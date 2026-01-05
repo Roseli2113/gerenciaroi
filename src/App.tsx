@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import Campaigns from "./pages/Campaigns";
+import Integrations from "./pages/Integrations";
 import Rules from "./pages/Rules";
 import UTMs from "./pages/UTMs";
 import Reports from "./pages/Reports";
@@ -25,6 +26,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/integrations" element={<Integrations />} />
             <Route path="/rules" element={<Rules />} />
             <Route path="/utms" element={<UTMs />} />
             <Route path="/reports" element={<Reports />} />
