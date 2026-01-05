@@ -1,0 +1,95 @@
+import { Sun, Moon, Bell, User, RefreshCw } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+interface HeaderProps {
+  title: string;
+}
+
+export function Header({ title }: HeaderProps) {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
+      <div className="flex items-center gap-4">
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Atualizar
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="rounded-xl hover:bg-accent"
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-5 h-5 text-warning" />
+          ) : (
+            <Moon className="w-5 h-5 text-primary" />
+          )}
+        </Button>
+
+        {/* Notifications */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-xl hover:bg-accent relative"
+        >
+          <Bell className="w-5 h-5" />
+          <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full" />
+        </Button>
+
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="gap-3 rounded-xl hover:bg-accent">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-medium">Usuário</p>
+                <p className="text-xs text-muted-foreground">Admin</p>
+              </div>
+              <Avatar className="w-9 h-9 border-2 border-primary/20">
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                  U
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <User className="w-4 h-4 mr-2" />
+              Perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Bell className="w-4 h-4 mr-2" />
+              Notificações
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive">
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
+  );
+}
