@@ -11,12 +11,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Target, label: 'Campanhas', path: '/campaigns' },
+  { icon: Plug, label: 'Integrações', path: '/integrations' },
   { icon: Settings2, label: 'Regras', path: '/rules' },
   { icon: Link2, label: 'UTMs', path: '/utms' },
   { icon: FileText, label: 'Relatórios', path: '/reports' },
