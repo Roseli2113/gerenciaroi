@@ -14,32 +14,63 @@ import {
   TestTube,
   Facebook,
   ChevronDown,
+  ChevronUp,
   MoreVertical,
-  Plus
+  Plus,
+  Loader2,
+  LogOut,
+  RefreshCw,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
-
-const mockProfiles = [
-  { id: 1, name: 'Roseli Oliveira' },
-];
-
-const mockAdAccounts = [
-  { id: 1, name: 'AGUA LIFE', status: 'Desabilitada', enabled: false },
-  { id: 2, name: 'BM - 02 ROSELI', status: 'Ativa', enabled: true },
-];
+import { useMetaAuth } from '@/hooks/useMetaAuth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 export default function Integrations() {
-  const [adAccounts, setAdAccounts] = useState(mockAdAccounts);
+  const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts } = useMetaAuth();
+  const [enabledAccounts, setEnabledAccounts] = useState<string[]>([]);
   const [allEnabled, setAllEnabled] = useState(false);
+  const [metaExpanded, setMetaExpanded] = useState(true);
 
   const toggleAllAccounts = (enabled: boolean) => {
     setAllEnabled(enabled);
-    setAdAccounts(adAccounts.map(acc => ({ ...acc, enabled })));
+    if (enabled && connection?.adAccounts) {
+      setEnabledAccounts(connection.adAccounts.map(acc => acc.id));
+    } else {
+      setEnabledAccounts([]);
+    }
   };
 
-  const toggleAccount = (id: number) => {
-    setAdAccounts(adAccounts.map(acc => 
-      acc.id === id ? { ...acc, enabled: !acc.enabled } : acc
-    ));
+  const toggleAccount = (id: string) => {
+    setEnabledAccounts(prev => 
+      prev.includes(id) 
+        ? prev.filter(accId => accId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const getAccountStatusLabel = (status: number) => {
+    switch (status) {
+      case 1: return { label: 'Ativa', color: 'text-success' };
+      case 2: return { label: 'Desativada', color: 'text-destructive' };
+      case 3: return { label: 'Não suportada', color: 'text-muted-foreground' };
+      case 7: return { label: 'Pendente de revisão', color: 'text-warning' };
+      case 8: return { label: 'Pendente de fechamento', color: 'text-warning' };
+      case 9: return { label: 'Em período de graça', color: 'text-warning' };
+      case 100: return { label: 'Temporariamente indisponível', color: 'text-warning' };
+      case 101: return { label: 'Permanentemente indisponível', color: 'text-destructive' };
+      default: return { label: 'Desconhecido', color: 'text-muted-foreground' };
+    }
   };
 
   return (
@@ -52,21 +83,32 @@ export default function Integrations() {
         </div>
 
         {/* Configuration Banner */}
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-foreground">Configuração COMPLETA!</p>
-                <p className="text-sm text-muted-foreground">
-                  Deseja reiniciar a configuração?{' '}
-                  <button className="text-primary underline hover:no-underline">
-                    Clique aqui para reiniciar
-                  </button>
-                </p>
+        {isConnected && (
+          <Card className="border-success/30 bg-success/5">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-success" />
+                  <div>
+                    <p className="font-semibold text-foreground">Configuração COMPLETA!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Conectado como <span className="text-foreground font-medium">{connection?.user.name}</span>
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={disconnect}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Desconectar
+                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue="anuncios" className="space-y-6">
@@ -100,63 +142,202 @@ export default function Integrations() {
           {/* Anúncios Tab */}
           <TabsContent value="anuncios" className="space-y-6">
             {/* Meta Ads Card */}
-            <Card>
-              <CardHeader className="cursor-pointer">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-                      <Facebook className="w-6 h-6 text-white" />
+            <Collapsible open={metaExpanded} onOpenChange={setMetaExpanded}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+                          <Facebook className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CardTitle className="text-lg">Meta Ads</CardTitle>
+                          {isConnected ? (
+                            <Badge className="bg-success/20 text-success border-0">
+                              Conectado
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                              Desconectado
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {metaExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      )}
                     </div>
-                    <CardTitle className="text-lg">Meta Ads</CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent>
+                  <CardContent className="space-y-6">
+                    {!isConnected ? (
+                      /* Not Connected State */
+                      <div className="text-center py-8 space-y-4">
+                        <div className="w-16 h-16 mx-auto rounded-full bg-blue-600/10 flex items-center justify-center">
+                          <Facebook className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-foreground">
+                            Conecte sua conta Meta Ads
+                          </h3>
+                          <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
+                            Ao conectar sua conta, você poderá visualizar e gerenciar suas campanhas, 
+                            criar regras automáticas e acompanhar métricas em tempo real.
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                          <Button 
+                            onClick={connect} 
+                            disabled={isLoading}
+                            className="bg-blue-600 hover:bg-blue-700 gap-2"
+                          >
+                            {isLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Facebook className="w-4 h-4" />
+                            )}
+                            Conectar com Facebook
+                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            Permissões necessárias: ads_read, ads_management
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Connected State */
+                      <>
+                        {/* Connected Profiles */}
+                        <div className="space-y-3">
+                          <p className="text-sm text-muted-foreground">Perfil conectado:</p>
+                          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                                <span className="text-white text-sm font-medium">
+                                  {connection?.user.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-foreground font-medium">{connection?.user.name}</span>
+                                {connection?.user.email && (
+                                  <p className="text-xs text-muted-foreground">{connection.user.email}</p>
+                                )}
+                              </div>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="w-5 h-5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={refreshAdAccounts}>
+                                  <RefreshCw className="w-4 h-4 mr-2" />
+                                  Atualizar contas
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={disconnect}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <LogOut className="w-4 h-4 mr-2" />
+                                  Desconectar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+
+                        {/* Ad Accounts */}
+                        {connection?.adAccounts && connection.adAccounts.length > 0 && (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm text-muted-foreground">
+                                Contas de Anúncio ({connection.adAccounts.length})
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">Ativar todas:</span>
+                                <Switch 
+                                  checked={allEnabled} 
+                                  onCheckedChange={toggleAllAccounts} 
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {connection.adAccounts.map((account) => {
+                                const status = getAccountStatusLabel(account.account_status);
+                                return (
+                                  <div 
+                                    key={account.id} 
+                                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                                  >
+                                    <div className="flex-1">
+                                      <p className="font-medium text-foreground">{account.name}</p>
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <span className={status.color}>{status.label}</span>
+                                        <span className="text-muted-foreground">•</span>
+                                        <span className="text-muted-foreground">{account.currency}</span>
+                                        <span className="text-muted-foreground">•</span>
+                                        <span className="text-muted-foreground">{account.timezone_name}</span>
+                                      </div>
+                                    </div>
+                                    <Switch 
+                                      checked={enabledAccounts.includes(account.id)} 
+                                      onCheckedChange={() => toggleAccount(account.id)} 
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {connection?.adAccounts && connection.adAccounts.length === 0 && (
+                          <div className="text-center py-6 text-muted-foreground">
+                            <XCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p>Nenhuma conta de anúncio encontrada.</p>
+                            <p className="text-sm">Verifique se você tem acesso a contas de anúncio no Meta Business.</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            {/* Google Ads Card (placeholder) */}
+            <Card className="opacity-60">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 via-green-500 to-yellow-500 flex items-center justify-center">
+                    <span className="text-white text-lg font-bold">G</span>
                   </div>
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-lg">Google Ads</CardTitle>
+                    <Badge variant="secondary">Em breve</Badge>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Connected Profiles */}
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">Conecte seus perfis por aqui:</p>
-                  {mockProfiles.map((profile) => (
-                    <div key={profile.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <span className="text-foreground">{profile.name}</span>
-                      <button className="text-muted-foreground hover:text-foreground">
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))}
-                  <Button className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Adicionar perfil
-                  </Button>
-                </div>
-              </CardContent>
             </Card>
 
-            {/* Ad Accounts Card */}
-            <Card>
+            {/* TikTok Ads Card (placeholder) */}
+            <Card className="opacity-60">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Contas de Anúncio (Meta)</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Ativar todas:</span>
-                    <Switch checked={allEnabled} onCheckedChange={toggleAllAccounts} />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
+                    <span className="text-white text-lg font-bold">T</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-lg">TikTok Ads</CardTitle>
+                    <Badge variant="secondary">Em breve</Badge>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">Escolha suas contas de anúncio:</p>
-                {adAccounts.map((account) => (
-                  <div key={account.id} className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="font-medium text-foreground">{account.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        status: <span className={account.status === 'Ativa' ? 'text-green-500' : 'text-muted-foreground'}>{account.status}</span>
-                      </p>
-                    </div>
-                    <Switch checked={account.enabled} onCheckedChange={() => toggleAccount(account.id)} />
-                  </div>
-                ))}
-              </CardContent>
             </Card>
           </TabsContent>
 
