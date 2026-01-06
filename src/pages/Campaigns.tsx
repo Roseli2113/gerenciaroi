@@ -1,14 +1,10 @@
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -17,239 +13,378 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Play, Pause, Search, Filter, TrendingUp, TrendingDown, Edit2 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { 
+  Settings, 
+  ArrowDown, 
+  ArrowUpDown,
+  ChevronDown,
+  RefreshCw,
+  Building2,
+  LayoutGrid,
+  Layers,
+  FileText,
+  Info
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
 interface Campaign {
   id: string;
   name: string;
-  status: 'active' | 'paused';
-  objective: string;
-  budget: number;
-  budgetType: 'daily' | 'total';
+  status: boolean;
+  budget: number | null;
+  budgetType: 'daily' | 'total' | null;
   spent: number;
-  impressions: number;
-  clicks: number;
-  ctr: number;
-  cpa: number;
-  roi: number;
   sales: number;
+  revenue: number;
+  profit: number;
+  cpa: number | null;
+  roi: number | null;
 }
 
-const campaigns: Campaign[] = [
+const mockCampaigns: Campaign[] = [
   { 
     id: '1', 
-    name: 'Conversão - Produto Premium', 
-    status: 'active',
-    objective: 'Conversões',
-    budget: 500, 
-    budgetType: 'daily',
-    spent: 342.50, 
-    impressions: 45230,
-    clicks: 1245,
-    ctr: 2.75,
-    cpa: 8.50, 
-    roi: 245, 
-    sales: 42 
+    name: 'LOVE/ ABO 05/01/26 - TOP ✅', 
+    status: true,
+    budget: null, 
+    budgetType: null,
+    spent: 27.05, 
+    sales: 5,
+    revenue: 46.90,
+    profit: 19.85,
+    cpa: 5.41,
+    roi: 1.73
   },
   { 
     id: '2', 
-    name: 'Tráfego - Blog Posts', 
-    status: 'active',
-    objective: 'Tráfego',
-    budget: 200, 
-    budgetType: 'daily',
-    spent: 156.80, 
-    impressions: 32150,
-    clicks: 890,
-    ctr: 2.77,
-    cpa: 12.30, 
-    roi: 180, 
-    sales: 28 
+    name: 'LOVE/ ABO 05/01/26 - TOP ✅ – Cópia', 
+    status: true,
+    budget: null, 
+    budgetType: null,
+    spent: 0.00, 
+    sales: 0,
+    revenue: 0.00,
+    profit: 0.00,
+    cpa: null,
+    roi: 0.00
   },
   { 
     id: '3', 
-    name: 'Remarketing - Carrinho Abandonado', 
-    status: 'paused',
-    objective: 'Conversões',
-    budget: 300, 
-    budgetType: 'total',
-    spent: 0, 
-    impressions: 0,
-    clicks: 0,
-    ctr: 0,
-    cpa: 5.20, 
-    roi: 320, 
-    sales: 0 
+    name: 'LOVE/ ABO 05/01/26 - TOP ✅ – Cópia', 
+    status: true,
+    budget: null, 
+    budgetType: null,
+    spent: 0.00, 
+    sales: 0,
+    revenue: 0.00,
+    profit: 0.00,
+    cpa: null,
+    roi: 0.00
   },
   { 
     id: '4', 
-    name: 'Awareness - Lançamento', 
-    status: 'active',
-    objective: 'Alcance',
-    budget: 150, 
+    name: 'LIMPEZA/ CBO- 31/12/25', 
+    status: true,
+    budget: 10.00, 
     budgetType: 'daily',
-    spent: 98.40, 
-    impressions: 89450,
-    clicks: 1520,
-    ctr: 1.70,
-    cpa: 18.90, 
-    roi: 95, 
-    sales: 12 
-  },
-  { 
-    id: '5', 
-    name: 'Lead Generation - Ebook', 
-    status: 'active',
-    objective: 'Leads',
-    budget: 250, 
-    budgetType: 'daily',
-    spent: 180.20, 
-    impressions: 28340,
-    clicks: 756,
-    ctr: 2.67,
-    cpa: 9.80, 
-    roi: 210, 
-    sales: 35 
+    spent: 0.00, 
+    sales: 0,
+    revenue: 0.00,
+    profit: 0.00,
+    cpa: null,
+    roi: null
   },
 ];
 
 const Campaigns = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('campanhas');
+  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
+  const [lastUpdated] = useState('30 segundos');
+
+  const toggleCampaignSelection = (id: string) => {
+    setSelectedCampaigns(prev => 
+      prev.includes(id) 
+        ? prev.filter(cId => cId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleAllCampaigns = () => {
+    if (selectedCampaigns.length === mockCampaigns.length) {
+      setSelectedCampaigns([]);
+    } else {
+      setSelectedCampaigns(mockCampaigns.map(c => c.id));
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  };
+
+  const formatROI = (value: number | null) => {
+    if (value === null) return 'N/A';
+    return value.toFixed(2).replace('.', ',');
+  };
+
+  // Calculate totals
+  const totals = mockCampaigns.reduce((acc, campaign) => ({
+    budget: acc.budget + (campaign.budget || 0),
+    spent: acc.spent + campaign.spent,
+    sales: acc.sales + campaign.sales,
+    revenue: acc.revenue + campaign.revenue,
+    profit: acc.profit + campaign.profit,
+  }), { budget: 0, spent: 0, sales: 0, revenue: 0, profit: 0 });
+
+  const totalCPA = totals.sales > 0 ? totals.spent / totals.sales : 0;
+  const totalROI = totals.spent > 0 ? totals.revenue / totals.spent : 0;
+
   return (
     <MainLayout title="Campanhas">
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar campanhas..."
-              className="pl-10 bg-card border-border"
-            />
+      <div className="space-y-4">
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+          <TabsList className="bg-card border border-border h-auto p-0 w-full grid grid-cols-4">
+            <TabsTrigger 
+              value="contas" 
+              className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"
+            >
+              <Building2 className="w-4 h-4" />
+              Contas
+            </TabsTrigger>
+            <TabsTrigger 
+              value="campanhas" 
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Campanhas
+            </TabsTrigger>
+            <TabsTrigger 
+              value="conjuntos" 
+              className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"
+            >
+              <Layers className="w-4 h-4" />
+              Conjuntos
+            </TabsTrigger>
+            <TabsTrigger 
+              value="anuncios" 
+              className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Anúncios
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Toolbar */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ArrowDown className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ArrowUpDown className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            <Badge className="bg-success text-success-foreground border-0 ml-2">
+              ✓ Todas as vendas trackeadas
+            </Badge>
           </div>
-          <div className="flex items-center gap-3">
-            <Select defaultValue="all">
-              <SelectTrigger className="w-40 bg-card">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="active">Ativos</SelectItem>
-                <SelectItem value="paused">Pausados</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="icon">
-              <Filter className="w-4 h-4" />
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              Atualizado há {lastUpdated}
+            </span>
+            <Button variant="default" className="bg-primary hover:bg-primary/90">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Atualizar
             </Button>
           </div>
         </div>
 
-        {/* Campaigns Table */}
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        {/* Table */}
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="w-12"></TableHead>
-                <TableHead>Campanha</TableHead>
-                <TableHead>Objetivo</TableHead>
-                <TableHead className="text-right">Orçamento</TableHead>
-                <TableHead className="text-right">Gastos</TableHead>
-                <TableHead className="text-right">Impressões</TableHead>
-                <TableHead className="text-right">Cliques</TableHead>
-                <TableHead className="text-right">CTR</TableHead>
-                <TableHead className="text-right">CPA</TableHead>
-                <TableHead className="text-right">ROI</TableHead>
-                <TableHead className="text-right">Vendas</TableHead>
-                <TableHead className="w-12"></TableHead>
+              <TableRow className="border-border hover:bg-transparent bg-muted/30">
+                <TableHead className="w-12">
+                  <Checkbox 
+                    checked={selectedCampaigns.length === mockCampaigns.length}
+                    onCheckedChange={toggleAllCampaigns}
+                  />
+                </TableHead>
+                <TableHead className="text-center font-semibold">STATUS</TableHead>
+                <TableHead className="font-semibold">CAMPANHA</TableHead>
+                <TableHead className="text-center font-semibold">ORÇAMENTO</TableHead>
+                <TableHead className="text-center font-semibold">GASTOS</TableHead>
+                <TableHead className="text-center font-semibold">VENDAS</TableHead>
+                <TableHead className="text-center font-semibold">
+                  <div className="flex items-center justify-center gap-1">
+                    FATURAMENTO
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Total de receita gerada</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableHead>
+                <TableHead className="text-center font-semibold">
+                  <div className="flex items-center justify-center gap-1">
+                    LUCRO
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Faturamento - Gastos</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableHead>
+                <TableHead className="text-center font-semibold">
+                  <div className="flex items-center justify-center gap-1">
+                    CPA
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Custo por Aquisição</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableHead>
+                <TableHead className="text-center font-semibold">
+                  <div className="flex items-center justify-center gap-1">
+                    ROI
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Retorno sobre Investimento</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {campaigns.map((campaign) => (
+              {mockCampaigns.map((campaign) => (
                 <TableRow key={campaign.id} className="border-border">
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'rounded-full w-8 h-8',
-                        campaign.status === 'active'
-                          ? 'bg-success/20 text-success hover:bg-success/30'
-                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      )}
-                    >
-                      {campaign.status === 'active' ? (
-                        <Pause className="w-3 h-3" />
-                      ) : (
-                        <Play className="w-3 h-3" />
-                      )}
-                    </Button>
+                    <Checkbox 
+                      checked={selectedCampaigns.includes(campaign.id)}
+                      onCheckedChange={() => toggleCampaignSelection(campaign.id)}
+                    />
                   </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-foreground">{campaign.name}</p>
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          'text-xs mt-1',
-                          campaign.status === 'active' 
-                            ? 'bg-success/20 text-success border-0' 
-                            : 'bg-muted text-muted-foreground'
-                        )}
-                      >
-                        {campaign.status === 'active' ? 'Ativa' : 'Pausada'}
-                      </Badge>
-                    </div>
+                  <TableCell className="text-center">
+                    <Switch 
+                      checked={campaign.status}
+                      className="data-[state=checked]:bg-primary"
+                    />
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {campaign.objective}
+                  <TableCell className="font-medium text-center">
+                    {campaign.name}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div>
-                      <p className="font-medium">R$ {campaign.budget.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {campaign.budgetType === 'daily' ? '/dia' : 'total'}
-                      </p>
-                    </div>
+                  <TableCell className="text-center text-muted-foreground">
+                    {campaign.budget ? (
+                      <div>
+                        <span>{formatCurrency(campaign.budget)}</span>
+                        <span className="text-xs block">
+                          {campaign.budgetType === 'daily' ? 'Diário' : 'Total'}
+                        </span>
+                      </div>
+                    ) : (
+                      'N/A'
+                    )}
                   </TableCell>
-                  <TableCell className="text-right font-medium">
-                    R$ {campaign.spent.toFixed(2)}
+                  <TableCell className="text-center">
+                    {formatCurrency(campaign.spent)}
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {campaign.impressions.toLocaleString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {campaign.clicks.toLocaleString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {campaign.ctr.toFixed(2)}%
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className={cn(
-                      'font-medium',
-                      campaign.cpa < 10 ? 'text-success' : campaign.cpa > 15 ? 'text-destructive' : 'text-warning'
-                    )}>
-                      R$ {campaign.cpa.toFixed(2)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className={cn(
-                      'flex items-center justify-end gap-1 font-medium',
-                      campaign.roi > 150 ? 'text-success' : campaign.roi < 100 ? 'text-destructive' : 'text-warning'
-                    )}>
-                      {campaign.roi > 150 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                      {campaign.roi}%
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="text-center">
                     {campaign.sales}
                   </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="rounded-lg">
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
+                  <TableCell className="text-center">
+                    {formatCurrency(campaign.revenue)}
+                  </TableCell>
+                  <TableCell className={cn(
+                    "text-center font-medium",
+                    campaign.profit > 0 ? "text-success" : campaign.profit < 0 ? "text-destructive" : ""
+                  )}>
+                    {formatCurrency(campaign.profit)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {campaign.cpa !== null ? formatCurrency(campaign.cpa) : 'N/A'}
+                  </TableCell>
+                  <TableCell className={cn(
+                    "text-center font-medium",
+                    campaign.roi !== null && campaign.roi > 1 
+                      ? "text-primary" 
+                      : campaign.roi !== null && campaign.roi > 0 && campaign.roi < 1 
+                        ? "text-destructive" 
+                        : ""
+                  )}>
+                    {formatROI(campaign.roi)}
                   </TableCell>
                 </TableRow>
               ))}
+              
+              {/* Totals Row */}
+              <TableRow className="border-border bg-muted/50 font-semibold">
+                <TableCell>N/A</TableCell>
+                <TableCell className="text-center">N/A</TableCell>
+                <TableCell className="text-center">{mockCampaigns.length} CAMPANHAS</TableCell>
+                <TableCell className="text-center">
+                  {totals.budget > 0 ? formatCurrency(totals.budget) : 'N/A'}
+                </TableCell>
+                <TableCell className="text-center">
+                  {formatCurrency(totals.spent)}
+                </TableCell>
+                <TableCell className="text-center">
+                  {totals.sales}
+                </TableCell>
+                <TableCell className="text-center">
+                  {formatCurrency(totals.revenue)}
+                </TableCell>
+                <TableCell className={cn(
+                  "text-center",
+                  totals.profit > 0 ? "text-success" : totals.profit < 0 ? "text-destructive" : ""
+                )}>
+                  {formatCurrency(totals.profit)}
+                </TableCell>
+                <TableCell className="text-center">
+                  {totalCPA > 0 ? formatCurrency(totalCPA) : 'N/A'}
+                </TableCell>
+                <TableCell className={cn(
+                  "text-center",
+                  totalROI > 1 ? "text-primary" : totalROI > 0 && totalROI < 1 ? "text-destructive" : ""
+                )}>
+                  {formatROI(totalROI)}
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </div>
