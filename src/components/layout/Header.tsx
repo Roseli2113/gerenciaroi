@@ -1,5 +1,6 @@
-import { Sun, Moon, Bell, User, RefreshCw } from 'lucide-react';
+import { Sun, Moon, Bell, User, RefreshCw, LogOut } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   title: string;
@@ -17,6 +19,16 @@ interface HeaderProps {
 
 export function Header({ title }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const userInitial = user?.email?.charAt(0).toUpperCase() || 'U';
+  const userEmail = user?.email || 'Usuário';
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
@@ -62,12 +74,11 @@ export function Header({ title }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-3 rounded-xl hover:bg-accent">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium">Usuário</p>
-                <p className="text-xs text-muted-foreground">Admin</p>
+                <p className="text-sm font-medium truncate max-w-32">{userEmail}</p>
               </div>
               <Avatar className="w-9 h-9 border-2 border-primary/20">
                 <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                  U
+                  {userInitial}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -84,7 +95,8 @@ export function Header({ title }: HeaderProps) {
               Notificações
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem className="text-destructive" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>

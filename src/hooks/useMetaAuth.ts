@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface MetaUser {
@@ -23,35 +24,75 @@ interface MetaConnection {
   adAccounts: MetaAdAccount[];
 }
 
-const META_CONNECTION_KEY = 'meta_connection';
-
 export function useMetaAuth() {
+  const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [connection, setConnection] = useState<MetaConnection | null>(null);
 
-  // Load connection from localStorage on mount
+  // Load connection from database on mount
   useEffect(() => {
-    const saved = localStorage.getItem(META_CONNECTION_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as MetaConnection;
-        // Check if token is still valid
-        if (parsed.expiresAt > Date.now()) {
-          setConnection(parsed);
-          setIsConnected(true);
-        } else {
-          localStorage.removeItem(META_CONNECTION_KEY);
-        }
-      } catch {
-        localStorage.removeItem(META_CONNECTION_KEY);
+    const loadConnection = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
       }
-    }
-  }, []);
+
+      try {
+        const { data: metaConnection, error } = await supabase
+          .from('meta_connections')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (metaConnection && new Date(metaConnection.expires_at) > new Date()) {
+          // Load ad accounts
+          const { data: adAccounts } = await supabase
+            .from('meta_ad_accounts')
+            .select('*')
+            .eq('connection_id', metaConnection.id);
+
+          setConnection({
+            accessToken: metaConnection.access_token,
+            expiresAt: new Date(metaConnection.expires_at).getTime(),
+            user: {
+              id: metaConnection.meta_user_id,
+              name: metaConnection.meta_user_name || '',
+              email: metaConnection.meta_user_email || undefined
+            },
+            adAccounts: (adAccounts || []).map(acc => ({
+              id: acc.account_id,
+              name: acc.name,
+              account_status: acc.account_status,
+              currency: acc.currency || '',
+              timezone_name: acc.timezone_name || ''
+            }))
+          });
+          setIsConnected(true);
+        } else if (metaConnection) {
+          // Token expired, delete connection
+          await supabase
+            .from('meta_connections')
+            .delete()
+            .eq('id', metaConnection.id);
+        }
+      } catch (err) {
+        console.error('Error loading meta connection:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadConnection();
+  }, [user]);
 
   // Handle OAuth callback
   useEffect(() => {
     const handleCallback = async () => {
+      if (!user) return;
+
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const error = urlParams.get('error');
@@ -79,15 +120,49 @@ export function useMetaAuth() {
             throw new Error(data?.error || fnError?.message || 'Erro ao trocar código de autorização');
           }
 
-          const newConnection: MetaConnection = {
+          // Save to database
+          const expiresAt = new Date(Date.now() + (data.expiresIn * 1000));
+
+          // Upsert meta connection
+          const { data: savedConnection, error: saveError } = await supabase
+            .from('meta_connections')
+            .upsert({
+              user_id: user.id,
+              access_token: data.accessToken,
+              expires_at: expiresAt.toISOString(),
+              meta_user_id: data.user.id,
+              meta_user_name: data.user.name,
+              meta_user_email: data.user.email
+            }, { onConflict: 'user_id' })
+            .select()
+            .single();
+
+          if (saveError) throw saveError;
+
+          // Save ad accounts
+          if (data.adAccounts && data.adAccounts.length > 0) {
+            const adAccountsToInsert = data.adAccounts.map((acc: MetaAdAccount) => ({
+              connection_id: savedConnection.id,
+              user_id: user.id,
+              account_id: acc.id,
+              name: acc.name,
+              account_status: acc.account_status,
+              currency: acc.currency,
+              timezone_name: acc.timezone_name,
+              is_active: false
+            }));
+
+            await supabase
+              .from('meta_ad_accounts')
+              .upsert(adAccountsToInsert, { onConflict: 'connection_id,account_id' });
+          }
+
+          setConnection({
             accessToken: data.accessToken,
-            expiresAt: Date.now() + (data.expiresIn * 1000),
+            expiresAt: expiresAt.getTime(),
             user: data.user,
             adAccounts: data.adAccounts
-          };
-
-          localStorage.setItem(META_CONNECTION_KEY, JSON.stringify(newConnection));
-          setConnection(newConnection);
+          });
           setIsConnected(true);
           toast.success('Conectado ao Meta Ads com sucesso!');
         } catch (err) {
@@ -101,7 +176,7 @@ export function useMetaAuth() {
     };
 
     handleCallback();
-  }, []);
+  }, [user]);
 
   const connect = useCallback(async () => {
     setIsLoading(true);
@@ -127,15 +202,26 @@ export function useMetaAuth() {
     }
   }, []);
 
-  const disconnect = useCallback(() => {
-    localStorage.removeItem(META_CONNECTION_KEY);
-    setConnection(null);
-    setIsConnected(false);
-    toast.success('Desconectado do Meta Ads');
-  }, []);
+  const disconnect = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('meta_connections')
+        .delete()
+        .eq('user_id', user.id);
+
+      setConnection(null);
+      setIsConnected(false);
+      toast.success('Desconectado do Meta Ads');
+    } catch (err) {
+      console.error('Error disconnecting:', err);
+      toast.error('Erro ao desconectar');
+    }
+  }, [user]);
 
   const refreshAdAccounts = useCallback(async () => {
-    if (!connection?.accessToken) return;
+    if (!connection?.accessToken || !user) return;
 
     setIsLoading(true);
     try {
@@ -150,20 +236,43 @@ export function useMetaAuth() {
         throw new Error(data?.error || error?.message);
       }
 
-      const updatedConnection = {
-        ...connection,
-        adAccounts: data.adAccounts
-      };
+      // Get connection id
+      const { data: metaConnection } = await supabase
+        .from('meta_connections')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
 
-      localStorage.setItem(META_CONNECTION_KEY, JSON.stringify(updatedConnection));
-      setConnection(updatedConnection);
+      if (metaConnection && data.adAccounts) {
+        const adAccountsToInsert = data.adAccounts.map((acc: MetaAdAccount) => ({
+          connection_id: metaConnection.id,
+          user_id: user.id,
+          account_id: acc.id,
+          name: acc.name,
+          account_status: acc.account_status,
+          currency: acc.currency,
+          timezone_name: acc.timezone_name,
+          is_active: false
+        }));
+
+        await supabase
+          .from('meta_ad_accounts')
+          .upsert(adAccountsToInsert, { onConflict: 'connection_id,account_id' });
+      }
+
+      setConnection(prev => prev ? {
+        ...prev,
+        adAccounts: data.adAccounts
+      } : null);
+
+      toast.success('Contas de anúncio atualizadas');
     } catch (err) {
       console.error('Error refreshing ad accounts:', err);
       toast.error('Erro ao atualizar contas de anúncio');
     } finally {
       setIsLoading(false);
     }
-  }, [connection]);
+  }, [connection, user]);
 
   return {
     isConnected,
