@@ -118,6 +118,34 @@ serve(async (req) => {
       );
     }
 
+    if (action === "get-adset-insights") {
+      const fields = ["adset_id", "adset_name", "spend", "impressions", "clicks", "actions", "action_values"].join(",");
+      const datePreset = dateRange || "last_7d";
+      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=adset&date_preset=${datePreset}&access_token=${accessToken}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.error) {
+        return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(JSON.stringify({ insights: data.data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "get-ad-insights") {
+      const fields = ["ad_id", "ad_name", "spend", "impressions", "clicks", "actions", "action_values"].join(",");
+      const datePreset = dateRange || "last_7d";
+      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=ad&date_preset=${datePreset}&access_token=${accessToken}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.error) {
+        return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(JSON.stringify({ insights: data.data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "get-ads") {
       const fields = [
         "id",
@@ -215,6 +243,42 @@ serve(async (req) => {
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    if (action === "pause-adset") {
+      const { adsetId } = await req.clone().json();
+      const url = `${baseUrl}/${adsetId}?access_token=${accessToken}`;
+      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PAUSED" }) });
+      const data = await response.json();
+      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "activate-adset") {
+      const { adsetId } = await req.clone().json();
+      const url = `${baseUrl}/${adsetId}?access_token=${accessToken}`;
+      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "ACTIVE" }) });
+      const data = await response.json();
+      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "pause-ad") {
+      const { adId } = await req.clone().json();
+      const url = `${baseUrl}/${adId}?access_token=${accessToken}`;
+      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PAUSED" }) });
+      const data = await response.json();
+      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "activate-ad") {
+      const { adId } = await req.clone().json();
+      const url = `${baseUrl}/${adId}?access_token=${accessToken}`;
+      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "ACTIVE" }) });
+      const data = await response.json();
+      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(

@@ -29,6 +29,23 @@ interface MetaCampaign {
   updated_time: string;
 }
 
+interface MetaAdSet {
+  id: string;
+  name: string;
+  status: 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED';
+  daily_budget?: string;
+  lifetime_budget?: string;
+  optimization_goal?: string;
+  campaign_id?: string;
+}
+
+interface MetaAd {
+  id: string;
+  name: string;
+  status: 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED';
+  adset_id?: string;
+}
+
 export interface Campaign {
   id: string;
   name: string;
@@ -44,10 +61,44 @@ export interface Campaign {
   roi: number | null;
 }
 
+export interface AdSet {
+  id: string;
+  name: string;
+  status: boolean;
+  rawStatus: string;
+  budget: number | null;
+  budgetType: 'daily' | 'total' | null;
+  optimizationGoal: string | null;
+  spent: number;
+  sales: number;
+  revenue: number;
+  profit: number;
+  cpa: number | null;
+  roi: number | null;
+}
+
+export interface Ad {
+  id: string;
+  name: string;
+  status: boolean;
+  rawStatus: string;
+  adsetId: string | null;
+  spent: number;
+  sales: number;
+  revenue: number;
+  profit: number;
+  cpa: number | null;
+  roi: number | null;
+}
+
 export function useMetaCampaigns() {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [adSets, setAdSets] = useState<AdSet[]>([]);
+  const [ads, setAds] = useState<Ad[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
+  const [isLoadingAds, setIsLoadingAds] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -223,6 +274,195 @@ export function useMetaCampaigns() {
     }
   }, [accessToken]);
 
+  const fetchAdSets = useCallback(async () => {
+    if (!accessToken || !activeAccountId) return;
+
+    setIsLoadingAdSets(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-ads', {
+        body: { action: 'get-adsets', accessToken, adAccountId: activeAccountId }
+      });
+
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
+        body: { action: 'get-adset-insights', accessToken, adAccountId: activeAccountId, dateRange: 'today' }
+      });
+
+      const insightsMap = new Map();
+      if (insightsData?.insights) {
+        insightsData.insights.forEach((i: { adset_id: string; spend: string; actions?: Array<{action_type: string; value: string}>; action_values?: Array<{action_type: string; value: string}> }) => 
+          insightsMap.set(i.adset_id, i)
+        );
+      }
+
+      const mapped: AdSet[] = (data.adsets || []).map((as: MetaAdSet) => {
+        const insight = insightsMap.get(as.id);
+        const spent = insight ? parseFloat(insight.spend) : 0;
+        const purchases = insight?.actions?.find((a: {action_type: string}) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
+        const sales = purchases ? parseInt(purchases.value) : 0;
+        const purchaseValue = insight?.action_values?.find((a: {action_type: string}) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
+        const revenue = purchaseValue ? parseFloat(purchaseValue.value) : 0;
+        const dailyBudget = as.daily_budget ? parseFloat(as.daily_budget) / 100 : null;
+        const lifetimeBudget = as.lifetime_budget ? parseFloat(as.lifetime_budget) / 100 : null;
+
+        return {
+          id: as.id,
+          name: as.name,
+          status: as.status === 'ACTIVE',
+          rawStatus: as.status,
+          budget: dailyBudget || lifetimeBudget,
+          budgetType: dailyBudget ? 'daily' : lifetimeBudget ? 'total' : null,
+          optimizationGoal: as.optimization_goal || null,
+          spent,
+          sales,
+          revenue,
+          profit: revenue - spent,
+          cpa: sales > 0 ? spent / sales : null,
+          roi: spent > 0 ? revenue / spent : null
+        };
+      });
+
+      setAdSets(mapped);
+    } catch (err) {
+      console.error('Error fetching ad sets:', err);
+      toast.error('Erro ao carregar conjuntos de anúncios');
+    } finally {
+      setIsLoadingAdSets(false);
+    }
+  }, [accessToken, activeAccountId]);
+
+  const fetchAds = useCallback(async () => {
+    if (!accessToken || !activeAccountId) return;
+
+    setIsLoadingAds(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-ads', {
+        body: { action: 'get-ads', accessToken, adAccountId: activeAccountId }
+      });
+
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
+        body: { action: 'get-ad-insights', accessToken, adAccountId: activeAccountId, dateRange: 'today' }
+      });
+
+      const insightsMap = new Map();
+      if (insightsData?.insights) {
+        insightsData.insights.forEach((i: { ad_id: string; spend: string; actions?: Array<{action_type: string; value: string}>; action_values?: Array<{action_type: string; value: string}> }) => 
+          insightsMap.set(i.ad_id, i)
+        );
+      }
+
+      const mapped: Ad[] = (data.ads || []).map((ad: MetaAd) => {
+        const insight = insightsMap.get(ad.id);
+        const spent = insight ? parseFloat(insight.spend) : 0;
+        const purchases = insight?.actions?.find((a: {action_type: string}) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
+        const sales = purchases ? parseInt(purchases.value) : 0;
+        const purchaseValue = insight?.action_values?.find((a: {action_type: string}) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
+        const revenue = purchaseValue ? parseFloat(purchaseValue.value) : 0;
+
+        return {
+          id: ad.id,
+          name: ad.name,
+          status: ad.status === 'ACTIVE',
+          rawStatus: ad.status,
+          adsetId: ad.adset_id || null,
+          spent,
+          sales,
+          revenue,
+          profit: revenue - spent,
+          cpa: sales > 0 ? spent / sales : null,
+          roi: spent > 0 ? revenue / spent : null
+        };
+      });
+
+      setAds(mapped);
+    } catch (err) {
+      console.error('Error fetching ads:', err);
+      toast.error('Erro ao carregar anúncios');
+    } finally {
+      setIsLoadingAds(false);
+    }
+  }, [accessToken, activeAccountId]);
+
+  const updateCampaignBudget = useCallback(async (campaignId: string, budget: number, budgetType: 'daily' | 'total') => {
+    if (!accessToken) {
+      toast.error('Não conectado ao Meta Ads');
+      return false;
+    }
+
+    try {
+      const budgetInCents = Math.round(budget * 100);
+      const updates = budgetType === 'daily' 
+        ? { daily_budget: budgetInCents }
+        : { lifetime_budget: budgetInCents };
+
+      const { data, error } = await supabase.functions.invoke('meta-ads', {
+        body: { action: 'update-campaign', accessToken, campaignId, updates }
+      });
+
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      setCampaigns(prev => prev.map(c =>
+        c.id === campaignId ? { ...c, budget, budgetType } : c
+      ));
+
+      toast.success('Orçamento atualizado');
+      return true;
+    } catch (err) {
+      console.error('Error updating budget:', err);
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar orçamento');
+      return false;
+    }
+  }, [accessToken]);
+
+  const toggleAdSetStatus = useCallback(async (adsetId: string, activate: boolean) => {
+    if (!accessToken) return false;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-ads', {
+        body: { action: activate ? 'activate-adset' : 'pause-adset', accessToken, adsetId }
+      });
+
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      setAdSets(prev => prev.map(as =>
+        as.id === adsetId ? { ...as, status: activate, rawStatus: activate ? 'ACTIVE' : 'PAUSED' } : as
+      ));
+
+      toast.success(activate ? 'Conjunto ativado' : 'Conjunto pausado');
+      return true;
+    } catch (err) {
+      console.error('Error toggling adset:', err);
+      toast.error('Erro ao alterar status do conjunto');
+      return false;
+    }
+  }, [accessToken]);
+
+  const toggleAdStatus = useCallback(async (adId: string, activate: boolean) => {
+    if (!accessToken) return false;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-ads', {
+        body: { action: activate ? 'activate-ad' : 'pause-ad', accessToken, adId }
+      });
+
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      setAds(prev => prev.map(ad =>
+        ad.id === adId ? { ...ad, status: activate, rawStatus: activate ? 'ACTIVE' : 'PAUSED' } : ad
+      ));
+
+      toast.success(activate ? 'Anúncio ativado' : 'Anúncio pausado');
+      return true;
+    } catch (err) {
+      console.error('Error toggling ad:', err);
+      toast.error('Erro ao alterar status do anúncio');
+      return false;
+    }
+  }, [accessToken]);
+
   const getLastUpdatedText = useCallback(() => {
     if (!lastUpdated) return 'Nunca';
     
@@ -236,11 +476,20 @@ export function useMetaCampaigns() {
 
   return {
     campaigns,
+    adSets,
+    ads,
     isLoading,
+    isLoadingAdSets,
+    isLoadingAds,
     lastUpdated,
     activeAccountId,
     fetchCampaigns,
+    fetchAdSets,
+    fetchAds,
     toggleCampaignStatus,
+    toggleAdSetStatus,
+    toggleAdStatus,
+    updateCampaignBudget,
     getLastUpdatedText,
     hasActiveAccount: !!activeAccountId && !!accessToken
   };
