@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,26 +37,47 @@ import {
 } from '@/components/ui/collapsible';
 
 export default function Integrations() {
-  const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts } = useMetaAuth();
-  const [enabledAccounts, setEnabledAccounts] = useState<string[]>([]);
-  const [allEnabled, setAllEnabled] = useState(false);
+  const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
+  const [enabledAccounts, setEnabledAccounts] = useState<Record<string, boolean>>({});
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [metaExpanded, setMetaExpanded] = useState(true);
 
-  const toggleAllAccounts = (enabled: boolean) => {
-    setAllEnabled(enabled);
-    if (enabled && connection?.adAccounts) {
-      setEnabledAccounts(connection.adAccounts.map(acc => acc.id));
-    } else {
-      setEnabledAccounts([]);
+  // Load initial enabled states from connection
+  useEffect(() => {
+    if (connection?.adAccounts) {
+      const initialState: Record<string, boolean> = {};
+      connection.adAccounts.forEach(acc => {
+        initialState[acc.id] = acc.is_active || false;
+      });
+      setEnabledAccounts(initialState);
     }
-  };
+  }, [connection?.adAccounts]);
 
-  const toggleAccount = (id: string) => {
-    setEnabledAccounts(prev => 
-      prev.includes(id) 
-        ? prev.filter(accId => accId !== id)
-        : [...prev, id]
-    );
+  const toggleAccount = async (accountId: string) => {
+    const newValue = !enabledAccounts[accountId];
+    
+    setTogglingIds(prev => new Set(prev).add(accountId));
+    
+    const success = await toggleAccountActive(accountId, newValue);
+    
+    if (success) {
+      // If activating, deactivate all others locally
+      if (newValue) {
+        const newState: Record<string, boolean> = {};
+        Object.keys(enabledAccounts).forEach(id => {
+          newState[id] = id === accountId;
+        });
+        setEnabledAccounts(newState);
+      } else {
+        setEnabledAccounts(prev => ({ ...prev, [accountId]: false }));
+      }
+    }
+    
+    setTogglingIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(accountId);
+      return newSet;
+    });
   };
 
   const getAccountStatusLabel = (status: number) => {
@@ -258,18 +279,15 @@ export default function Integrations() {
                               <p className="text-sm text-muted-foreground">
                                 Contas de Anúncio ({connection.adAccounts.length})
                               </p>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Ativar todas:</span>
-                                <Switch 
-                                  checked={allEnabled} 
-                                  onCheckedChange={toggleAllAccounts} 
-                                />
-                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Ative uma conta para gerenciar campanhas
+                              </p>
                             </div>
                             
                             <div className="space-y-2">
                               {connection.adAccounts.map((account) => {
                                 const status = getAccountStatusLabel(account.account_status);
+                                const isToggling = togglingIds.has(account.id);
                                 return (
                                   <div 
                                     key={account.id} 
@@ -285,10 +303,14 @@ export default function Integrations() {
                                         <span className="text-muted-foreground">{account.timezone_name}</span>
                                       </div>
                                     </div>
-                                    <Switch 
-                                      checked={enabledAccounts.includes(account.id)} 
-                                      onCheckedChange={() => toggleAccount(account.id)} 
-                                    />
+                                    {isToggling ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Switch 
+                                        checked={enabledAccounts[account.id] || false} 
+                                        onCheckedChange={() => toggleAccount(account.id)} 
+                                      />
+                                    )}
                                   </div>
                                 );
                               })}
@@ -393,10 +415,10 @@ export default function Integrations() {
           <TabsContent value="whatsapp" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Integração WhatsApp</CardTitle>
+                <CardTitle>WhatsApp Business</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">Conecte seu WhatsApp Business para receber notificações e interagir com leads.</p>
+                <p className="text-muted-foreground">Conecte seu WhatsApp Business para automações e notificações.</p>
                 <Button className="mt-4 gap-2">
                   <MessageCircle className="w-4 h-4" />
                   Conectar WhatsApp
@@ -409,13 +431,13 @@ export default function Integrations() {
           <TabsContent value="testes" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Testes de Integração</CardTitle>
+                <CardTitle>Ambiente de Testes</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">Execute testes para verificar se suas integrações estão funcionando corretamente.</p>
+                <p className="text-muted-foreground">Teste suas integrações antes de ir para produção.</p>
                 <Button className="mt-4 gap-2">
                   <TestTube className="w-4 h-4" />
-                  Executar Testes
+                  Iniciar Teste
                 </Button>
               </CardContent>
             </Card>

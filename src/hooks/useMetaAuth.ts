@@ -15,6 +15,7 @@ interface MetaAdAccount {
   account_status: number;
   currency: string;
   timezone_name: string;
+  is_active?: boolean;
 }
 
 interface MetaConnection {
@@ -67,7 +68,8 @@ export function useMetaAuth() {
               name: acc.name,
               account_status: acc.account_status,
               currency: acc.currency || '',
-              timezone_name: acc.timezone_name || ''
+              timezone_name: acc.timezone_name || '',
+              is_active: acc.is_active
             }))
           });
           setIsConnected(true);
@@ -274,12 +276,43 @@ export function useMetaAuth() {
     }
   }, [connection, user]);
 
+  const toggleAccountActive = useCallback(async (accountId: string, isActive: boolean) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('meta_ad_accounts')
+        .update({ is_active: isActive })
+        .eq('user_id', user.id)
+        .eq('account_id', accountId);
+
+      if (error) throw error;
+      
+      // If activating, deactivate other accounts
+      if (isActive) {
+        await supabase
+          .from('meta_ad_accounts')
+          .update({ is_active: false })
+          .eq('user_id', user.id)
+          .neq('account_id', accountId);
+      }
+
+      toast.success(isActive ? 'Conta ativada' : 'Conta desativada');
+      return true;
+    } catch (err) {
+      console.error('Error toggling account:', err);
+      toast.error('Erro ao alterar status da conta');
+      return false;
+    }
+  }, [user]);
+
   return {
     isConnected,
     isLoading,
     connection,
     connect,
     disconnect,
-    refreshAdAccounts
+    refreshAdAccounts,
+    toggleAccountActive
   };
 }
