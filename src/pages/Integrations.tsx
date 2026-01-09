@@ -35,6 +35,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { ApiCredentialsCard } from '@/components/integrations/ApiCredentialsCard';
 
 export default function Integrations() {
   const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
@@ -365,18 +366,27 @@ export default function Integrations() {
 
           {/* Webhooks Tab */}
           <TabsContent value="webhooks" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Webhooks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Configure seus webhooks para receber notificações em tempo real sobre eventos das suas campanhas.</p>
-                <Button className="mt-4 gap-2">
-                  <Plus className="w-4 h-4" />
-                  Adicionar Webhook
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">Webhooks</CardTitle>
+                    <Radio className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Adicione webhooks para se conectar com as plataformas de venda:
+                  </p>
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Adicionar Webhook
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <ApiCredentialsCard />
+            </div>
           </TabsContent>
 
           {/* UTMs Tab */}

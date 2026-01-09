@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, accessToken, adAccountId, campaignId, dateRange, updates } = await req.json();
+    const { action, accessToken, adAccountId, campaignId, adsetId, adId, dateRange, updates } = await req.json();
 
     if (!accessToken) {
       return new Response(
@@ -245,8 +245,18 @@ serve(async (req) => {
       );
     }
 
+    if (action === "update-adset") {
+      if (!adsetId || !updates) {
+        return new Response(JSON.stringify({ error: "Adset ID and updates are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const url = `${baseUrl}/${adsetId}?access_token=${accessToken}`;
+      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
+      const data = await response.json();
+      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true, data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "pause-adset") {
-      const { adsetId } = await req.clone().json();
       const url = `${baseUrl}/${adsetId}?access_token=${accessToken}`;
       const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PAUSED" }) });
       const data = await response.json();
@@ -255,7 +265,6 @@ serve(async (req) => {
     }
 
     if (action === "activate-adset") {
-      const { adsetId } = await req.clone().json();
       const url = `${baseUrl}/${adsetId}?access_token=${accessToken}`;
       const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "ACTIVE" }) });
       const data = await response.json();
@@ -264,7 +273,6 @@ serve(async (req) => {
     }
 
     if (action === "pause-ad") {
-      const { adId } = await req.clone().json();
       const url = `${baseUrl}/${adId}?access_token=${accessToken}`;
       const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PAUSED" }) });
       const data = await response.json();
@@ -273,13 +281,13 @@ serve(async (req) => {
     }
 
     if (action === "activate-ad") {
-      const { adId } = await req.clone().json();
       const url = `${baseUrl}/${adId}?access_token=${accessToken}`;
       const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "ACTIVE" }) });
       const data = await response.json();
       if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     return new Response(
       JSON.stringify({ error: "Invalid action" }),

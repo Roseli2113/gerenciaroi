@@ -417,6 +417,37 @@ export function useMetaCampaigns() {
     }
   }, [accessToken]);
 
+  const updateAdSetBudget = useCallback(async (adsetId: string, budget: number, budgetType: 'daily' | 'total') => {
+    if (!accessToken) {
+      toast.error('Não conectado ao Meta Ads');
+      return false;
+    }
+
+    try {
+      const budgetInCents = Math.round(budget * 100);
+      const updates = budgetType === 'daily' 
+        ? { daily_budget: budgetInCents }
+        : { lifetime_budget: budgetInCents };
+
+      const { data, error } = await supabase.functions.invoke('meta-ads', {
+        body: { action: 'update-adset', accessToken, adsetId, updates }
+      });
+
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      setAdSets(prev => prev.map(as =>
+        as.id === adsetId ? { ...as, budget, budgetType } : as
+      ));
+
+      toast.success('Orçamento do conjunto atualizado');
+      return true;
+    } catch (err) {
+      console.error('Error updating adset budget:', err);
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar orçamento do conjunto');
+      return false;
+    }
+  }, [accessToken]);
+
   const toggleAdSetStatus = useCallback(async (adsetId: string, activate: boolean) => {
     if (!accessToken) return false;
 
@@ -490,6 +521,7 @@ export function useMetaCampaigns() {
     toggleAdSetStatus,
     toggleAdStatus,
     updateCampaignBudget,
+    updateAdSetBudget,
     getLastUpdatedText,
     hasActiveAccount: !!activeAccountId && !!accessToken
   };
