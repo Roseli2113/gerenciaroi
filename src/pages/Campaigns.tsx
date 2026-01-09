@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useMetaCampaigns, Campaign, AdSet, Ad } from '@/hooks/useMetaCampaigns';
 import { Link } from 'react-router-dom';
 import { EditBudgetDialog } from '@/components/campaigns/EditBudgetDialog';
+import { EditAdSetBudgetDialog } from '@/components/campaigns/EditAdSetBudgetDialog';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
@@ -26,12 +27,13 @@ const Campaigns = () => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [editingAdSet, setEditingAdSet] = useState<AdSet | null>(null);
   
   const {
     campaigns, adSets, ads, isLoading, isLoadingAdSets, isLoadingAds,
     fetchCampaigns, fetchAdSets, fetchAds,
     toggleCampaignStatus, toggleAdSetStatus, toggleAdStatus,
-    updateCampaignBudget, getLastUpdatedText, hasActiveAccount
+    updateCampaignBudget, updateAdSetBudget, getLastUpdatedText, hasActiveAccount
   } = useMetaCampaigns();
 
   useEffect(() => {
@@ -89,7 +91,7 @@ const Campaigns = () => {
             <TableHead className="w-12"><Checkbox /></TableHead>
             <TableHead className="text-center font-semibold">STATUS</TableHead>
             <TableHead className="font-semibold">NOME</TableHead>
-            {activeTab === 'campanhas' && <TableHead className="text-center font-semibold">ORÇAMENTO</TableHead>}
+            {(activeTab === 'campanhas' || activeTab === 'conjuntos') && <TableHead className="text-center font-semibold">ORÇAMENTO</TableHead>}
             <TableHead className="text-center font-semibold">GASTOS</TableHead>
             <TableHead className="text-center font-semibold">VENDAS</TableHead>
             <TableHead className="text-center font-semibold">FATURAMENTO</TableHead>
@@ -120,6 +122,23 @@ const Campaigns = () => {
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingCampaign(item as Campaign)}>
                       <Pencil className="w-3 h-3" />
                     </Button>
+                  </div>
+                </TableCell>
+              )}
+              {activeTab === 'conjuntos' && (
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    {(item as AdSet).budget ? (
+                      <div>
+                        <span>{formatCurrency((item as AdSet).budget!)}</span>
+                        <span className="text-xs block">{(item as AdSet).budgetType === 'daily' ? 'Diário' : 'Total'}</span>
+                      </div>
+                    ) : 'CBO'}
+                    {(item as AdSet).budget && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingAdSet(item as AdSet)}>
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               )}
@@ -169,6 +188,17 @@ const Campaigns = () => {
           currentBudget={editingCampaign.budget}
           budgetType={editingCampaign.budgetType}
           onSave={(budget, type) => updateCampaignBudget(editingCampaign.id, budget, type)}
+        />
+      )}
+
+      {editingAdSet && (
+        <EditAdSetBudgetDialog
+          open={!!editingAdSet}
+          onOpenChange={(open) => !open && setEditingAdSet(null)}
+          adSetName={editingAdSet.name}
+          currentBudget={editingAdSet.budget}
+          budgetType={editingAdSet.budgetType}
+          onSave={(budget, type) => updateAdSetBudget(editingAdSet.id, budget, type)}
         />
       )}
     </MainLayout>
