@@ -11,14 +11,16 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
-  Settings, ArrowDown, ArrowUpDown, ChevronDown, RefreshCw, Building2, LayoutGrid, Layers, FileText, Info, AlertCircle, Loader2, Pencil
+  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMetaCampaigns, Campaign, AdSet, Ad } from '@/hooks/useMetaCampaigns';
 import { Link } from 'react-router-dom';
 import { EditBudgetDialog } from '@/components/campaigns/EditBudgetDialog';
 import { EditAdSetBudgetDialog } from '@/components/campaigns/EditAdSetBudgetDialog';
+import { EditCampaignNameDialog } from '@/components/campaigns/EditCampaignNameDialog';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
@@ -28,18 +30,26 @@ const Campaigns = () => {
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [editingAdSet, setEditingAdSet] = useState<AdSet | null>(null);
+  const [editingCampaignName, setEditingCampaignName] = useState<Campaign | null>(null);
   
   const {
     campaigns, adSets, ads, isLoading, isLoadingAdSets, isLoadingAds,
-    fetchCampaigns, fetchAdSets, fetchAds,
+    fetchCampaigns, fetchAdSets, fetchAds, refreshAll,
     toggleCampaignStatus, toggleAdSetStatus, toggleAdStatus,
-    updateCampaignBudget, updateAdSetBudget, getLastUpdatedText, hasActiveAccount
+    updateCampaignBudget, updateAdSetBudget, updateCampaignName,
+    getLastUpdatedText, hasActiveAccount,
+    selectedCampaignId, selectedAdSetId, setSelectedCampaignId, setSelectedAdSetId
   } = useMetaCampaigns();
 
+  // When switching to conjuntos tab, fetch adsets for selected campaign
   useEffect(() => {
-    if (activeTab === 'conjuntos' && adSets.length === 0 && hasActiveAccount) fetchAdSets();
-    if (activeTab === 'anuncios' && ads.length === 0 && hasActiveAccount) fetchAds();
-  }, [activeTab, adSets.length, ads.length, hasActiveAccount, fetchAdSets, fetchAds]);
+    if (activeTab === 'conjuntos' && hasActiveAccount) {
+      fetchAdSets(selectedCampaignId || undefined);
+    }
+    if (activeTab === 'anuncios' && hasActiveAccount) {
+      fetchAds(selectedAdSetId || undefined);
+    }
+  }, [activeTab, hasActiveAccount, fetchAdSets, fetchAds, selectedCampaignId, selectedAdSetId]);
 
   const handleToggleStatus = async (id: string, currentStatus: boolean, type: 'campaign' | 'adset' | 'ad') => {
     setTogglingIds(prev => new Set(prev).add(id));
@@ -49,13 +59,21 @@ const Campaigns = () => {
     setTogglingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
   };
 
+  const handleSelectCampaign = (campaignId: string) => {
+    setSelectedCampaignId(campaignId === selectedCampaignId ? null : campaignId);
+    setSelectedAdSetId(null); // Reset adset selection when campaign changes
+  };
+
+  const handleSelectAdSet = (adsetId: string) => {
+    setSelectedAdSetId(adsetId === selectedAdSetId ? null : adsetId);
+  };
+
   const formatCurrency = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
-  const formatROI = (v: number | null) => v === null ? 'N/A' : v.toFixed(2).replace('.', ',');
+  const formatPercent = (v: number | null) => v === null ? 'N/A' : `${v.toFixed(2).replace('.', ',')}%`;
+  const formatNumber = (v: number) => v.toLocaleString('pt-BR');
 
   const handleRefresh = () => {
-    if (activeTab === 'campanhas') fetchCampaigns();
-    else if (activeTab === 'conjuntos') fetchAdSets();
-    else if (activeTab === 'anuncios') fetchAds();
+    refreshAll();
   };
 
   if (!hasActiveAccount) {
@@ -76,82 +94,184 @@ const Campaigns = () => {
   const currentLoading = activeTab === 'campanhas' ? isLoading : activeTab === 'conjuntos' ? isLoadingAdSets : isLoadingAds;
   const currentData = activeTab === 'campanhas' ? campaigns : activeTab === 'conjuntos' ? adSets : ads;
 
+  // Get filtered data based on selection
+  const getFilteredAdSets = () => {
+    if (!selectedCampaignId) return adSets;
+    return adSets.filter(as => as.campaignId === selectedCampaignId);
+  };
+
+  const getFilteredAds = () => {
+    if (!selectedAdSetId) return ads;
+    return ads.filter(ad => ad.adsetId === selectedAdSetId);
+  };
+
+  const displayData = activeTab === 'campanhas' ? campaigns : 
+                      activeTab === 'conjuntos' ? getFilteredAdSets() : 
+                      getFilteredAds();
+
   const renderTable = () => {
-    if (currentLoading && currentData.length === 0) {
+    if (currentLoading && displayData.length === 0) {
       return <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /><span className="ml-3 text-muted-foreground">Carregando...</span></div>;
     }
-    if (currentData.length === 0) {
-      return <div className="flex flex-col items-center justify-center py-16"><LayoutGrid className="w-12 h-12 text-muted-foreground mb-3" /><p className="text-muted-foreground">Nenhum item encontrado</p></div>;
+    if (displayData.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16">
+          <LayoutGrid className="w-12 h-12 text-muted-foreground mb-3" />
+          <p className="text-muted-foreground">
+            {activeTab === 'conjuntos' && selectedCampaignId 
+              ? 'Nenhum conjunto encontrado para esta campanha' 
+              : activeTab === 'anuncios' && selectedAdSetId
+              ? 'Nenhum anúncio encontrado para este conjunto'
+              : 'Nenhum item com gastos hoje'}
+          </p>
+        </div>
+      );
     }
 
     return (
-      <Table>
-        <TableHeader>
-          <TableRow className="border-border hover:bg-transparent bg-muted/30">
-            <TableHead className="w-12"><Checkbox /></TableHead>
-            <TableHead className="text-center font-semibold">STATUS</TableHead>
-            <TableHead className="font-semibold">NOME</TableHead>
-            {(activeTab === 'campanhas' || activeTab === 'conjuntos') && <TableHead className="text-center font-semibold">ORÇAMENTO</TableHead>}
-            <TableHead className="text-center font-semibold">GASTOS</TableHead>
-            <TableHead className="text-center font-semibold">VENDAS</TableHead>
-            <TableHead className="text-center font-semibold">FATURAMENTO</TableHead>
-            <TableHead className="text-center font-semibold">LUCRO</TableHead>
-            <TableHead className="text-center font-semibold">CPA</TableHead>
-            <TableHead className="text-center font-semibold">ROI</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {currentData.map((item) => (
-            <TableRow key={item.id} className="border-border">
-              <TableCell><Checkbox /></TableCell>
-              <TableCell className="text-center">
-                {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
-                  <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
-                )}
-              </TableCell>
-              <TableCell className="font-medium">{item.name}</TableCell>
-              {activeTab === 'campanhas' && (
-                <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    {(item as Campaign).budget ? (
-                      <div>
-                        <span>{formatCurrency((item as Campaign).budget!)}</span>
-                        <span className="text-xs block">{(item as Campaign).budgetType === 'daily' ? 'Diário' : 'Total'}</span>
-                      </div>
-                    ) : 'N/A'}
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingCampaign(item as Campaign)}>
-                      <Pencil className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </TableCell>
-              )}
-              {activeTab === 'conjuntos' && (
-                <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    {(item as AdSet).budget ? (
-                      <div>
-                        <span>{formatCurrency((item as AdSet).budget!)}</span>
-                        <span className="text-xs block">{(item as AdSet).budgetType === 'daily' ? 'Diário' : 'Total'}</span>
-                      </div>
-                    ) : 'CBO'}
-                    {(item as AdSet).budget && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingAdSet(item as AdSet)}>
-                        <Pencil className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              )}
-              <TableCell className="text-center">{formatCurrency(item.spent)}</TableCell>
-              <TableCell className="text-center">{item.sales}</TableCell>
-              <TableCell className="text-center">{formatCurrency(item.revenue)}</TableCell>
-              <TableCell className={cn("text-center font-medium", item.profit > 0 ? "text-success" : item.profit < 0 ? "text-destructive" : "")}>{formatCurrency(item.profit)}</TableCell>
-              <TableCell className="text-center">{item.cpa !== null ? formatCurrency(item.cpa) : 'N/A'}</TableCell>
-              <TableCell className={cn("text-center font-medium", item.roi !== null && item.roi > 1 ? "text-primary" : item.roi !== null && item.roi < 1 ? "text-destructive" : "")}>{formatROI(item.roi)}</TableCell>
+      <ScrollArea className="w-full whitespace-nowrap">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border hover:bg-transparent bg-muted/30">
+              <TableHead className="w-12 sticky left-0 bg-muted/30 z-10"><Checkbox /></TableHead>
+              <TableHead className="text-center font-semibold sticky left-12 bg-muted/30 z-10">STATUS</TableHead>
+              <TableHead className="font-semibold sticky left-24 bg-muted/30 z-10 min-w-[200px]">NOME</TableHead>
+              {(activeTab === 'campanhas' || activeTab === 'conjuntos') && <TableHead className="text-center font-semibold">ORÇAMENTO</TableHead>}
+              <TableHead className="text-center font-semibold">GASTOS</TableHead>
+              <TableHead className="text-center font-semibold">IMPRESSÕES</TableHead>
+              <TableHead className="text-center font-semibold">CPM</TableHead>
+              <TableHead className="text-center font-semibold">CLIQUES</TableHead>
+              <TableHead className="text-center font-semibold">CPC</TableHead>
+              <TableHead className="text-center font-semibold">CTR</TableHead>
+              <TableHead className="text-center font-semibold">FREQUÊNCIA</TableHead>
+              <TableHead className="text-center font-semibold">PLAY RATE</TableHead>
+              <TableHead className="text-center font-semibold">HOLD RATE</TableHead>
+              <TableHead className="text-center font-semibold">CTA</TableHead>
+              <TableHead className="text-center font-semibold">VIS. PÁG.</TableHead>
+              <TableHead className="text-center font-semibold">CPV</TableHead>
+              <TableHead className="text-center font-semibold">IC</TableHead>
+              <TableHead className="text-center font-semibold">CPI</TableHead>
+              <TableHead className="text-center font-semibold">CONV. CHECK</TableHead>
+              <TableHead className="text-center font-semibold">VENDAS</TableHead>
+              <TableHead className="text-center font-semibold">FATURAMENTO</TableHead>
+              <TableHead className="text-center font-semibold">CPA</TableHead>
+              <TableHead className="text-center font-semibold">ROAS</TableHead>
+              <TableHead className="text-center font-semibold">LUCRO</TableHead>
+              <TableHead className="text-center font-semibold">ROI</TableHead>
+              <TableHead className="text-center font-semibold">MARGEM</TableHead>
+              <TableHead className="text-center font-semibold">RECUSADAS</TableHead>
+              <TableHead className="text-center font-semibold">REEMB.</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {displayData.map((item) => {
+              const isSelected = activeTab === 'campanhas' 
+                ? selectedCampaignId === item.id 
+                : activeTab === 'conjuntos' 
+                ? selectedAdSetId === item.id 
+                : false;
+              
+              return (
+                <TableRow 
+                  key={item.id} 
+                  className={cn(
+                    "border-border cursor-pointer",
+                    isSelected && "bg-primary/10"
+                  )}
+                  onClick={() => {
+                    if (activeTab === 'campanhas') handleSelectCampaign(item.id);
+                    else if (activeTab === 'conjuntos') handleSelectAdSet(item.id);
+                  }}
+                >
+                  <TableCell className="sticky left-0 bg-card z-10" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox checked={isSelected} />
+                  </TableCell>
+                  <TableCell className="text-center sticky left-12 bg-card z-10" onClick={(e) => e.stopPropagation()}>
+                    {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
+                      <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px]">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate max-w-[180px]">{item.name}</span>
+                      {activeTab === 'campanhas' && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCampaignName(item as Campaign);
+                          }}
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                  {activeTab === 'campanhas' && (
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
+                        {(item as Campaign).budget ? (
+                          <div>
+                            <span>{formatCurrency((item as Campaign).budget!)}</span>
+                            <span className="text-xs block">{(item as Campaign).budgetType === 'daily' ? 'Diário' : 'Total'}</span>
+                          </div>
+                        ) : 'N/A'}
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingCampaign(item as Campaign)}>
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
+                  {activeTab === 'conjuntos' && (
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
+                        {(item as AdSet).budget ? (
+                          <div>
+                            <span>{formatCurrency((item as AdSet).budget!)}</span>
+                            <span className="text-xs block">{(item as AdSet).budgetType === 'daily' ? 'Diário' : 'Total'}</span>
+                          </div>
+                        ) : 'CBO'}
+                        {(item as AdSet).budget && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingAdSet(item as AdSet)}>
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+                  <TableCell className="text-center">{formatCurrency(item.spent)}</TableCell>
+                  <TableCell className="text-center">{formatNumber(item.impressions)}</TableCell>
+                  <TableCell className="text-center">{item.cpm !== null ? formatCurrency(item.cpm) : 'N/A'}</TableCell>
+                  <TableCell className="text-center">{formatNumber(item.clicks)}</TableCell>
+                  <TableCell className="text-center">{item.cpc !== null ? formatCurrency(item.cpc) : 'N/A'}</TableCell>
+                  <TableCell className="text-center">{formatPercent(item.ctr)}</TableCell>
+                  <TableCell className="text-center">{item.frequency !== null ? item.frequency.toFixed(2) : 'N/A'}</TableCell>
+                  <TableCell className="text-center">{formatPercent(item.hookPlayRate)}</TableCell>
+                  <TableCell className="text-center">{formatPercent(item.holdRate)}</TableCell>
+                  <TableCell className="text-center">{formatNumber(item.ctaClicks)}</TableCell>
+                  <TableCell className="text-center">{formatNumber(item.pageViews)}</TableCell>
+                  <TableCell className="text-center">{item.cpv !== null ? formatCurrency(item.cpv) : 'N/A'}</TableCell>
+                  <TableCell className="text-center">{formatNumber(item.initiatedCheckout)}</TableCell>
+                  <TableCell className="text-center">{item.costPerInitiatedCheckout !== null ? formatCurrency(item.costPerInitiatedCheckout) : 'N/A'}</TableCell>
+                  <TableCell className="text-center">{formatPercent(item.checkoutConversion)}</TableCell>
+                  <TableCell className="text-center">{item.sales}</TableCell>
+                  <TableCell className="text-center">{formatCurrency(item.revenue)}</TableCell>
+                  <TableCell className="text-center">{item.cpa !== null ? formatCurrency(item.cpa) : 'N/A'}</TableCell>
+                  <TableCell className="text-center">{item.roas !== null ? item.roas.toFixed(2) : 'N/A'}</TableCell>
+                  <TableCell className={cn("text-center font-medium", item.profit > 0 ? "text-success" : item.profit < 0 ? "text-destructive" : "")}>{formatCurrency(item.profit)}</TableCell>
+                  <TableCell className={cn("text-center font-medium", item.roi !== null && item.roi > 1 ? "text-primary" : item.roi !== null && item.roi < 1 ? "text-destructive" : "")}>{item.roi !== null ? item.roi.toFixed(2) : 'N/A'}</TableCell>
+                  <TableCell className={cn("text-center font-medium", item.margin !== null && item.margin > 0 ? "text-success" : item.margin !== null && item.margin < 0 ? "text-destructive" : "")}>{formatPercent(item.margin)}</TableCell>
+                  <TableCell className="text-center text-destructive">{item.declinedSales}</TableCell>
+                  <TableCell className="text-center text-destructive">{item.refundedSales}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     );
   };
 
@@ -162,17 +282,39 @@ const Campaigns = () => {
           <TabsList className="bg-card border border-border h-auto p-0 w-full grid grid-cols-4">
             <TabsTrigger value="contas" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"><Building2 className="w-4 h-4" />Contas</TabsTrigger>
             <TabsTrigger value="campanhas" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"><LayoutGrid className="w-4 h-4" />Campanhas</TabsTrigger>
-            <TabsTrigger value="conjuntos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"><Layers className="w-4 h-4" />Conjuntos</TabsTrigger>
-            <TabsTrigger value="anuncios" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"><FileText className="w-4 h-4" />Anúncios</TabsTrigger>
+            <TabsTrigger value="conjuntos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+              <Layers className="w-4 h-4" />
+              Conjuntos
+              {selectedCampaignId && <Badge variant="secondary" className="ml-1 text-xs">Filtrado</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="anuncios" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+              <FileText className="w-4 h-4" />
+              Anúncios
+              {selectedAdSetId && <Badge variant="secondary" className="ml-1 text-xs">Filtrado</Badge>}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
         <div className="flex items-center justify-between">
-          <Badge className="bg-success text-success-foreground border-0">✓ Meta Ads conectado</Badge>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-success text-success-foreground border-0">✓ Meta Ads conectado</Badge>
+            {selectedCampaignId && activeTab === 'conjuntos' && (
+              <Badge variant="outline" className="gap-1">
+                Campanha selecionada
+                <button onClick={() => setSelectedCampaignId(null)} className="ml-1 hover:text-destructive">×</button>
+              </Badge>
+            )}
+            {selectedAdSetId && activeTab === 'anuncios' && (
+              <Badge variant="outline" className="gap-1">
+                Conjunto selecionado
+                <button onClick={() => setSelectedAdSetId(null)} className="ml-1 hover:text-destructive">×</button>
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">Atualizado há {getLastUpdatedText()}</span>
-            <Button variant="default" onClick={handleRefresh} disabled={currentLoading}>
-              {currentLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}Atualizar
+            <Button variant="default" onClick={handleRefresh} disabled={isLoading || isLoadingAdSets || isLoadingAds}>
+              {(isLoading || isLoadingAdSets || isLoadingAds) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}Atualizar
             </Button>
           </div>
         </div>
@@ -199,6 +341,15 @@ const Campaigns = () => {
           currentBudget={editingAdSet.budget}
           budgetType={editingAdSet.budgetType}
           onSave={(budget, type) => updateAdSetBudget(editingAdSet.id, budget, type)}
+        />
+      )}
+
+      {editingCampaignName && (
+        <EditCampaignNameDialog
+          open={!!editingCampaignName}
+          onOpenChange={(open) => !open && setEditingCampaignName(null)}
+          currentName={editingCampaignName.name}
+          onSave={(name) => updateCampaignName(editingCampaignName.id, name)}
         />
       )}
     </MainLayout>

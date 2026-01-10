@@ -5,7 +5,7 @@ import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { CPAChart } from '@/components/dashboard/CPAChart';
 import { ConversionFunnel } from '@/components/dashboard/ConversionFunnel';
 import { CampaignsList } from '@/components/dashboard/CampaignsList';
-import { MetaConnection } from '@/components/dashboard/MetaConnection';
+import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 import {
   DollarSign,
   TrendingUp,
@@ -16,62 +16,73 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
+  const { campaigns, hasActiveAccount } = useMetaCampaigns();
+  
+  // Calculate real metrics from campaigns data
+  const totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0);
+  const totalSpent = campaigns.reduce((sum, c) => sum + c.spent, 0);
+  const totalSales = campaigns.reduce((sum, c) => sum + c.sales, 0);
+  const totalProfit = totalRevenue - totalSpent;
+  const avgROI = totalSpent > 0 ? (totalRevenue / totalSpent) * 100 : 0;
+  const avgCPA = totalSales > 0 ? totalSpent / totalSales : 0;
+
+  const formatCurrency = (value: number) => {
+    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   return (
     <MainLayout title="Dashboard - Principal">
       <div className="space-y-6">
-        {/* Meta Connection Status */}
-        <MetaConnection isConnected={true} />
-
         {/* Filters */}
         <DashboardFilters />
 
-        {/* Metrics Grid */}
+        {/* Metrics Grid - Real data from campaigns */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <MetricCard
             title="Faturamento"
-            value="R$ 45.230,00"
-            change={12.5}
-            changeLabel="vs ontem"
+            value={formatCurrency(totalRevenue)}
+            change={0}
+            changeLabel="hoje"
             icon={DollarSign}
             variant="success"
           />
           <MetricCard
             title="Gastos com Anúncios"
-            value="R$ 8.540,00"
-            change={-3.2}
-            changeLabel="vs ontem"
+            value={formatCurrency(totalSpent)}
+            change={0}
+            changeLabel="hoje"
             icon={Wallet}
             variant="primary"
           />
           <MetricCard
             title="ROI"
-            value="429%"
-            change={18.7}
-            changeLabel="vs ontem"
+            value={`${avgROI.toFixed(0)}%`}
+            change={0}
+            changeLabel="hoje"
             icon={TrendingUp}
-            variant="success"
+            variant={avgROI > 100 ? "success" : "primary"}
           />
           <MetricCard
             title="Lucro"
-            value="R$ 36.690,00"
-            change={15.3}
-            changeLabel="vs ontem"
+            value={formatCurrency(totalProfit)}
+            change={0}
+            changeLabel="hoje"
             icon={BarChart3}
-            variant="success"
+            variant={totalProfit > 0 ? "success" : "primary"}
           />
           <MetricCard
             title="CPA Médio"
-            value="R$ 9,45"
-            change={-8.1}
-            changeLabel="vs ontem"
+            value={formatCurrency(avgCPA)}
+            change={0}
+            changeLabel="hoje"
             icon={Target}
             variant="primary"
           />
           <MetricCard
             title="Vendas"
-            value="904"
-            change={22.4}
-            changeLabel="vs ontem"
+            value={totalSales.toString()}
+            change={0}
+            changeLabel="hoje"
             icon={ShoppingCart}
             variant="success"
           />
