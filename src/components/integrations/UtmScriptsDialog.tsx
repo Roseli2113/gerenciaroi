@@ -16,45 +16,53 @@ interface UtmScriptsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const projectUrl = 'https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/utms/latest.js';
+
 const platformScripts: Record<string, string> = {
   hotmart: `<script
-  src="https://cdn.utmify.com.br/scripts/utms/latest.js"
+  src="${projectUrl}"
   data-utmify-prevent-subids
   async
   defer
 ></script>`,
   cartpanda: `<script
-  src="https://cdn.utmify.com.br/scripts/utms/latest.js"
+  src="${projectUrl}"
   data-utmify-prevent-xcod-sck
+  data-utmify-prevent-subids
+  data-utmify-ignore-iframe
+  data-utmify-is-cartpanda
   async
   defer
 ></script>`,
   buygoods: `<script
-  src="https://cdn.utmify.com.br/scripts/utms/latest.js"
-  data-utmify-buygoods
+  src="${projectUrl}"
+  data-utmify-prevent-xcod-sck
   async
   defer
 ></script>`,
   clickbank: `<script
-  src="https://cdn.utmify.com.br/scripts/utms/latest.js"
-  data-utmify-clickbank
+  src="${projectUrl}"
+  data-utmify-prevent-xcod-sck
+  data-utmify-is-click-bank
   async
   defer
 ></script>`,
   maxweb: `<script
-  src="https://cdn.utmify.com.br/scripts/utms/latest.js"
-  data-utmify-maxweb
+  src="${projectUrl}"
+  data-utmify-prevent-xcod-sck
   async
   defer
 ></script>`,
   doppus: `<script
-  src="https://cdn.utmify.com.br/scripts/utms/latest.js"
-  data-utmify-doppus
+  src="${projectUrl}"
+  data-utmify-prevent-xcod-sck
+  data-utmify-prevent-subids
+  data-utmify-plus-signal
   async
   defer
 ></script>`,
   outra: `<script
-  src="https://cdn.utmify.com.br/scripts/utms/latest.js"
+  src="${projectUrl}"
   data-utmify-prevent-xcod-sck
   data-utmify-prevent-subids
   async
@@ -83,11 +91,11 @@ export function UtmScriptsDialog({ open, onOpenChange }: UtmScriptsDialogProps) 
     }
 
     const script = platformScripts[selectedPlatform];
-    const blob = new Blob([script], { type: 'text/html' });
+    const blob = new Blob([script], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `utm-script-${selectedPlatform}.html`;
+    a.download = `gerenciaroi-utms-script.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
