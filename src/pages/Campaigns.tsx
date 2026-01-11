@@ -132,6 +132,102 @@ const Campaigns = () => {
                       activeTab === 'conjuntos' ? getFilteredAdSets() : 
                       getFilteredAds();
 
+  // Get visible columns in correct order
+  const visibleColumns = columnConfig.filter(c => c.visible);
+
+  // Column data mapping for dynamic rendering
+  const getColumnValue = (item: Campaign | AdSet | Ad, columnId: string) => {
+    switch (columnId) {
+      case 'orcamento':
+        if (activeTab === 'campanhas') {
+          const campaign = item as Campaign;
+          return campaign.budget ? (
+            <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <div>
+                <span>{formatCurrency(campaign.budget)}</span>
+                <span className="text-xs block">{campaign.budgetType === 'daily' ? 'Diário' : 'Total'}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingCampaign(campaign)}>
+                <Pencil className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : 'N/A';
+        } else if (activeTab === 'conjuntos') {
+          const adset = item as AdSet;
+          return adset.budget ? (
+            <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <div>
+                <span>{formatCurrency(adset.budget)}</span>
+                <span className="text-xs block">{adset.budgetType === 'daily' ? 'Diário' : 'Total'}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingAdSet(adset)}>
+                <Pencil className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : 'CBO';
+        }
+        return null;
+      case 'gastos':
+        return formatCurrency(item.spent);
+      case 'impressoes':
+        return formatNumber(item.impressions);
+      case 'cpm':
+        return item.cpm !== null ? formatCurrency(item.cpm) : 'N/A';
+      case 'cliques':
+        return formatNumber(item.clicks);
+      case 'cpc':
+        return item.cpc !== null ? formatCurrency(item.cpc) : 'N/A';
+      case 'ctr':
+        return formatPercent(item.ctr);
+      case 'frequencia':
+        return item.frequency !== null ? item.frequency.toFixed(2) : 'N/A';
+      case 'playRateHook':
+        return formatPercent(item.hookPlayRate);
+      case 'holdRate':
+        return formatPercent(item.holdRate);
+      case 'cta':
+        return formatNumber(item.ctaClicks);
+      case 'visPag':
+        return formatNumber(item.pageViews);
+      case 'cpv':
+        return item.cpv !== null ? formatCurrency(item.cpv) : 'N/A';
+      case 'ic':
+        return formatNumber(item.initiatedCheckout);
+      case 'cpi':
+        return item.costPerInitiatedCheckout !== null ? formatCurrency(item.costPerInitiatedCheckout) : 'N/A';
+      case 'convCheck':
+        return formatPercent(item.checkoutConversion);
+      case 'vendas':
+        return item.sales;
+      case 'faturamento':
+        return formatCurrency(item.revenue);
+      case 'cpa':
+        return item.cpa !== null ? formatCurrency(item.cpa) : 'N/A';
+      case 'roas':
+        return item.roas !== null ? item.roas.toFixed(2) : 'N/A';
+      case 'lucro':
+        return <span className={cn("font-medium", item.profit > 0 ? "text-success" : item.profit < 0 ? "text-destructive" : "")}>{formatCurrency(item.profit)}</span>;
+      case 'roi':
+        return <span className={cn("font-medium", item.roi !== null && item.roi > 1 ? "text-primary" : item.roi !== null && item.roi < 1 ? "text-destructive" : "")}>{item.roi !== null ? item.roi.toFixed(2) : 'N/A'}</span>;
+      case 'margem':
+        return <span className={cn("font-medium", item.margin !== null && item.margin > 0 ? "text-success" : item.margin !== null && item.margin < 0 ? "text-destructive" : "")}>{formatPercent(item.margin)}</span>;
+      case 'vendasRecusadas':
+        return <span className="text-destructive">{item.declinedSales}</span>;
+      case 'vendasReemb':
+        return <span className="text-destructive">{item.refundedSales}</span>;
+      default:
+        return 'N/A';
+    }
+  };
+
+  const getColumnLabel = (columnId: string) => {
+    const col = ALL_COLUMNS.find(c => c.id === columnId);
+    if (!col) return columnId.toUpperCase();
+    // Extract short label from full label
+    const label = col.label.split(' - ')[0].replace(/[\[\]]/g, '');
+    return label.toUpperCase();
+  };
+
   const renderTable = () => {
     if (currentLoading && displayData.length === 0) {
       return <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /><span className="ml-3 text-muted-foreground">Carregando...</span></div>;
@@ -153,37 +249,23 @@ const Campaigns = () => {
 
     return (
       <ScrollArea className="w-full whitespace-nowrap">
-        <Table>
+        <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent bg-muted/30">
-              <TableHead className="w-12 sticky left-0 bg-muted/30 z-10"><Checkbox /></TableHead>
-              <TableHead className="text-center font-semibold sticky left-12 bg-muted/30 z-10">STATUS</TableHead>
-              <TableHead className="font-semibold sticky left-24 bg-muted/30 z-10 min-w-[200px]">NOME</TableHead>
-              {(activeTab === 'campanhas' || activeTab === 'conjuntos') && <TableHead className="text-center font-semibold">ORÇAMENTO</TableHead>}
-              <TableHead className="text-center font-semibold">GASTOS</TableHead>
-              <TableHead className="text-center font-semibold">IMPRESSÕES</TableHead>
-              <TableHead className="text-center font-semibold">CPM</TableHead>
-              <TableHead className="text-center font-semibold">CLIQUES</TableHead>
-              <TableHead className="text-center font-semibold">CPC</TableHead>
-              <TableHead className="text-center font-semibold">CTR</TableHead>
-              <TableHead className="text-center font-semibold">FREQUÊNCIA</TableHead>
-              <TableHead className="text-center font-semibold">PLAY RATE</TableHead>
-              <TableHead className="text-center font-semibold">HOLD RATE</TableHead>
-              <TableHead className="text-center font-semibold">CTA</TableHead>
-              <TableHead className="text-center font-semibold">VIS. PÁG.</TableHead>
-              <TableHead className="text-center font-semibold">CPV</TableHead>
-              <TableHead className="text-center font-semibold">IC</TableHead>
-              <TableHead className="text-center font-semibold">CPI</TableHead>
-              <TableHead className="text-center font-semibold">CONV. CHECK</TableHead>
-              <TableHead className="text-center font-semibold">VENDAS</TableHead>
-              <TableHead className="text-center font-semibold">FATURAMENTO</TableHead>
-              <TableHead className="text-center font-semibold">CPA</TableHead>
-              <TableHead className="text-center font-semibold">ROAS</TableHead>
-              <TableHead className="text-center font-semibold">LUCRO</TableHead>
-              <TableHead className="text-center font-semibold">ROI</TableHead>
-              <TableHead className="text-center font-semibold">MARGEM</TableHead>
-              <TableHead className="text-center font-semibold">RECUSADAS</TableHead>
-              <TableHead className="text-center font-semibold">REEMB.</TableHead>
+              <TableHead className="w-12 sticky left-0 bg-muted/30 z-10 border-r border-border"><Checkbox /></TableHead>
+              <TableHead className="text-center font-semibold sticky left-12 bg-muted/30 z-10 border-r border-border">STATUS</TableHead>
+              <TableHead className="font-semibold sticky left-24 bg-muted/30 z-10 min-w-[200px] border-r border-border">NOME</TableHead>
+              {visibleColumns.map((col, index) => (
+                <TableHead 
+                  key={col.id} 
+                  className={cn(
+                    "text-center font-semibold border-r border-border",
+                    index === visibleColumns.length - 1 && "border-r-0"
+                  )}
+                >
+                  {getColumnLabel(col.id)}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -206,7 +288,7 @@ const Campaigns = () => {
                     else if (activeTab === 'conjuntos') handleSelectAdSet(item.id);
                   }}
                 >
-                  <TableCell className="sticky left-0 bg-card z-10">
+                  <TableCell className="sticky left-0 bg-card z-10 border-r border-border">
                     <Checkbox 
                       checked={isSelected} 
                       onCheckedChange={() => {
@@ -216,12 +298,12 @@ const Campaigns = () => {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </TableCell>
-                  <TableCell className="text-center sticky left-12 bg-card z-10" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="text-center sticky left-12 bg-card z-10 border-r border-border" onClick={(e) => e.stopPropagation()}>
                     {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
                       <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
                     )}
                   </TableCell>
-                  <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px]">
+                  <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px] border-r border-border">
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[180px]">{item.name}</span>
                       {activeTab === 'campanhas' && (
@@ -239,62 +321,17 @@ const Campaigns = () => {
                       )}
                     </div>
                   </TableCell>
-                  {activeTab === 'campanhas' && (
-                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        {(item as Campaign).budget ? (
-                          <div>
-                            <span>{formatCurrency((item as Campaign).budget!)}</span>
-                            <span className="text-xs block">{(item as Campaign).budgetType === 'daily' ? 'Diário' : 'Total'}</span>
-                          </div>
-                        ) : 'N/A'}
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingCampaign(item as Campaign)}>
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                      </div>
+                  {visibleColumns.map((col, index) => (
+                    <TableCell 
+                      key={col.id} 
+                      className={cn(
+                        "text-center border-r border-border",
+                        index === visibleColumns.length - 1 && "border-r-0"
+                      )}
+                    >
+                      {getColumnValue(item, col.id)}
                     </TableCell>
-                  )}
-                  {activeTab === 'conjuntos' && (
-                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        {(item as AdSet).budget ? (
-                          <div>
-                            <span>{formatCurrency((item as AdSet).budget!)}</span>
-                            <span className="text-xs block">{(item as AdSet).budgetType === 'daily' ? 'Diário' : 'Total'}</span>
-                          </div>
-                        ) : 'CBO'}
-                        {(item as AdSet).budget && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingAdSet(item as AdSet)}>
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  )}
-                  <TableCell className="text-center">{formatCurrency(item.spent)}</TableCell>
-                  <TableCell className="text-center">{formatNumber(item.impressions)}</TableCell>
-                  <TableCell className="text-center">{item.cpm !== null ? formatCurrency(item.cpm) : 'N/A'}</TableCell>
-                  <TableCell className="text-center">{formatNumber(item.clicks)}</TableCell>
-                  <TableCell className="text-center">{item.cpc !== null ? formatCurrency(item.cpc) : 'N/A'}</TableCell>
-                  <TableCell className="text-center">{formatPercent(item.ctr)}</TableCell>
-                  <TableCell className="text-center">{item.frequency !== null ? item.frequency.toFixed(2) : 'N/A'}</TableCell>
-                  <TableCell className="text-center">{formatPercent(item.hookPlayRate)}</TableCell>
-                  <TableCell className="text-center">{formatPercent(item.holdRate)}</TableCell>
-                  <TableCell className="text-center">{formatNumber(item.ctaClicks)}</TableCell>
-                  <TableCell className="text-center">{formatNumber(item.pageViews)}</TableCell>
-                  <TableCell className="text-center">{item.cpv !== null ? formatCurrency(item.cpv) : 'N/A'}</TableCell>
-                  <TableCell className="text-center">{formatNumber(item.initiatedCheckout)}</TableCell>
-                  <TableCell className="text-center">{item.costPerInitiatedCheckout !== null ? formatCurrency(item.costPerInitiatedCheckout) : 'N/A'}</TableCell>
-                  <TableCell className="text-center">{formatPercent(item.checkoutConversion)}</TableCell>
-                  <TableCell className="text-center">{item.sales}</TableCell>
-                  <TableCell className="text-center">{formatCurrency(item.revenue)}</TableCell>
-                  <TableCell className="text-center">{item.cpa !== null ? formatCurrency(item.cpa) : 'N/A'}</TableCell>
-                  <TableCell className="text-center">{item.roas !== null ? item.roas.toFixed(2) : 'N/A'}</TableCell>
-                  <TableCell className={cn("text-center font-medium", item.profit > 0 ? "text-success" : item.profit < 0 ? "text-destructive" : "")}>{formatCurrency(item.profit)}</TableCell>
-                  <TableCell className={cn("text-center font-medium", item.roi !== null && item.roi > 1 ? "text-primary" : item.roi !== null && item.roi < 1 ? "text-destructive" : "")}>{item.roi !== null ? item.roi.toFixed(2) : 'N/A'}</TableCell>
-                  <TableCell className={cn("text-center font-medium", item.margin !== null && item.margin > 0 ? "text-success" : item.margin !== null && item.margin < 0 ? "text-destructive" : "")}>{formatPercent(item.margin)}</TableCell>
-                  <TableCell className="text-center text-destructive">{item.declinedSales}</TableCell>
-                  <TableCell className="text-center text-destructive">{item.refundedSales}</TableCell>
+                  ))}
                 </TableRow>
               );
             })}
