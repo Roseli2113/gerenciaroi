@@ -42,6 +42,7 @@ import {
 import { ApiCredentialsCard } from '@/components/integrations/ApiCredentialsCard';
 import { UtmCodesDialog } from '@/components/integrations/UtmCodesDialog';
 import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
+import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
 
 export default function Integrations() {
   const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
@@ -53,6 +54,7 @@ export default function Integrations() {
   const [utmCodeDialogOpen, setUtmCodeDialogOpen] = useState(false);
   const [utmCodePlatform, setUtmCodePlatform] = useState<'facebook' | 'google' | 'kwai' | 'tiktok'>('facebook');
   const [utmScriptsDialogOpen, setUtmScriptsDialogOpen] = useState(false);
+  const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
 
   const openUtmCodeDialog = (platform: 'facebook' | 'google' | 'kwai' | 'tiktok') => {
     setUtmCodePlatform(platform);
@@ -394,7 +396,7 @@ export default function Integrations() {
                   <p className="text-sm text-muted-foreground">
                     Adicione webhooks para se conectar com as plataformas de venda:
                   </p>
-                  <Button className="gap-2">
+                  <Button className="gap-2" onClick={() => setWebhookDialogOpen(true)}>
                     <Plus className="w-4 h-4" />
                     Adicionar Webhook
                   </Button>
@@ -601,6 +603,10 @@ export default function Integrations() {
         <UtmScriptsDialog 
           open={utmScriptsDialogOpen} 
           onOpenChange={setUtmScriptsDialogOpen} 
+        />
+        <CreateWebhookDialog
+          open={webhookDialogOpen}
+          onOpenChange={setWebhookDialogOpen}
         />
       </div>
     </MainLayout>
