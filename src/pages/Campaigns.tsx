@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/tooltip';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
-  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3
+  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMetaCampaigns, Campaign, AdSet, Ad } from '@/hooks/useMetaCampaigns';
@@ -21,8 +21,11 @@ import { Link } from 'react-router-dom';
 import { EditBudgetDialog } from '@/components/campaigns/EditBudgetDialog';
 import { EditAdSetBudgetDialog } from '@/components/campaigns/EditAdSetBudgetDialog';
 import { EditCampaignNameDialog } from '@/components/campaigns/EditCampaignNameDialog';
+import { ColumnCustomizationDialog, ColumnConfig, ALL_COLUMNS, DEFAULT_VISIBLE } from '@/components/campaigns/ColumnCustomizationDialog';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
+
+const COLUMNS_STORAGE_KEY = 'campaigns-columns-config';
 
 const Campaigns = () => {
   const [activeTab, setActiveTab] = useState<TabType>('campanhas');
@@ -31,6 +34,21 @@ const Campaigns = () => {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [editingAdSet, setEditingAdSet] = useState<AdSet | null>(null);
   const [editingCampaignName, setEditingCampaignName] = useState<Campaign | null>(null);
+  const [showColumnDialog, setShowColumnDialog] = useState(false);
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return ALL_COLUMNS.map(col => ({
+      ...col,
+      visible: DEFAULT_VISIBLE.includes(col.id)
+    }));
+  });
   
   const {
     campaigns, adSets, ads, isLoading, isLoadingAdSets, isLoadingAds,
@@ -74,6 +92,11 @@ const Campaigns = () => {
 
   const handleRefresh = () => {
     refreshAll();
+  };
+
+  const handleSaveColumns = (newColumns: ColumnConfig[]) => {
+    setColumnConfig(newColumns);
+    localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(newColumns));
   };
 
   if (!hasActiveAccount) {
@@ -183,8 +206,15 @@ const Campaigns = () => {
                     else if (activeTab === 'conjuntos') handleSelectAdSet(item.id);
                   }}
                 >
-                  <TableCell className="sticky left-0 bg-card z-10" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox checked={isSelected} />
+                  <TableCell className="sticky left-0 bg-card z-10">
+                    <Checkbox 
+                      checked={isSelected} 
+                      onCheckedChange={() => {
+                        if (activeTab === 'campanhas') handleSelectCampaign(item.id);
+                        else if (activeTab === 'conjuntos') handleSelectAdSet(item.id);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   </TableCell>
                   <TableCell className="text-center sticky left-12 bg-card z-10" onClick={(e) => e.stopPropagation()}>
                     {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
@@ -297,7 +327,21 @@ const Campaigns = () => {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Badge className="bg-success text-success-foreground border-0">✓ Meta Ads conectado</Badge>
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setShowColumnDialog(true)}
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-9 w-9">
+              <ArrowUp className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-9 w-9">
+              <ArrowDown className="w-4 h-4" />
+            </Button>
+            <Badge className="bg-success text-success-foreground border-0">✓ Todas as vendas trackeadas</Badge>
             {selectedCampaignId && activeTab === 'conjuntos' && (
               <Badge variant="outline" className="gap-1">
                 Campanha selecionada
@@ -352,6 +396,13 @@ const Campaigns = () => {
           onSave={(name) => updateCampaignName(editingCampaignName.id, name)}
         />
       )}
+
+      <ColumnCustomizationDialog
+        open={showColumnDialog}
+        onOpenChange={setShowColumnDialog}
+        columns={columnConfig}
+        onSave={handleSaveColumns}
+      />
     </MainLayout>
   );
 };
