@@ -2,7 +2,6 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { SpendingChart } from '@/components/dashboard/SpendingChart';
-import { CPAChart } from '@/components/dashboard/CPAChart';
 import { ConversionFunnel } from '@/components/dashboard/ConversionFunnel';
 import { CampaignsList } from '@/components/dashboard/CampaignsList';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
@@ -13,10 +12,11 @@ import {
   Wallet,
   ShoppingCart,
   BarChart3,
+  Receipt,
 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { campaigns, hasActiveAccount } = useMetaCampaigns();
+  const { campaigns, hasActiveAccount, isLoading, refreshAll } = useMetaCampaigns();
   
   // Calculate real metrics from campaigns data
   const totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0);
@@ -25,6 +25,7 @@ const Dashboard = () => {
   const totalProfit = totalRevenue - totalSpent;
   const avgROI = totalSpent > 0 ? (totalRevenue / totalSpent) * 100 : 0;
   const avgCPA = totalSales > 0 ? totalSpent / totalSales : 0;
+  const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
   const formatCurrency = (value: number) => {
     return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -33,11 +34,11 @@ const Dashboard = () => {
   return (
     <MainLayout title="Dashboard - Principal">
       <div className="space-y-6">
-        {/* Filters */}
-        <DashboardFilters />
+        {/* Filters with Refresh Button */}
+        <DashboardFilters onRefresh={refreshAll} isLoading={isLoading} />
 
         {/* Metrics Grid - Real data from campaigns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           <MetricCard
             title="Faturamento"
             value={formatCurrency(totalRevenue)}
@@ -52,7 +53,7 @@ const Dashboard = () => {
             change={0}
             changeLabel="hoje"
             icon={Wallet}
-            variant="primary"
+            variant="danger"
           />
           <MetricCard
             title="ROI"
@@ -68,7 +69,7 @@ const Dashboard = () => {
             change={0}
             changeLabel="hoje"
             icon={BarChart3}
-            variant={totalProfit > 0 ? "success" : "primary"}
+            variant="success"
           />
           <MetricCard
             title="CPA Médio"
@@ -84,14 +85,21 @@ const Dashboard = () => {
             change={0}
             changeLabel="hoje"
             icon={ShoppingCart}
-            variant="success"
+            variant="primary"
+          />
+          <MetricCard
+            title="Ticket Médio"
+            value={formatCurrency(avgTicket)}
+            change={0}
+            changeLabel="hoje"
+            icon={Receipt}
+            variant="primary"
           />
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts Row - Only Spending Chart now */}
+        <div className="grid grid-cols-1 gap-6">
           <SpendingChart />
-          <CPAChart />
         </div>
 
         {/* Funnel and Campaigns */}
