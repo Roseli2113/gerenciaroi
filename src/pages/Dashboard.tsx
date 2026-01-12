@@ -37,8 +37,8 @@ const Dashboard = () => {
         {/* Filters with Refresh Button */}
         <DashboardFilters onRefresh={refreshAll} isLoading={isLoading} />
 
-        {/* Metrics Grid - Real data from campaigns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+        {/* Metrics Grid - Real data from campaigns - 4 per row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="Faturamento"
             value={formatCurrency(totalRevenue)}
@@ -69,7 +69,7 @@ const Dashboard = () => {
             change={0}
             changeLabel="hoje"
             icon={BarChart3}
-            variant="success"
+            variant={totalProfit >= 0 ? "success" : "danger"}
           />
           <MetricCard
             title="CPA Médio"
