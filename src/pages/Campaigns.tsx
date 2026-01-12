@@ -8,9 +8,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
   RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown
@@ -22,12 +19,23 @@ import { EditBudgetDialog } from '@/components/campaigns/EditBudgetDialog';
 import { EditAdSetBudgetDialog } from '@/components/campaigns/EditAdSetBudgetDialog';
 import { EditCampaignNameDialog } from '@/components/campaigns/EditCampaignNameDialog';
 import { ColumnCustomizationDialog, ColumnConfig, ALL_COLUMNS, DEFAULT_VISIBLE } from '@/components/campaigns/ColumnCustomizationDialog';
+import { MetricTooltip } from '@/components/campaigns/MetricTooltip';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
 const COLUMNS_STORAGE_KEY = 'campaigns-columns-config';
 
+interface ActiveAccount {
+  id: string;
+  name: string;
+  account_id: string;
+  is_active: boolean;
+}
+
 const Campaigns = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('campanhas');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
@@ -35,6 +43,7 @@ const Campaigns = () => {
   const [editingAdSet, setEditingAdSet] = useState<AdSet | null>(null);
   const [editingCampaignName, setEditingCampaignName] = useState<Campaign | null>(null);
   const [showColumnDialog, setShowColumnDialog] = useState(false);
+  const [activeAccounts, setActiveAccounts] = useState<ActiveAccount[]>([]);
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
     const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
     if (saved) {
@@ -58,6 +67,25 @@ const Campaigns = () => {
     getLastUpdatedText, hasActiveAccount,
     selectedCampaignId, selectedAdSetId, setSelectedCampaignId, setSelectedAdSetId
   } = useMetaCampaigns();
+
+  // Load active accounts
+  useEffect(() => {
+    const loadActiveAccounts = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('meta_ad_accounts')
+        .select('id, name, account_id, is_active')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      if (data) {
+        setActiveAccounts(data);
+      }
+    };
+
+    loadActiveAccounts();
+  }, [user]);
 
   // When switching to conjuntos tab, fetch adsets for selected campaign
   useEffect(() => {
@@ -206,15 +234,46 @@ const Campaigns = () => {
       case 'roas':
         return item.roas !== null ? item.roas.toFixed(2) : 'N/A';
       case 'lucro':
-        return <span className={cn("font-medium", item.profit > 0 ? "text-success" : item.profit < 0 ? "text-destructive" : "")}>{formatCurrency(item.profit)}</span>;
+        return (
+          <span className={cn(
+            "font-medium", 
+            item.profit > 0 ? "text-success" : item.profit < 0 ? "text-[hsl(0,100%,60%)]" : ""
+          )}>
+            {formatCurrency(item.profit)}
+          </span>
+        );
       case 'roi':
-        return <span className={cn("font-medium", item.roi !== null && item.roi > 1 ? "text-primary" : item.roi !== null && item.roi < 1 ? "text-destructive" : "")}>{item.roi !== null ? item.roi.toFixed(2) : 'N/A'}</span>;
+        return (
+          <span className={cn(
+            "font-medium", 
+            item.roi !== null && item.roi > 1 ? "text-primary" : item.roi !== null && item.roi < 1 ? "text-[hsl(0,100%,60%)]" : ""
+          )}>
+            {item.roi !== null ? item.roi.toFixed(2) : 'N/A'}
+          </span>
+        );
       case 'margem':
-        return <span className={cn("font-medium", item.margin !== null && item.margin > 0 ? "text-success" : item.margin !== null && item.margin < 0 ? "text-destructive" : "")}>{formatPercent(item.margin)}</span>;
+        return (
+          <span className={cn(
+            "font-medium", 
+            item.margin !== null && item.margin > 0 ? "text-success" : item.margin !== null && item.margin < 0 ? "text-[hsl(0,100%,60%)]" : ""
+          )}>
+            {formatPercent(item.margin)}
+          </span>
+        );
       case 'vendasRecusadas':
-        return <span className="text-destructive">{item.declinedSales}</span>;
+        return <span className="text-[hsl(0,100%,60%)]">{item.declinedSales}</span>;
       case 'vendasReemb':
-        return <span className="text-destructive">{item.refundedSales}</span>;
+        return <span className="text-[hsl(0,100%,60%)]">{item.refundedSales}</span>;
+      case 'con':
+        // Taxa de conexão = Vis. de pág. / cliques (%)
+        const conRate = item.clicks > 0 ? (item.pageViews / item.clicks) * 100 : null;
+        return formatPercent(conRate);
+      case 'icr':
+        // Taxa de ICs = ICs / vis. de pág. (%)
+        const icrRate = item.pageViews > 0 ? (item.initiatedCheckout / item.pageViews) * 100 : null;
+        return formatPercent(icrRate);
+      case 'vendasTotais':
+        return item.sales + item.declinedSales + item.refundedSales;
       default:
         return 'N/A';
     }
@@ -228,7 +287,183 @@ const Campaigns = () => {
     return label.toUpperCase();
   };
 
+  // Render Contas tab with active accounts
+  const renderContasTable = () => {
+    if (activeAccounts.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16">
+          <Building2 className="w-12 h-12 text-muted-foreground mb-3" />
+          <p className="text-muted-foreground">Nenhuma conta ativa encontrada</p>
+        </div>
+      );
+    }
+
+    // Calculate totals from campaigns for each account
+    const totalSpent = campaigns.reduce((sum, c) => sum + c.spent, 0);
+    const totalSales = campaigns.reduce((sum, c) => sum + c.sales, 0);
+    const totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0);
+    const totalProfit = totalRevenue - totalSpent;
+    const totalImpressions = campaigns.reduce((sum, c) => sum + c.impressions, 0);
+    const totalClicks = campaigns.reduce((sum, c) => sum + c.clicks, 0);
+    const totalPageViews = campaigns.reduce((sum, c) => sum + c.pageViews, 0);
+    const totalIC = campaigns.reduce((sum, c) => sum + c.initiatedCheckout, 0);
+    const avgCPA = totalSales > 0 ? totalSpent / totalSales : null;
+    const avgROI = totalSpent > 0 ? totalRevenue / totalSpent : null;
+    const avgCPM = totalImpressions > 0 ? (totalSpent / totalImpressions) * 1000 : null;
+    const avgCPC = totalClicks > 0 ? totalSpent / totalClicks : null;
+    const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null;
+    const avgFrequency = campaigns.length > 0 
+      ? campaigns.reduce((sum, c) => sum + (c.frequency || 0), 0) / campaigns.filter(c => c.frequency !== null).length 
+      : null;
+    const avgCPV = totalPageViews > 0 ? totalSpent / totalPageViews : null;
+    const avgCPI = totalIC > 0 ? totalSpent / totalIC : null;
+    const convCheck = totalIC > 0 ? (totalSales / totalIC) * 100 : null;
+    const conRate = totalClicks > 0 ? (totalPageViews / totalClicks) * 100 : null;
+    const icrRate = totalPageViews > 0 ? (totalIC / totalPageViews) * 100 : null;
+    const margin = totalRevenue > 0 ? ((totalRevenue - totalSpent) / totalRevenue) * 100 : null;
+    const roas = totalSpent > 0 ? totalRevenue / totalSpent : null;
+
+    return (
+      <ScrollArea className="w-full whitespace-nowrap">
+        <Table className="border-separate border-spacing-0">
+          <TableHeader>
+            <TableRow className="border-border hover:bg-transparent bg-muted/30">
+              <TableHead className="w-12 sticky left-0 bg-muted/30 z-10 border-r border-border"><Checkbox /></TableHead>
+              <TableHead className="text-center font-semibold sticky left-12 bg-muted/30 z-10 border-r border-border">STATUS</TableHead>
+              <TableHead className="font-semibold sticky left-24 bg-muted/30 z-10 min-w-[200px] border-r border-border">CONTA</TableHead>
+              {visibleColumns.map((col, index) => (
+                <TableHead 
+                  key={col.id} 
+                  className={cn(
+                    "text-center font-semibold border-r border-border",
+                    index === visibleColumns.length - 1 && "border-r-0"
+                  )}
+                >
+                  <MetricTooltip metricId={col.id} label={getColumnLabel(col.id)} />
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {activeAccounts.map((account) => (
+              <TableRow key={account.id} className="border-border">
+                <TableCell className="sticky left-0 bg-card z-10 border-r border-border">
+                  <Checkbox />
+                </TableCell>
+                <TableCell className="text-center sticky left-12 bg-card z-10 border-r border-border">
+                  <Switch checked={account.is_active} disabled />
+                </TableCell>
+                <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px] border-r border-border">
+                  {account.name}
+                </TableCell>
+                {visibleColumns.map((col, index) => {
+                  // Create a mock item with aggregated data for the account
+                  const mockItem = {
+                    spent: totalSpent,
+                    sales: totalSales,
+                    revenue: totalRevenue,
+                    profit: totalProfit,
+                    impressions: totalImpressions,
+                    clicks: totalClicks,
+                    pageViews: totalPageViews,
+                    initiatedCheckout: totalIC,
+                    cpa: avgCPA,
+                    roi: avgROI,
+                    cpm: avgCPM,
+                    cpc: avgCPC,
+                    ctr: avgCTR,
+                    frequency: avgFrequency,
+                    cpv: avgCPV,
+                    costPerInitiatedCheckout: avgCPI,
+                    checkoutConversion: convCheck,
+                    margin: margin,
+                    roas: roas,
+                    hookPlayRate: null,
+                    holdRate: null,
+                    ctaClicks: 0,
+                    refundedSales: 0,
+                    declinedSales: 0,
+                    budget: null,
+                    budgetType: null,
+                  } as unknown as Campaign;
+
+                  return (
+                    <TableCell 
+                      key={col.id} 
+                      className={cn(
+                        "text-center border-r border-border",
+                        index === visibleColumns.length - 1 && "border-r-0"
+                      )}
+                    >
+                      {getColumnValue(mockItem, col.id)}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+            {/* Summary row */}
+            <TableRow className="border-border bg-muted/20 font-semibold">
+              <TableCell className="sticky left-0 bg-muted/20 z-10 border-r border-border" />
+              <TableCell className="sticky left-12 bg-muted/20 z-10 border-r border-border" />
+              <TableCell className="sticky left-24 bg-muted/20 z-10 min-w-[200px] border-r border-border">
+                {activeAccounts.length} Conta{activeAccounts.length > 1 ? 's' : ''}
+              </TableCell>
+              {visibleColumns.map((col, index) => {
+                const mockItem = {
+                  spent: totalSpent,
+                  sales: totalSales,
+                  revenue: totalRevenue,
+                  profit: totalProfit,
+                  impressions: totalImpressions,
+                  clicks: totalClicks,
+                  pageViews: totalPageViews,
+                  initiatedCheckout: totalIC,
+                  cpa: avgCPA,
+                  roi: avgROI,
+                  cpm: avgCPM,
+                  cpc: avgCPC,
+                  ctr: avgCTR,
+                  frequency: avgFrequency,
+                  cpv: avgCPV,
+                  costPerInitiatedCheckout: avgCPI,
+                  checkoutConversion: convCheck,
+                  margin: margin,
+                  roas: roas,
+                  hookPlayRate: null,
+                  holdRate: null,
+                  ctaClicks: 0,
+                  refundedSales: 0,
+                  declinedSales: 0,
+                  budget: null,
+                  budgetType: null,
+                } as unknown as Campaign;
+
+                return (
+                  <TableCell 
+                    key={col.id} 
+                    className={cn(
+                      "text-center border-r border-border",
+                      index === visibleColumns.length - 1 && "border-r-0"
+                    )}
+                  >
+                    {getColumnValue(mockItem, col.id)}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          </TableBody>
+        </Table>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    );
+  };
+
   const renderTable = () => {
+    // Handle Contas tab separately
+    if (activeTab === 'contas') {
+      return renderContasTable();
+    }
+
     if (currentLoading && displayData.length === 0) {
       return <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /><span className="ml-3 text-muted-foreground">Carregando...</span></div>;
     }
@@ -263,7 +498,7 @@ const Campaigns = () => {
                     index === visibleColumns.length - 1 && "border-r-0"
                   )}
                 >
-                  {getColumnLabel(col.id)}
+                  <MetricTooltip metricId={col.id} label={getColumnLabel(col.id)} />
                 </TableHead>
               ))}
             </TableRow>
@@ -347,10 +582,16 @@ const Campaigns = () => {
       <div className="space-y-4">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
           <TabsList className="bg-card border border-border h-auto p-0 w-full grid grid-cols-4">
-            <TabsTrigger value="contas" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"><Building2 className="w-4 h-4" />Contas</TabsTrigger>
-            <TabsTrigger value="campanhas" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2"><LayoutGrid className="w-4 h-4" />Campanhas</TabsTrigger>
-            <TabsTrigger value="conjuntos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+            <TabsTrigger value="contas" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+              <Building2 className="w-4 h-4" />
+              Contas
+            </TabsTrigger>
+            <TabsTrigger value="campanhas" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
               <Layers className="w-4 h-4" />
+              Campanhas
+            </TabsTrigger>
+            <TabsTrigger value="conjuntos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+              <LayoutGrid className="w-4 h-4" />
               Conjuntos
               {selectedCampaignId && <Badge variant="secondary" className="ml-1 text-xs">Filtrado</Badge>}
             </TabsTrigger>

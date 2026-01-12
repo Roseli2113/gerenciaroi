@@ -1,4 +1,5 @@
-import { Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -7,13 +8,70 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
-export function DashboardFilters() {
+interface AdAccount {
+  id: string;
+  name: string;
+  account_id: string;
+  is_active: boolean;
+}
+
+interface DashboardFiltersProps {
+  onRefresh?: () => void;
+  isLoading?: boolean;
+}
+
+export function DashboardFilters({ onRefresh, isLoading }: DashboardFiltersProps) {
+  const { user } = useAuth();
+  const [accounts, setAccounts] = useState<AdAccount[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('today');
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<string>('all');
+
+  // Load accounts from database
+  useEffect(() => {
+    const loadAccounts = async () => {
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('meta_ad_accounts')
+        .select('id, name, account_id, is_active')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      if (data) {
+        setAccounts(data);
+      }
+    };
+
+    loadAccounts();
+  }, [user]);
+
+  // Load campaigns when account changes (mock for now - would come from meta-ads)
+  useEffect(() => {
+    // This would load campaigns from the API based on selected account
+    // For now, campaigns will be loaded from the hook
+    setCampaigns([]);
+  }, [selectedAccount]);
+
+  const handleApplyFilters = () => {
+    // Apply filters - this would trigger data reload
+    console.log('Applying filters:', { selectedAccount, selectedPeriod, selectedCampaign, selectedProduct });
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-card border border-border">
       <div className="flex items-center gap-2">
         <Calendar className="w-4 h-4 text-muted-foreground" />
-        <Select defaultValue="today">
+        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
           <SelectTrigger className="w-40 border-0 bg-muted/50">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
@@ -28,44 +86,69 @@ export function DashboardFilters() {
         </Select>
       </div>
 
-      <Select defaultValue="all">
+      <Select value={selectedAccount} onValueChange={setSelectedAccount}>
         <SelectTrigger className="w-48 border-0 bg-muted/50">
           <SelectValue placeholder="Conta de Anúncio" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas as contas</SelectItem>
-          <SelectItem value="account1">Conta Principal</SelectItem>
-          <SelectItem value="account2">Conta Secundária</SelectItem>
+          {accounts.map((account) => (
+            <SelectItem key={account.id} value={account.account_id}>
+              {account.name}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
-      <Select defaultValue="all">
+      <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
         <SelectTrigger className="w-48 border-0 bg-muted/50">
           <SelectValue placeholder="Campanha" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas as campanhas</SelectItem>
-          <SelectItem value="campaign1">Conversão - Produto A</SelectItem>
-          <SelectItem value="campaign2">Tráfego - Blog</SelectItem>
-          <SelectItem value="campaign3">Remarketing</SelectItem>
+          {campaigns.map((campaign) => (
+            <SelectItem key={campaign.id} value={campaign.id}>
+              {campaign.name}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
-      <Select defaultValue="all">
+      <Select value={selectedProduct} onValueChange={setSelectedProduct}>
         <SelectTrigger className="w-40 border-0 bg-muted/50">
           <SelectValue placeholder="Produto" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="product1">Produto A</SelectItem>
-          <SelectItem value="product2">Produto B</SelectItem>
-          <SelectItem value="product3">Produto C</SelectItem>
+          {products.map((product) => (
+            <SelectItem key={product.id} value={product.id}>
+              {product.name}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
-      <Button className="ml-auto gradient-primary text-primary-foreground hover:opacity-90">
-        Aplicar Filtros
-      </Button>
+      <div className="flex items-center gap-2 ml-auto">
+        <Button 
+          onClick={handleApplyFilters}
+          className="gradient-primary text-primary-foreground hover:opacity-90"
+        >
+          Aplicar Filtros
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={onRefresh} 
+          disabled={isLoading}
+          className="gap-2"
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Atualizar
+        </Button>
+      </div>
     </div>
   );
 }
