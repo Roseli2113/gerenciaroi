@@ -154,6 +154,122 @@ export type Database = {
         }
         Relationships: []
       }
+      sales: {
+        Row: {
+          amount: number
+          commission: number | null
+          created_at: string
+          currency: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          payment_method: string | null
+          platform: string
+          product_id: string | null
+          product_name: string | null
+          raw_data: Json | null
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+          webhook_id: string | null
+        }
+        Insert: {
+          amount?: number
+          commission?: number | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          payment_method?: string | null
+          platform: string
+          product_id?: string | null
+          product_name?: string | null
+          raw_data?: Json | null
+          status: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+          webhook_id?: string | null
+        }
+        Update: {
+          amount?: number
+          commission?: number | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          payment_method?: string | null
+          platform?: string
+          product_id?: string | null
+          product_name?: string | null
+          raw_data?: Json | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          client_id: string | null
+          client_secret: string | null
+          created_at: string
+          id: string
+          name: string
+          pixel_id: string | null
+          platform: string
+          status: string
+          token: string | null
+          updated_at: string
+          user_id: string
+          webhook_url: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_secret?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          pixel_id?: string | null
+          platform: string
+          status?: string
+          token?: string | null
+          updated_at?: string
+          user_id: string
+          webhook_url?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          client_secret?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          pixel_id?: string | null
+          platform?: string
+          status?: string
+          token?: string | null
+          updated_at?: string
+          user_id?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
