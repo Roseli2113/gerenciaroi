@@ -25,9 +25,11 @@ import {
   List,
   FileCode,
   Download,
-  Play
+  Play,
+  Trash2
 } from 'lucide-react';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
+import { useWebhooks } from '@/hooks/useWebhooks';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +48,7 @@ import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDial
 
 export default function Integrations() {
   const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
+  const { webhooks, loading: webhooksLoading, createWebhook, deleteWebhook, toggleWebhookStatus } = useWebhooks();
   const [enabledAccounts, setEnabledAccounts] = useState<Record<string, boolean>>({});
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [metaExpanded, setMetaExpanded] = useState(true);
@@ -396,6 +399,59 @@ export default function Integrations() {
                   <p className="text-sm text-muted-foreground">
                     Adicione webhooks para se conectar com as plataformas de venda:
                   </p>
+                  
+                  {/* Webhooks List */}
+                  {webhooksLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : webhooks.length > 0 ? (
+                    <div className="space-y-2">
+                      {webhooks.map((webhook) => (
+                        <div 
+                          key={webhook.id} 
+                          className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-foreground">{webhook.name}</p>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {webhook.platform}
+                              </Badge>
+                            </div>
+                            <p className={`text-xs ${webhook.status === 'active' ? 'text-success' : 'text-muted-foreground'}`}>
+                              Status: {webhook.status === 'active' ? 'Ativado' : 'Inativo'}
+                            </p>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => toggleWebhookStatus(
+                                  webhook.id, 
+                                  webhook.status === 'active' ? 'inactive' : 'active'
+                                )}
+                              >
+                                {webhook.status === 'active' ? 'Desativar' : 'Ativar'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => deleteWebhook(webhook.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
                   <Button className="gap-2" onClick={() => setWebhookDialogOpen(true)}>
                     <Plus className="w-4 h-4" />
                     Adicionar Webhook
@@ -607,6 +663,7 @@ export default function Integrations() {
         <CreateWebhookDialog
           open={webhookDialogOpen}
           onOpenChange={setWebhookDialogOpen}
+          onCreateWebhook={createWebhook}
         />
       </div>
     </MainLayout>

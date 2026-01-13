@@ -9,12 +9,21 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Eye, EyeOff, ArrowLeft, Copy, Check } from 'lucide-react';
+import { Search, Eye, EyeOff, ArrowLeft, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CreateWebhookDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreateWebhook: (data: {
+    platform: string;
+    name: string;
+    clientId?: string;
+    clientSecret?: string;
+    webhookUrl?: string;
+    token?: string;
+    pixelId?: string;
+  }) => Promise<unknown>;
 }
 
 const PLATFORMS = [
@@ -103,12 +112,13 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
   ];
 };
 
-export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogProps) {
+export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: CreateWebhookDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Generate webhook URL for platforms that need it
   const webhookUrl = `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver`;
@@ -150,14 +160,31 @@ export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogP
     }
   };
 
-  const handleCreateWebhook = () => {
-    console.log('Creating webhook for', selectedPlatform, formData);
-    // TODO: Implement webhook creation logic
-    onOpenChange(false);
-    setSelectedPlatform(null);
-    setFormData({});
-    setSearchTerm('');
-    setCopiedUrl(false);
+  const handleCreateWebhook = async () => {
+    if (!selectedPlatform || !formData.name) return;
+    
+    setIsSubmitting(true);
+    try {
+      await onCreateWebhook({
+        platform: selectedPlatform,
+        name: formData.name,
+        clientId: formData.clientId,
+        clientSecret: formData.clientSecret,
+        webhookUrl: isUrlPlatform ? webhookUrl : formData.webhookUrl,
+        token: formData.token || formData.webhookToken || formData.apiKey || formData.secretKey,
+        pixelId: formData.pixelId,
+      });
+      
+      onOpenChange(false);
+      setSelectedPlatform(null);
+      setFormData({});
+      setSearchTerm('');
+      setCopiedUrl(false);
+    } catch (error) {
+      console.error('Error creating webhook:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -303,8 +330,11 @@ export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogP
             <Button
               className="w-full"
               onClick={handleCreateWebhook}
-              disabled={!formData.name}
+              disabled={!formData.name || isSubmitting}
             >
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
               {isUrlPlatform ? 'Salvar Webhook' : 'Criar Webhook'}
             </Button>
           </div>
