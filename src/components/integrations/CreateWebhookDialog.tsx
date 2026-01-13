@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Search, Eye, EyeOff, ArrowLeft, Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CreateWebhookDialogProps {
   open: boolean;
@@ -34,11 +35,14 @@ const PLATFORMS = [
   'Salduu', 'ViperPay', 'Sunize', 'Assiny', 'Wiapy', 'UnicoPag', 'ImperialPay', 'Zedy',
   'Sinix', 'Voomp', 'Ombrelone', 'PushinPay', 'Genesys', 'OnProfit', 'SacaPay', 'Cloudfy',
   'Kuenha', 'NinjaPay', 'Xgrow', 'ggCheckout', 'PanteraCheckout', 'NublaPay', 'Cartly',
-  'Pagah', 'Pagsafe', 'Nomadfy', 'Sync', 'LPQV'
+  'Pagah', 'Pagsafe', 'Nomadfy', 'Sync', 'LPQV', 'Lowify'
 ];
 
+// Platforms that need a webhook URL to be provided to them (URL de conexão)
+const PLATFORMS_WITH_WEBHOOK_URL = ['Lowify'];
+
 // Define platform-specific fields
-const getPlatformFields = (platform: string): { id: string; label: string; type: 'text' | 'password' }[] => {
+const getPlatformFields = (platform: string): { id: string; label: string; type: 'text' | 'password' | 'readonly' }[] => {
   const commonFields = [
     { id: 'name', label: 'Nome', type: 'text' as const },
   ];
@@ -57,6 +61,14 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
   const platformsWithSecretKey = [
     'Clickbank', 'BuyGoods', 'Digistore', 'Maxweb'
   ];
+
+  // Lowify - needs a webhook URL to copy
+  if (platform === 'Lowify') {
+    return [
+      ...commonFields,
+      { id: 'webhookUrl', label: 'URL do Webhook', type: 'readonly' },
+    ];
+  }
 
   if (platformsWithClientCredentials.includes(platform)) {
     return [
@@ -96,6 +108,10 @@ export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogP
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // Generate webhook URL for platforms that need it
+  const webhookUrl = `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver`;
 
   const filteredPlatforms = PLATFORMS.filter(platform =>
     platform.toLowerCase().includes(searchTerm.toLowerCase())
@@ -105,12 +121,14 @@ export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogP
     setSelectedPlatform(platform);
     setFormData({});
     setShowPasswords({});
+    setCopiedUrl(false);
   };
 
   const handleBack = () => {
     setSelectedPlatform(null);
     setFormData({});
     setShowPasswords({});
+    setCopiedUrl(false);
   };
 
   const handleInputChange = (fieldId: string, value: string) => {
@@ -121,6 +139,17 @@ export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogP
     setShowPasswords(prev => ({ ...prev, [fieldId]: !prev[fieldId] }));
   };
 
+  const handleCopyWebhookUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopiedUrl(true);
+      toast.success('URL copiada com sucesso!');
+      setTimeout(() => setCopiedUrl(false), 2000);
+    } catch (err) {
+      toast.error('Erro ao copiar URL');
+    }
+  };
+
   const handleCreateWebhook = () => {
     console.log('Creating webhook for', selectedPlatform, formData);
     // TODO: Implement webhook creation logic
@@ -128,6 +157,7 @@ export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogP
     setSelectedPlatform(null);
     setFormData({});
     setSearchTerm('');
+    setCopiedUrl(false);
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -136,11 +166,13 @@ export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogP
       setFormData({});
       setSearchTerm('');
       setShowPasswords({});
+      setCopiedUrl(false);
     }
     onOpenChange(isOpen);
   };
 
   const platformFields = selectedPlatform ? getPlatformFields(selectedPlatform) : [];
+  const isUrlPlatform = selectedPlatform && PLATFORMS_WITH_WEBHOOK_URL.includes(selectedPlatform);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -209,38 +241,71 @@ export function CreateWebhookDialog({ open, onOpenChange }: CreateWebhookDialogP
               <div key={field.id} className="space-y-2">
                 <Label htmlFor={field.id}>{field.label}</Label>
                 <div className="relative">
-                  <Input
-                    id={field.id}
-                    type={field.type === 'password' && !showPasswords[field.id] ? 'password' : 'text'}
-                    placeholder={field.type === 'text' ? `Nome do Webhook` : field.label}
-                    value={formData[field.id] || ''}
-                    onChange={(e) => handleInputChange(field.id, e.target.value)}
-                  />
-                  {field.type === 'password' && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                      onClick={() => togglePasswordVisibility(field.id)}
-                    >
-                      {showPasswords[field.id] ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
+                  {field.type === 'readonly' ? (
+                    <div className="flex gap-2">
+                      <Input
+                        id={field.id}
+                        type="text"
+                        value={webhookUrl}
+                        readOnly
+                        className="flex-1 bg-muted text-muted-foreground cursor-text"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyWebhookUrl}
+                        className="shrink-0"
+                      >
+                        {copiedUrl ? (
+                          <Check className="h-4 w-4 text-success" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Input
+                        id={field.id}
+                        type={field.type === 'password' && !showPasswords[field.id] ? 'password' : 'text'}
+                        placeholder={field.type === 'text' ? `Nome do Webhook` : field.label}
+                        value={formData[field.id] || ''}
+                        onChange={(e) => handleInputChange(field.id, e.target.value)}
+                      />
+                      {field.type === 'password' && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                          onClick={() => togglePasswordVisibility(field.id)}
+                        >
+                          {showPasswords[field.id] ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
                       )}
-                    </Button>
+                    </>
                   )}
                 </div>
               </div>
             ))}
+
+            {isUrlPlatform && (
+              <p className="text-sm text-muted-foreground">
+                Copie a URL acima e cole no campo "URL do Webhook" na plataforma {selectedPlatform}.
+              </p>
+            )}
 
             <Button
               className="w-full"
               onClick={handleCreateWebhook}
               disabled={!formData.name}
             >
-              Criar Webhook
+              {isUrlPlatform ? 'Salvar Webhook' : 'Criar Webhook'}
             </Button>
           </div>
         )}
