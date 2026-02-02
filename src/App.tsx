@@ -14,6 +14,7 @@ import UTMs from "./pages/UTMs";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Subscription from "./pages/Subscription";
+import Sales from "./pages/Sales";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
               <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
               <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
               <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />

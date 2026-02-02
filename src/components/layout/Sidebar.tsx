@@ -12,11 +12,13 @@ import {
   ChevronRight,
   Zap,
   Plug,
+  ShoppingCart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+  { icon: ShoppingCart, label: 'Vendas', path: '/sales' },
   { icon: Target, label: 'Campanhas', path: '/campaigns' },
   { icon: Plug, label: 'Integrações', path: '/integrations' },
   { icon: Settings2, label: 'Regras', path: '/rules' },
