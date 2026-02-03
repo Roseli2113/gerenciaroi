@@ -4,16 +4,36 @@ import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { ConversionFunnel } from '@/components/dashboard/ConversionFunnel';
 import { CampaignsList } from '@/components/dashboard/CampaignsList';
 import { EditableDashboardGrid } from '@/components/dashboard/EditableDashboardGrid';
-import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
+import { useDashboardLayout } from '@/hooks/useDashboardLayout';
+import { EditModeBar } from '@/components/dashboard/EditModeBar';
 
 const Dashboard = () => {
-  const { isLoading, refreshAll } = useMetaCampaigns();
+  const {
+    isEditMode,
+    saving,
+    setIsEditMode,
+    saveLayout,
+    cancelEdit,
+    resetLayout,
+  } = useDashboardLayout();
 
   return (
-    <MainLayout title="Dashboard - Principal">
+    <MainLayout 
+      title="Dashboard - Principal"
+      headerAction={
+        <EditModeBar
+          isEditMode={isEditMode}
+          saving={saving}
+          onToggleEdit={() => setIsEditMode(true)}
+          onSave={saveLayout}
+          onCancel={cancelEdit}
+          onReset={resetLayout}
+        />
+      }
+    >
       <div className="space-y-6">
-        {/* Filters with Refresh Button */}
-        <DashboardFilters onRefresh={refreshAll} isLoading={isLoading} />
+        {/* Filters */}
+        <DashboardFilters />
 
         {/* Editable Metrics Grid */}
         <EditableDashboardGrid />

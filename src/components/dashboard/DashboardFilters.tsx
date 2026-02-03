@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, RefreshCw, Loader2 } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -18,12 +18,7 @@ interface AdAccount {
   is_active: boolean;
 }
 
-interface DashboardFiltersProps {
-  onRefresh?: () => void;
-  isLoading?: boolean;
-}
-
-export function DashboardFilters({ onRefresh, isLoading }: DashboardFiltersProps) {
+export function DashboardFilters() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
@@ -62,9 +57,6 @@ export function DashboardFilters({ onRefresh, isLoading }: DashboardFiltersProps
   const handleApplyFilters = () => {
     // Apply filters - this would trigger data reload
     console.log('Applying filters:', { selectedAccount, selectedPeriod, selectedCampaign, selectedProduct });
-    if (onRefresh) {
-      onRefresh();
-    }
   };
 
   return (
@@ -128,25 +120,12 @@ export function DashboardFilters({ onRefresh, isLoading }: DashboardFiltersProps
         </SelectContent>
       </Select>
 
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="ml-auto">
         <Button 
           onClick={handleApplyFilters}
           className="gradient-primary text-primary-foreground hover:opacity-90"
         >
           Aplicar Filtros
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={onRefresh} 
-          disabled={isLoading}
-          className="gap-2"
-        >
-          {isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-          Atualizar
         </Button>
       </div>
     </div>

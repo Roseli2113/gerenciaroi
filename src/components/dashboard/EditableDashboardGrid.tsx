@@ -200,15 +200,6 @@ export function EditableDashboardGrid() {
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-4">
-        <EditModeBar
-          isEditMode={isEditMode}
-          saving={saving}
-          onToggleEdit={() => setIsEditMode(true)}
-          onSave={saveLayout}
-          onCancel={cancelEdit}
-          onReset={resetLayout}
-        />
-
         <div className={`flex ${isEditMode ? 'gap-0' : ''}`}>
           <MetricsSidebar
             availableMetrics={getAvailableMetrics()}
