@@ -120,12 +120,18 @@ export function DashboardFilters() {
         </SelectContent>
       </Select>
 
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
         <Button 
           onClick={handleApplyFilters}
           className="gradient-primary text-primary-foreground hover:opacity-90"
         >
           Aplicar Filtros
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => window.location.reload()}
+        >
+          Atualizar
         </Button>
       </div>
     </div>
