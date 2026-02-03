@@ -9,7 +9,9 @@ interface LowifyPayload {
   id?: string | number;
   event?: string;
   transaction_id?: string;
+  order_id?: string;
   status?: string;
+  sale_amount?: number;
   customer?: {
     name?: string;
     email?: string;
@@ -23,6 +25,7 @@ interface LowifyPayload {
   product?: {
     id?: string | number;
     name?: string;
+    price?: number;
   };
   offer?: {
     id?: string | number;
@@ -167,14 +170,14 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
     case 'lowify':
       return {
         ...baseData,
-        transaction_id: payload.transaction_id || payload.id?.toString() || null,
+        transaction_id: payload.transaction_id || payload.order_id || payload.id?.toString() || null,
         status: mapStatus(payload.status || payload.event || 'unknown'),
         customer_name: payload.customer?.name || payload.buyer?.name || null,
         customer_email: payload.customer?.email || payload.buyer?.email || null,
         customer_phone: payload.customer?.phone || payload.buyer?.phone || null,
         product_name: payload.product?.name || payload.offer?.name || null,
         product_id: payload.product?.id?.toString() || payload.offer?.id?.toString() || null,
-        amount: payload.payment?.amount || payload.value || payload.price || 0,
+        amount: payload.sale_amount || payload.product?.price || payload.payment?.amount || payload.value || payload.price || 0,
         currency: payload.payment?.currency || 'BRL',
         payment_method: payload.payment?.method || payload.payment_type || null,
         commission: payload.commission || 0,

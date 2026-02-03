@@ -18,6 +18,28 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -35,8 +57,13 @@ import {
   CheckCircle,
   XCircle,
   RotateCcw,
+  MoreHorizontal,
+  Eye,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Todos' },
@@ -77,11 +104,57 @@ function getStatusBadge(status: string) {
   );
 }
 
+// Helper to extract amount from sale (checks raw_data for actual value)
+function getSaleAmount(sale: Sale): number {
+  // First try the amount field
+  if (sale.amount && sale.amount > 0) {
+    return Number(sale.amount);
+  }
+  
+  // If amount is 0, try to get from raw_data
+  if (sale.raw_data && typeof sale.raw_data === 'object') {
+    const rawData = sale.raw_data as Record<string, unknown>;
+    
+    // Try sale_amount
+    if (typeof rawData.sale_amount === 'number' && rawData.sale_amount > 0) {
+      return rawData.sale_amount;
+    }
+    
+    // Try product.price
+    if (rawData.product && typeof rawData.product === 'object') {
+      const product = rawData.product as Record<string, unknown>;
+      if (typeof product.price === 'number' && product.price > 0) {
+        return product.price;
+      }
+    }
+    
+    // Try payment.amount
+    if (rawData.payment && typeof rawData.payment === 'object') {
+      const payment = rawData.payment as Record<string, unknown>;
+      if (typeof payment.amount === 'number' && payment.amount > 0) {
+        return payment.amount;
+      }
+    }
+    
+    // Try value or price directly
+    if (typeof rawData.value === 'number' && rawData.value > 0) {
+      return rawData.value;
+    }
+    if (typeof rawData.price === 'number' && rawData.price > 0) {
+      return rawData.price;
+    }
+  }
+  
+  return 0;
+}
+
 const Sales = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
 
   const { sales, loading, metrics, refreshSales } = useSales({
     status: statusFilter,
@@ -103,6 +176,27 @@ const Sales = () => {
     setPlatformFilter('all');
     setStartDate(undefined);
     setEndDate(undefined);
+  };
+
+  const handleDeleteSale = async () => {
+    if (!saleToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', saleToDelete.id);
+
+      if (error) throw error;
+
+      toast.success('Venda excluída com sucesso');
+      refreshSales();
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      toast.error('Erro ao excluir venda');
+    } finally {
+      setSaleToDelete(null);
+    }
   };
 
   return (
@@ -300,18 +394,19 @@ const Sales = () => {
                     <TableHead>Plataforma</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="w-[50px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                         <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                       </TableCell>
                     </TableRow>
                   ) : sales.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         Nenhuma venda encontrada
                       </TableCell>
                     </TableRow>
@@ -335,7 +430,29 @@ const Sales = () => {
                         </TableCell>
                         <TableCell>{getStatusBadge(sale.status)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(Number(sale.amount))}
+                          {formatCurrency(getSaleAmount(sale))}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setSelectedSale(sale)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => setSaleToDelete(sale)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -346,6 +463,109 @@ const Sales = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Sale Details Dialog */}
+      <Dialog open={!!selectedSale} onOpenChange={() => setSelectedSale(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Venda</DialogTitle>
+          </DialogHeader>
+          {selectedSale && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">ID da Transação</label>
+                  <p className="font-mono">{selectedSale.transaction_id || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <div className="mt-1">{getStatusBadge(selectedSale.status)}</div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Valor</label>
+                  <p className="text-lg font-bold text-success">{formatCurrency(getSaleAmount(selectedSale))}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Plataforma</label>
+                  <p className="capitalize">{selectedSale.platform}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-2">Dados do Cliente</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                    <p>{selectedSale.customer_name || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
+                    <p>{selectedSale.customer_email || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Telefone</label>
+                    <p>{selectedSale.customer_phone || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-2">Dados do Produto</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Produto</label>
+                    <p>{selectedSale.product_name || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">ID do Produto</label>
+                    <p className="font-mono">{selectedSale.product_id || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Método de Pagamento</label>
+                    <p>{selectedSale.payment_method || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Moeda</label>
+                    <p>{selectedSale.currency || 'BRL'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-2">Datas</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Criado em</label>
+                    <p>{formatDate(selectedSale.created_at)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Atualizado em</label>
+                    <p>{formatDate(selectedSale.updated_at)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!saleToDelete} onOpenChange={() => setSaleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Venda</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSale} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
