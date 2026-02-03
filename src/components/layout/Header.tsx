@@ -1,4 +1,5 @@
-import { Sun, Moon, Bell, User, RefreshCw, LogOut } from 'lucide-react';
+import { ReactNode } from 'react';
+import { Sun, Moon, Bell, User, LogOut } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -15,9 +16,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   title: string;
+  headerAction?: ReactNode;
 }
 
-export function Header({ title }: HeaderProps) {
+export function Header({ title, headerAction }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -34,14 +36,7 @@ export function Header({ title }: HeaderProps) {
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
         <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Atualizar
-        </Button>
+        {headerAction}
       </div>
 
       <div className="flex items-center gap-3">
