@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,18 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Camera, Save, User, Mail, Loader2 } from 'lucide-react';
+import { Save, User, Mail, Loader2, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const Profile = () => {
   const { user } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -32,7 +31,7 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, avatar_url')
+        .select('display_name')
         .eq('user_id', user.id)
         .single();
 
@@ -43,79 +42,9 @@ const Profile = () => {
 
       if (data) {
         setDisplayName(data.display_name || '');
-        setAvatarUrl(data.avatar_url || null);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-    }
-  };
-
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Por favor, selecione uma imagem válida');
-      return;
-    }
-
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('A imagem deve ter no máximo 2MB');
-      return;
-    }
-
-    setUploading(true);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) {
-        // If bucket doesn't exist, show a friendly message
-        if (uploadError.message.includes('Bucket not found')) {
-          toast.error('Armazenamento de avatares não configurado. Entre em contato com o suporte.');
-          return;
-        }
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          avatar_url: publicUrl,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (updateError) throw updateError;
-
-      setAvatarUrl(publicUrl);
-      toast.success('Foto de perfil atualizada com sucesso!');
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      toast.error('Erro ao atualizar foto de perfil');
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -165,41 +94,17 @@ const Profile = () => {
           <CardHeader>
             <CardTitle>Foto de Perfil</CardTitle>
             <CardDescription>
-              Clique na foto para alterar sua imagem de perfil
+              Sua foto de perfil
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <Avatar 
-                className="h-32 w-32 cursor-pointer transition-opacity hover:opacity-80"
-                onClick={handleAvatarClick}
-              >
-                <AvatarImage src={avatarUrl || undefined} alt={displayName || 'Avatar'} />
-                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                  {getInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <div 
-                className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
-                onClick={handleAvatarClick}
-              >
-                {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarChange}
-                disabled={uploading}
-              />
-            </div>
+            <Avatar className="h-32 w-32">
+              <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
             <p className="text-sm text-muted-foreground">
-              JPG, PNG ou GIF. Máximo 2MB.
+              {displayName || email || 'Usuário'}
             </p>
           </CardContent>
         </Card>
@@ -269,17 +174,34 @@ const Profile = () => {
             <CardTitle>Informações da Conta</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="flex justify-between py-2 border-b">
-              <span className="text-muted-foreground">ID do Usuário</span>
-              <span className="font-mono text-sm">{user?.id}</span>
+            <div className="flex justify-between py-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">ID do Usuário</span>
+              </div>
+              <span className="font-mono text-sm">{user?.id?.slice(0, 8)}...</span>
             </div>
-            <div className="flex justify-between py-2 border-b">
-              <span className="text-muted-foreground">Criado em</span>
-              <span>{user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '-'}</span>
+            <div className="flex justify-between py-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Criado em</span>
+              </div>
+              <span>
+                {user?.created_at 
+                  ? format(new Date(user.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                  : '-'}
+              </span>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-muted-foreground">Último acesso</span>
-              <span>{user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString('pt-BR') : '-'}</span>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Último acesso</span>
+              </div>
+              <span>
+                {user?.last_sign_in_at 
+                  ? format(new Date(user.last_sign_in_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                  : '-'}
+              </span>
             </div>
           </CardContent>
         </Card>
