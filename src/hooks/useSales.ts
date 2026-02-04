@@ -1,26 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { Tables } from '@/integrations/supabase/types';
 
-export interface Sale {
-  id: string;
-  user_id: string;
-  webhook_id: string | null;
-  platform: string;
-  transaction_id: string | null;
-  status: string;
-  amount: number;
-  commission: number | null;
-  currency: string | null;
-  payment_method: string | null;
-  customer_name: string | null;
-  customer_email: string | null;
-  customer_phone: string | null;
-  product_name: string | null;
-  product_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type Sale = Tables<'sales'>;
 
 export interface SalesMetrics {
   totalRevenue: number;
@@ -98,6 +81,24 @@ export function useSales(filters?: SalesFilters) {
     }
   }, [userId, fetchSales]);
 
+  const deleteSale = async (saleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', saleId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      
+      setSales(prev => prev.filter(s => s.id !== saleId));
+      toast.success('Transação excluída com sucesso');
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      toast.error('Erro ao excluir transação');
+    }
+  };
+
   const calculateMetrics = useCallback((): SalesMetrics => {
     const approvedSales = sales.filter(s => s.status === 'approved' || s.status === 'paid');
     const pendingSales = sales.filter(s => s.status === 'pending');
@@ -132,5 +133,6 @@ export function useSales(filters?: SalesFilters) {
     loading,
     metrics: calculateMetrics(),
     refreshSales: fetchSales,
+    deleteSale,
   };
 }
