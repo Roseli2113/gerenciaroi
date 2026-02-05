@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useState } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -15,10 +16,8 @@ import {
   rectSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { useState } from 'react';
 import { DraggableMetricCard } from './DraggableMetricCard';
 import { MetricsSidebar } from './MetricsSidebar';
-import { EditModeBar } from './EditModeBar';
 import { useDashboardLayout, LayoutItem, AVAILABLE_METRICS } from '@/hooks/useDashboardLayout';
 import { useSales } from '@/hooks/useSales';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
@@ -68,15 +67,13 @@ function DroppableArea({ children, isEditMode }: { children: React.ReactNode; is
   );
 }
 
-export function EditableDashboardGrid() {
+interface EditableDashboardGridProps {
+  isEditMode: boolean;
+}
+
+export function EditableDashboardGrid({ isEditMode }: EditableDashboardGridProps) {
   const {
     layout,
-    isEditMode,
-    saving,
-    setIsEditMode,
-    saveLayout,
-    cancelEdit,
-    resetLayout,
     updateLayout,
     addMetric,
     removeMetric,
@@ -159,6 +156,8 @@ export function EditableDashboardGrid() {
   };
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
+    if (!isEditMode) return;
+    
     const { active, over } = event;
     setActiveId(null);
 
