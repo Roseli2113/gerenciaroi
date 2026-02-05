@@ -21,50 +21,50 @@ const projectUrl = 'https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/utms/l
 const platformScripts: Record<string, string> = {
   hotmart: `<script
   src="${projectUrl}"
-  data-utmify-prevent-subids
+  data-gerenciaroi-prevent-subids
   async
   defer
 ></script>`,
   cartpanda: `<script
   src="${projectUrl}"
-  data-utmify-prevent-xcod-sck
-  data-utmify-prevent-subids
-  data-utmify-ignore-iframe
-  data-utmify-is-cartpanda
+  data-gerenciaroi-prevent-xcod-sck
+  data-gerenciaroi-prevent-subids
+  data-gerenciaroi-ignore-iframe
+  data-gerenciaroi-is-cartpanda
   async
   defer
 ></script>`,
   buygoods: `<script
   src="${projectUrl}"
-  data-utmify-prevent-xcod-sck
+  data-gerenciaroi-prevent-xcod-sck
   async
   defer
 ></script>`,
   clickbank: `<script
   src="${projectUrl}"
-  data-utmify-prevent-xcod-sck
-  data-utmify-is-click-bank
+  data-gerenciaroi-prevent-xcod-sck
+  data-gerenciaroi-is-click-bank
   async
   defer
 ></script>`,
   maxweb: `<script
   src="${projectUrl}"
-  data-utmify-prevent-xcod-sck
+  data-gerenciaroi-prevent-xcod-sck
   async
   defer
 ></script>`,
   doppus: `<script
   src="${projectUrl}"
-  data-utmify-prevent-xcod-sck
-  data-utmify-prevent-subids
-  data-utmify-plus-signal
+  data-gerenciaroi-prevent-xcod-sck
+  data-gerenciaroi-prevent-subids
+  data-gerenciaroi-plus-signal
   async
   defer
 ></script>`,
   outra: `<script
   src="${projectUrl}"
-  data-utmify-prevent-xcod-sck
-  data-utmify-prevent-subids
+  data-gerenciaroi-prevent-xcod-sck
+  data-gerenciaroi-prevent-subids
   async
   defer
 ></script>`,

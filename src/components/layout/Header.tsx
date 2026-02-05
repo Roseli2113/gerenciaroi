@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { Sun, Moon, Bell, User, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sun, Moon, Bell, User, LogOut, Settings } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface HeaderProps {
   title: string;
@@ -23,14 +25,31 @@ export function Header({ title, headerAction }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .single();
+      if (data?.display_name) {
+        setDisplayName(data.display_name);
+      }
+    };
+    loadProfile();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
 
-  const userInitial = user?.email?.charAt(0).toUpperCase() || 'U';
-  const userEmail = user?.email || 'Usuário';
+  const userName = displayName || user?.email || 'Usuário';
+  const userInitial = userName.charAt(0).toUpperCase();
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
@@ -69,9 +88,10 @@ export function Header({ title, headerAction }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-3 rounded-xl hover:bg-accent">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium truncate max-w-32">{userEmail}</p>
+                <p className="text-sm font-medium truncate max-w-32">{userName}</p>
               </div>
               <Avatar className="w-9 h-9 border-2 border-primary/20">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
                 <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                   {userInitial}
                 </AvatarFallback>
@@ -81,11 +101,11 @@ export function Header({ title, headerAction }: HeaderProps) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
               <User className="w-4 h-4 mr-2" />
               Perfil
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/notifications')}>
               <Bell className="w-4 h-4 mr-2" />
               Notificações
             </DropdownMenuItem>

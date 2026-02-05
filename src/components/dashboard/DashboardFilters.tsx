@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
+import { useSales } from '@/hooks/useSales';
 
 interface AdAccount {
   id: string;
@@ -20,6 +22,8 @@ interface AdAccount {
 
 export function DashboardFilters() {
   const { user } = useAuth();
+  const { refreshAll, isLoading: campaignsLoading } = useMetaCampaigns();
+  const { refreshSales, loading: salesLoading } = useSales();
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('today');
@@ -58,6 +62,15 @@ export function DashboardFilters() {
     // Apply filters - this would trigger data reload
     console.log('Applying filters:', { selectedAccount, selectedPeriod, selectedCampaign, selectedProduct });
   };
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      refreshAll(),
+      refreshSales()
+    ]);
+  };
+
+  const isRefreshing = campaignsLoading || salesLoading;
 
   return (
     <div className="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-card border border-border">
@@ -129,8 +142,11 @@ export function DashboardFilters() {
         </Button>
         <Button 
           variant="outline"
-          onClick={() => window.location.reload()}
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="gap-2"
         >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           Atualizar
         </Button>
       </div>
