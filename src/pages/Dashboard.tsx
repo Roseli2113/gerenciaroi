@@ -4,8 +4,8 @@ import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { ConversionFunnel } from '@/components/dashboard/ConversionFunnel';
 import { CampaignsList } from '@/components/dashboard/CampaignsList';
 import { EditableDashboardGrid } from '@/components/dashboard/EditableDashboardGrid';
-import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 import { EditModeBar } from '@/components/dashboard/EditModeBar';
+import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 
 const Dashboard = () => {
   const {
@@ -36,7 +36,9 @@ const Dashboard = () => {
         <DashboardFilters />
 
         {/* Editable Metrics Grid */}
-        <EditableDashboardGrid />
+        <EditableDashboardGrid 
+          isEditMode={isEditMode}
+        />
 
         {/* Charts Row - Only Spending Chart now */}
         <div className="grid grid-cols-1 gap-6">

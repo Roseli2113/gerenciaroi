@@ -44,6 +44,54 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_rules: {
+        Row: {
+          action_type: string
+          applied_to: string
+          condition_type: string
+          condition_value: string
+          created_at: string
+          executions: number
+          frequency: string
+          id: string
+          is_active: boolean
+          last_execution: string | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          applied_to?: string
+          condition_type: string
+          condition_value: string
+          created_at?: string
+          executions?: number
+          frequency: string
+          id?: string
+          is_active?: boolean
+          last_execution?: string | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          applied_to?: string
+          condition_type?: string
+          condition_value?: string
+          created_at?: string
+          executions?: number
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_execution?: string | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dashboard_layouts: {
         Row: {
           created_at: string
@@ -177,6 +225,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      rule_execution_logs: {
+        Row: {
+          action_description: string
+          action_type: string
+          campaign_name: string
+          executed_at: string
+          id: string
+          rule_id: string
+          rule_name: string
+          user_id: string
+        }
+        Insert: {
+          action_description: string
+          action_type: string
+          campaign_name: string
+          executed_at?: string
+          id?: string
+          rule_id: string
+          rule_name: string
+          user_id: string
+        }
+        Update: {
+          action_description?: string
+          action_type?: string
+          campaign_name?: string
+          executed_at?: string
+          id?: string
+          rule_id?: string
+          rule_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_execution_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sales: {
         Row: {

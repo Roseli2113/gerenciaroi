@@ -38,88 +38,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Zap, TrendingUp, Pause, Clock, History, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Zap, TrendingUp, Pause, Clock, History, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-
-interface Rule {
-  id: string;
-  name: string;
-  condition: string;
-  conditionType: string;
-  conditionValue: string;
-  action: string;
-  actionType: string;
-  frequency: string;
-  isActive: boolean;
-  appliedTo: string;
-  executions: number;
-  lastExecution?: string;
-}
-
-const initialRules: Rule[] = [
-  {
-    id: '1',
-    name: 'Aumentar orçamento se CPA baixo',
-    condition: 'Se CPA < R$ 5,00',
-    conditionType: 'cpa_less',
-    conditionValue: '5',
-    action: 'Aumentar orçamento em 20%',
-    actionType: 'increase_budget',
-    frequency: '30min',
-    isActive: true,
-    appliedTo: 'all',
-    executions: 15,
-    lastExecution: 'há 25 min',
-  },
-  {
-    id: '2',
-    name: 'Pausar se CPA alto',
-    condition: 'Se CPA > R$ 15,00',
-    conditionType: 'cpa_greater',
-    conditionValue: '15',
-    action: 'Pausar campanha',
-    actionType: 'pause',
-    frequency: '1hour',
-    isActive: true,
-    appliedTo: 'campaign1',
-    executions: 3,
-    lastExecution: 'há 2 horas',
-  },
-  {
-    id: '3',
-    name: 'Escalar ROI positivo',
-    condition: 'Se ROI > 150%',
-    conditionType: 'roi_greater',
-    conditionValue: '150',
-    action: 'Aumentar orçamento em 30%',
-    actionType: 'increase_budget',
-    frequency: '2hours',
-    isActive: false,
-    appliedTo: 'campaign2',
-    executions: 8,
-    lastExecution: 'há 1 dia',
-  },
-  {
-    id: '4',
-    name: 'Cortar gastos sem vendas',
-    condition: 'Se gastos > R$ 100 sem vendas',
-    conditionType: 'spend_greater',
-    conditionValue: '100',
-    action: 'Pausar campanha',
-    actionType: 'pause',
-    frequency: '30min',
-    isActive: true,
-    appliedTo: 'all',
-    executions: 2,
-    lastExecution: 'há 4 horas',
-  },
-];
+import { useRules, Rule } from '@/hooks/useRules';
 
 const Rules = () => {
-  const [rules, setRules] = useState<Rule[]>(initialRules);
+  const { 
+    rules, 
+    executionLogs, 
+    loading, 
+    createRule, 
+    updateRule, 
+    deleteRule, 
+    toggleRuleActive 
+  } = useRules();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<Rule | null>(null);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null);
   
   // Form state
@@ -137,11 +72,11 @@ const Rules = () => {
     setFormConditionValue('');
     setFormActionType('pause');
     setFormFrequency('30min');
-    setEditingRule(null);
+    setEditingRuleId(null);
   };
 
   const openEditDialog = (rule: Rule) => {
-    setEditingRule(rule);
+    setEditingRuleId(rule.id);
     setFormName(rule.name);
     setFormAppliedTo(rule.appliedTo);
     setFormConditionType(rule.conditionType);
@@ -197,70 +132,44 @@ const Rules = () => {
     }
   };
 
-  const handleSaveRule = () => {
+  const handleSaveRule = async () => {
     if (!formName || !formConditionValue) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
-    const condition = getConditionText(formConditionType, formConditionValue);
-    const action = getActionText(formActionType);
-
-    if (editingRule) {
-      // Update existing rule
-      setRules(prev => prev.map(r => 
-        r.id === editingRule.id 
-          ? {
-              ...r,
-              name: formName,
-              condition,
-              conditionType: formConditionType,
-              conditionValue: formConditionValue,
-              action,
-              actionType: formActionType,
-              frequency: formFrequency,
-              appliedTo: formAppliedTo,
-            }
-          : r
-      ));
-      toast.success('Regra atualizada com sucesso!');
-    } else {
-      // Create new rule
-      const newRule: Rule = {
-        id: Date.now().toString(),
+    if (editingRuleId) {
+      await updateRule(editingRuleId, {
         name: formName,
-        condition,
         conditionType: formConditionType,
         conditionValue: formConditionValue,
-        action,
+        actionType: formActionType,
+        frequency: formFrequency,
+        appliedTo: formAppliedTo,
+      });
+    } else {
+      await createRule({
+        name: formName,
+        conditionType: formConditionType,
+        conditionValue: formConditionValue,
         actionType: formActionType,
         frequency: formFrequency,
         isActive: true,
         appliedTo: formAppliedTo,
-        executions: 0,
-      };
-      setRules(prev => [...prev, newRule]);
-      toast.success('Regra criada com sucesso!');
+      });
     }
 
     setIsDialogOpen(false);
     resetForm();
   };
 
-  const handleToggleActive = (ruleId: string) => {
-    setRules(prev => prev.map(r => 
-      r.id === ruleId ? { ...r, isActive: !r.isActive } : r
-    ));
-    const rule = rules.find(r => r.id === ruleId);
-    if (rule) {
-      toast.success(`Regra ${rule.isActive ? 'desativada' : 'ativada'} com sucesso!`);
-    }
+  const handleToggleActive = async (ruleId: string) => {
+    await toggleRuleActive(ruleId);
   };
 
-  const handleDeleteRule = () => {
+  const handleDeleteRule = async () => {
     if (deleteRuleId) {
-      setRules(prev => prev.filter(r => r.id !== deleteRuleId));
-      toast.success('Regra excluída com sucesso!');
+      await deleteRule(deleteRuleId);
       setDeleteRuleId(null);
     }
   };
@@ -287,7 +196,7 @@ const Rules = () => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>{editingRule ? 'Editar Regra' : 'Criar Nova Regra'}</DialogTitle>
+                <DialogTitle>{editingRuleId ? 'Editar Regra' : 'Criar Nova Regra'}</DialogTitle>
                 <DialogDescription>
                   Configure as condições e ações para sua regra automática
                 </DialogDescription>
@@ -384,7 +293,7 @@ const Rules = () => {
                   className="gradient-primary text-primary-foreground"
                   onClick={handleSaveRule}
                 >
-                  {editingRule ? 'Salvar Alterações' : 'Criar Regra'}
+                  {editingRuleId ? 'Salvar Alterações' : 'Criar Regra'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -393,7 +302,17 @@ const Rules = () => {
 
         {/* Rules Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {rules.map((rule) => (
+          {loading ? (
+            <div className="col-span-2 flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : rules.length === 0 ? (
+            <div className="col-span-2 text-center py-12 text-muted-foreground">
+              <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">Nenhuma regra configurada</p>
+              <p className="text-sm">Crie sua primeira regra automática clicando em "Nova Regra"</p>
+            </div>
+          ) : rules.map((rule) => (
             <Card key={rule.id} className={cn(
               'transition-all hover:shadow-card-hover',
               rule.isActive ? 'border-primary/30' : 'border-border opacity-60'
@@ -444,15 +363,15 @@ const Rules = () => {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Badge variant="secondary" className="bg-muted">
-                    {rule.condition}
+                        {getConditionText(rule.conditionType, rule.conditionValue)}
                   </Badge>
                   <span className="text-muted-foreground">→</span>
                   <Badge variant="secondary" className={cn(
-                    rule.action.includes('Pausar') 
+                        rule.actionType === 'pause'
                       ? 'bg-destructive/20 text-destructive border-0' 
                       : 'bg-success/20 text-success border-0'
                   )}>
-                    {rule.action}
+                        {getActionText(rule.actionType)}
                   </Badge>
                 </div>
 
@@ -485,29 +404,30 @@ const Rules = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { rule: 'Aumentar orçamento se CPA baixo', campaign: 'Conversão - Produto Premium', action: 'Orçamento aumentado de R$ 400 para R$ 480', time: 'há 25 min', type: 'increase' },
-                { rule: 'Cortar gastos sem vendas', campaign: 'Awareness - Lançamento', action: 'Campanha pausada', time: 'há 4 horas', type: 'pause' },
-                { rule: 'Pausar se CPA alto', campaign: 'Tráfego - Blog Posts', action: 'Campanha pausada', time: 'há 2 horas', type: 'pause' },
-              ].map((log, index) => (
-                <div key={index} className="flex items-center gap-4 p-3 rounded-xl bg-muted/30">
+              {executionLogs.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <History className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>Nenhuma execução registrada</p>
+                </div>
+              ) : executionLogs.map((log) => (
+                <div key={log.id} className="flex items-center gap-4 p-3 rounded-xl bg-muted/30">
                   <div className={cn(
                     'p-2 rounded-lg',
-                    log.type === 'increase' ? 'bg-success/20' : 'bg-destructive/20'
+                    log.actionType === 'increase_budget' || log.actionType === 'activate' ? 'bg-success/20' : 'bg-destructive/20'
                   )}>
-                    {log.type === 'increase' ? (
+                    {log.actionType === 'increase_budget' || log.actionType === 'activate' ? (
                       <TrendingUp className="w-4 h-4 text-success" />
                     ) : (
                       <Pause className="w-4 h-4 text-destructive" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-foreground text-sm">{log.action}</p>
+                    <p className="font-medium text-foreground text-sm">{log.actionDescription}</p>
                     <p className="text-xs text-muted-foreground">
-                      {log.rule} • {log.campaign}
+                      {log.ruleName} • {log.campaignName}
                     </p>
                   </div>
-                  <span className="text-xs text-muted-foreground">{log.time}</span>
+                  <span className="text-xs text-muted-foreground">{log.executedAt}</span>
                 </div>
               ))}
             </div>
