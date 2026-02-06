@@ -17,16 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Link2, Copy, Check, TrendingUp, Eye, ShoppingCart } from 'lucide-react';
+import { Link2, Copy, Check, Eye, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-
-const utmPerformance = [
-  { source: 'facebook', medium: 'cpc', campaign: 'produto_premium', visits: 4520, conversions: 156, revenue: 12450, cpa: 8.50 },
-  { source: 'instagram', medium: 'social', campaign: 'stories_janeiro', visits: 2340, conversions: 89, revenue: 7120, cpa: 9.20 },
-  { source: 'facebook', medium: 'remarketing', campaign: 'carrinho_abandonado', visits: 1890, conversions: 124, revenue: 9920, cpa: 5.10 },
-  { source: 'instagram', medium: 'influencer', campaign: 'parceria_jan', visits: 3450, conversions: 67, revenue: 5360, cpa: 12.30 },
-];
+import { useSales } from '@/hooks/useSales';
+import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 
 const UTMs = () => {
   const [copied, setCopied] = useState(false);
@@ -34,6 +29,9 @@ const UTMs = () => {
   const [utmMedium, setUtmMedium] = useState('cpc');
   const [utmCampaign, setUtmCampaign] = useState('');
   const [baseUrl, setBaseUrl] = useState('https://seusite.com/produto');
+  
+  const { sales } = useSales();
+  const { campaigns } = useMetaCampaigns();
 
   const generatedUrl = `${baseUrl}?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`;
 
@@ -42,6 +40,29 @@ const UTMs = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Calculate UTM performance from real data (sales raw_data contains UTM info)
+  const utmPerformance = campaigns.map(campaign => {
+    // Get sales related to this campaign (by matching campaign name or UTM)
+    const campaignSales = sales.filter(sale => {
+      const rawData = sale.raw_data as Record<string, unknown> | null;
+      const utmCampaign = rawData?.utm_campaign as string | undefined;
+      return utmCampaign?.toLowerCase().includes(campaign.name.toLowerCase().slice(0, 10));
+    });
+
+    const revenue = campaignSales.reduce((sum, s) => sum + Number(s.amount), 0);
+    const conversions = campaignSales.length;
+
+    return {
+      source: 'facebook',
+      medium: 'cpc',
+      campaign: campaign.name,
+      visits: campaign.pageViews,
+      conversions,
+      revenue,
+      cpa: conversions > 0 ? campaign.spent / conversions : 0,
+    };
+  }).filter(utm => utm.visits > 0 || utm.conversions > 0);
 
   return (
     <MainLayout title="UTMs e Rastreamento">
@@ -136,55 +157,67 @@ const UTMs = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead>Source</TableHead>
-                  <TableHead>Medium</TableHead>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Eye className="w-3 h-3" />
-                      Visitas
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <ShoppingCart className="w-3 h-3" />
-                      Conversões
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-right">Receita</TableHead>
-                  <TableHead className="text-right">CPA</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {utmPerformance.map((utm, index) => (
-                  <TableRow key={index} className="border-border">
-                    <TableCell className="font-medium">{utm.source}</TableCell>
-                    <TableCell className="text-muted-foreground">{utm.medium}</TableCell>
-                    <TableCell className="text-muted-foreground">{utm.campaign}</TableCell>
-                    <TableCell className="text-right">
-                      {utm.visits.toLocaleString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-success">
-                      {utm.conversions}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      R$ {utm.revenue.toLocaleString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className={cn(
-                        'font-medium',
-                        utm.cpa < 8 ? 'text-success' : utm.cpa > 10 ? 'text-warning' : 'text-foreground'
-                      )}>
-                        R$ {utm.cpa.toFixed(2)}
-                      </span>
-                    </TableCell>
+            {utmPerformance.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Link2 className="w-12 h-12 mb-4 opacity-50" />
+                <p className="text-center">Nenhum dado de UTM disponível</p>
+                <p className="text-sm text-center mt-1">
+                  Os dados aparecerão aqui quando houver campanhas com visitas ou conversões
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead>Source</TableHead>
+                    <TableHead>Medium</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Eye className="w-3 h-3" />
+                        Visitas
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <ShoppingCart className="w-3 h-3" />
+                        Conversões
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right">Receita</TableHead>
+                    <TableHead className="text-right">CPA</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {utmPerformance.map((utm, index) => (
+                    <TableRow key={index} className="border-border">
+                      <TableCell className="font-medium">{utm.source}</TableCell>
+                      <TableCell className="text-muted-foreground">{utm.medium}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                        {utm.campaign}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {utm.visits.toLocaleString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-success">
+                        {utm.conversions}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        R$ {utm.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className={cn(
+                          'font-medium',
+                          utm.cpa < 8 ? 'text-success' : utm.cpa > 10 ? 'text-warning' : 'text-foreground'
+                        )}>
+                          R$ {utm.cpa.toFixed(2)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

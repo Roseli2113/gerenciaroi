@@ -105,6 +105,8 @@ const Rules = () => {
   const getActionText = (type: string) => {
     switch (type) {
       case 'pause': return 'Pausar campanha';
+      case 'pause_adset': return 'Pausar conjunto';
+      case 'pause_ad': return 'Pausar anúncio';
       case 'increase_budget': return 'Aumentar orçamento em 20%';
       case 'decrease_budget': return 'Diminuir orçamento em 20%';
       case 'activate': return 'Ativar campanha';
@@ -219,8 +221,6 @@ const Rules = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as campanhas</SelectItem>
-                      <SelectItem value="campaign1">Conversão - Produto Premium</SelectItem>
-                      <SelectItem value="campaign2">Tráfego - Blog Posts</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -259,6 +259,8 @@ const Rules = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pause">Pausar campanha</SelectItem>
+                        <SelectItem value="pause_adset">Pausar conjunto</SelectItem>
+                        <SelectItem value="pause_ad">Pausar anúncio</SelectItem>
                         <SelectItem value="increase_budget">Aumentar orçamento</SelectItem>
                         <SelectItem value="decrease_budget">Diminuir orçamento</SelectItem>
                         <SelectItem value="activate">Ativar campanha</SelectItem>

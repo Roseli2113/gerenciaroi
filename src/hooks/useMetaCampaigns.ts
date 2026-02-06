@@ -280,8 +280,10 @@ function sortByStatusAndImpressions<T extends { status: boolean; impressions: nu
   });
 }
 
-// Filter items with impressions only (spent > 0)
-function filterWithImpressions<T extends { impressions: number; spent: number }>(items: T[]): T[] {
+// Filter items with impressions or spent > 0 (show items with activity)
+// Note: Setting to false to show ALL items when there are many duplicated ad sets
+function filterWithImpressions<T extends { impressions: number; spent: number }>(items: T[], showAll = false): T[] {
+  if (showAll) return items;
   return items.filter(item => item.impressions > 0 || item.spent > 0);
 }
 
@@ -376,6 +378,7 @@ export function useMetaCampaigns() {
       });
 
       // Filter and sort: only show campaigns with impressions/spent, active first
+      // Keep filtering for campaigns to avoid showing empty ones
       const filteredAndSorted = sortByStatusAndImpressions(filterWithImpressions(mergedCampaigns));
       setCampaigns(filteredAndSorted);
       setLastUpdated(new Date());
@@ -439,9 +442,9 @@ export function useMetaCampaigns() {
         mapped = mapped.filter(as => as.campaignId === campaignIdFilter);
       }
 
-      // Filter and sort
-      const filteredAndSorted = sortByStatusAndImpressions(filterWithImpressions(mapped));
-      setAdSets(filteredAndSorted);
+      // Sort but show ALL ad sets (no filtering) to handle duplicated sets
+      const sorted = sortByStatusAndImpressions(mapped);
+      setAdSets(sorted);
     } catch (err) {
       console.error('Error fetching ad sets:', err);
       toast.error('Erro ao carregar conjuntos de anúncios');
@@ -491,9 +494,9 @@ export function useMetaCampaigns() {
         mapped = mapped.filter(ad => ad.adsetId === adsetIdFilter);
       }
 
-      // Filter and sort
-      const filteredAndSorted = sortByStatusAndImpressions(filterWithImpressions(mapped));
-      setAds(filteredAndSorted);
+      // Sort but show ALL ads (no filtering) to handle many ads
+      const sorted = sortByStatusAndImpressions(mapped);
+      setAds(sorted);
     } catch (err) {
       console.error('Error fetching ads:', err);
       toast.error('Erro ao carregar anúncios');
