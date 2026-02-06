@@ -1,6 +1,5 @@
-import { ReactNode } from 'react';
-import { useState, useEffect } from 'react';
-import { Sun, Moon, Bell, User, LogOut, Settings } from 'lucide-react';
+import { ReactNode, useState, useEffect } from 'react';
+import { Sun, Moon, Bell, User, LogOut } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -28,19 +27,31 @@ export function Header({ title, headerAction }: HeaderProps) {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  const loadProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('display_name, avatar_url')
+      .eq('user_id', user.id)
+      .single();
+    if (data) {
+      setDisplayName(data.display_name || null);
+      setAvatarUrl(data.avatar_url || null);
+    }
+  };
+
   useEffect(() => {
-    const loadProfile = async () => {
-      if (!user) return;
-      const { data } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('user_id', user.id)
-        .single();
-      if (data?.display_name) {
-        setDisplayName(data.display_name);
-      }
-    };
     loadProfile();
+
+    // Listen for profile updates
+    const handleProfileUpdate = () => {
+      loadProfile();
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profile-updated', handleProfileUpdate);
+    };
   }, [user]);
 
   const handleSignOut = async () => {
@@ -78,6 +89,7 @@ export function Header({ title, headerAction }: HeaderProps) {
           variant="ghost"
           size="icon"
           className="rounded-xl hover:bg-accent relative"
+          onClick={() => navigate('/notifications')}
         >
           <Bell className="w-5 h-5" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full" />
@@ -91,7 +103,7 @@ export function Header({ title, headerAction }: HeaderProps) {
                 <p className="text-sm font-medium truncate max-w-32">{userName}</p>
               </div>
               <Avatar className="w-9 h-9 border-2 border-primary/20">
-                {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
+                <AvatarImage src={avatarUrl || undefined} alt={userName} />
                 <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                   {userInitial}
                 </AvatarFallback>

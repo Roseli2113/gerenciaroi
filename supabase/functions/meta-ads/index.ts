@@ -5,6 +5,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function fetchAllPages(url: string): Promise<any[]> {
+  const allData: any[] = [];
+  let nextUrl: string | null = url;
+
+  while (nextUrl) {
+    const response = await fetch(nextUrl);
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error.message);
+    }
+
+    if (data.data) {
+      allData.push(...data.data);
+    }
+
+    // Check for pagination
+    nextUrl = data.paging?.next || null;
+  }
+
+  return allData;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,19 +57,11 @@ serve(async (req) => {
         "updated_time"
       ].join(",");
 
-      const url = `${baseUrl}/${adAccountId}/campaigns?fields=${fields}&access_token=${accessToken}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.error) {
-        return new Response(
-          JSON.stringify({ error: data.error.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      const url = `${baseUrl}/${adAccountId}/campaigns?fields=${fields}&limit=500&access_token=${accessToken}`;
+      const campaigns = await fetchAllPages(url);
 
       return new Response(
-        JSON.stringify({ campaigns: data.data || [] }),
+        JSON.stringify({ campaigns }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -62,30 +77,28 @@ serve(async (req) => {
         "cpm",
         "ctr",
         "reach",
+        "frequency",
         "actions",
         "action_values",
-        "cost_per_action_type"
+        "cost_per_action_type",
+        "video_p25_watched_actions",
+        "video_p50_watched_actions",
+        "video_p75_watched_actions",
+        "video_p100_watched_actions"
       ].join(",");
 
-      const datePreset = dateRange || "last_7d";
+      const datePreset = dateRange || "today";
       const url = `${baseUrl}/${adAccountId}/insights?` +
         `fields=${fields}` +
         `&level=campaign` +
         `&date_preset=${datePreset}` +
+        `&limit=500` +
         `&access_token=${accessToken}`;
 
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.error) {
-        return new Response(
-          JSON.stringify({ error: data.error.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      const insights = await fetchAllPages(url);
 
       return new Response(
-        JSON.stringify({ insights: data.data || [] }),
+        JSON.stringify({ insights }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -98,52 +111,79 @@ serve(async (req) => {
         "daily_budget",
         "lifetime_budget",
         "targeting",
-        "optimization_goal"
+        "optimization_goal",
+        "campaign_id"
       ].join(",");
 
-      const url = `${baseUrl}/${adAccountId}/adsets?fields=${fields}&access_token=${accessToken}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.error) {
-        return new Response(
-          JSON.stringify({ error: data.error.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      const url = `${baseUrl}/${adAccountId}/adsets?fields=${fields}&limit=500&access_token=${accessToken}`;
+      const adsets = await fetchAllPages(url);
 
       return new Response(
-        JSON.stringify({ adsets: data.data || [] }),
+        JSON.stringify({ adsets }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (action === "get-adset-insights") {
-      const fields = ["adset_id", "adset_name", "spend", "impressions", "clicks", "actions", "action_values"].join(",");
-      const datePreset = dateRange || "last_7d";
-      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=adset&date_preset=${datePreset}&access_token=${accessToken}`;
-      const response = await fetch(url);
-      const data = await response.json();
+      const fields = [
+        "adset_id",
+        "adset_name",
+        "spend",
+        "impressions",
+        "clicks",
+        "cpc",
+        "cpm",
+        "ctr",
+        "reach",
+        "frequency",
+        "actions",
+        "action_values",
+        "cost_per_action_type",
+        "video_p25_watched_actions",
+        "video_p50_watched_actions",
+        "video_p75_watched_actions",
+        "video_p100_watched_actions"
+      ].join(",");
+      
+      const datePreset = dateRange || "today";
+      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=adset&date_preset=${datePreset}&limit=500&access_token=${accessToken}`;
+      const insights = await fetchAllPages(url);
 
-      if (data.error) {
-        return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      return new Response(JSON.stringify({ insights: data.data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ insights }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (action === "get-ad-insights") {
-      const fields = ["ad_id", "ad_name", "spend", "impressions", "clicks", "actions", "action_values"].join(",");
-      const datePreset = dateRange || "last_7d";
-      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=ad&date_preset=${datePreset}&access_token=${accessToken}`;
-      const response = await fetch(url);
-      const data = await response.json();
+      const fields = [
+        "ad_id",
+        "ad_name",
+        "spend",
+        "impressions",
+        "clicks",
+        "cpc",
+        "cpm",
+        "ctr",
+        "reach",
+        "frequency",
+        "actions",
+        "action_values",
+        "cost_per_action_type",
+        "video_p25_watched_actions",
+        "video_p50_watched_actions",
+        "video_p75_watched_actions",
+        "video_p100_watched_actions"
+      ].join(",");
+      
+      const datePreset = dateRange || "today";
+      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=ad&date_preset=${datePreset}&limit=500&access_token=${accessToken}`;
+      const insights = await fetchAllPages(url);
 
-      if (data.error) {
-        return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      return new Response(JSON.stringify({ insights: data.data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ insights }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (action === "get-ads") {
@@ -155,19 +195,11 @@ serve(async (req) => {
         "adset_id"
       ].join(",");
 
-      const url = `${baseUrl}/${adAccountId}/ads?fields=${fields}&access_token=${accessToken}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.error) {
-        return new Response(
-          JSON.stringify({ error: data.error.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      const url = `${baseUrl}/${adAccountId}/ads?fields=${fields}&limit=500&access_token=${accessToken}`;
+      const ads = await fetchAllPages(url);
 
       return new Response(
-        JSON.stringify({ ads: data.data || [] }),
+        JSON.stringify({ ads }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

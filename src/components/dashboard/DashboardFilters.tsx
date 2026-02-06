@@ -58,9 +58,10 @@ export function DashboardFilters() {
     setCampaigns([]);
   }, [selectedAccount]);
 
-  const handleApplyFilters = () => {
-    // Apply filters - this would trigger data reload
+  const handleApplyFilters = async () => {
+    // Apply filters - trigger data reload
     console.log('Applying filters:', { selectedAccount, selectedPeriod, selectedCampaign, selectedProduct });
+    await handleRefresh();
   };
 
   const handleRefresh = async () => {
@@ -133,13 +134,7 @@ export function DashboardFilters() {
         </SelectContent>
       </Select>
 
-      <div className="ml-auto flex items-center gap-2">
-        <Button 
-          onClick={handleApplyFilters}
-          className="gradient-primary text-primary-foreground hover:opacity-90"
-        >
-          Aplicar Filtros
-        </Button>
+      <div className="ml-auto">
         <Button 
           variant="outline"
           onClick={handleRefresh}

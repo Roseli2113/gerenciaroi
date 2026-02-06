@@ -346,14 +346,14 @@ const Campaigns = () => {
           </TableHeader>
           <TableBody>
             {activeAccounts.map((account) => (
-              <TableRow key={account.id} className="border-border">
-                <TableCell className="sticky left-0 bg-card z-10 border-r border-border">
+              <TableRow key={account.id} className="border-b border-border">
+                <TableCell className="sticky left-0 bg-card z-10 border-r border-b border-border">
                   <Checkbox />
                 </TableCell>
-                <TableCell className="text-center sticky left-12 bg-card z-10 border-r border-border">
+                <TableCell className="text-center sticky left-12 bg-card z-10 border-r border-b border-border">
                   <Switch checked={account.is_active} disabled />
                 </TableCell>
-                <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px] border-r border-border">
+                <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px] border-r border-b border-border">
                   {account.name}
                 </TableCell>
                 {visibleColumns.map((col, index) => {
@@ -438,14 +438,14 @@ const Campaigns = () => {
                   budgetType: null,
                 } as unknown as Campaign;
 
-                return (
-                  <TableCell 
-                    key={col.id} 
-                    className={cn(
-                      "text-center border-r border-border",
-                      index === visibleColumns.length - 1 && "border-r-0"
-                    )}
-                  >
+                  return (
+                    <TableCell 
+                      key={col.id} 
+                      className={cn(
+                        "text-center border-r border-b border-border",
+                        index === visibleColumns.length - 1 && "border-r-0"
+                      )}
+                    >
                     {getColumnValue(mockItem, col.id)}
                   </TableCell>
                 );
@@ -515,7 +515,7 @@ const Campaigns = () => {
                 <TableRow 
                   key={item.id} 
                   className={cn(
-                    "border-border cursor-pointer",
+                    "border-b border-border cursor-pointer",
                     isSelected && "bg-primary/10"
                   )}
                   onClick={() => {
@@ -523,7 +523,7 @@ const Campaigns = () => {
                     else if (activeTab === 'conjuntos') handleSelectAdSet(item.id);
                   }}
                 >
-                  <TableCell className="sticky left-0 bg-card z-10 border-r border-border">
+                  <TableCell className="sticky left-0 bg-card z-10 border-r border-b border-border">
                     <Checkbox 
                       checked={isSelected} 
                       onCheckedChange={() => {
@@ -533,12 +533,12 @@ const Campaigns = () => {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </TableCell>
-                  <TableCell className="text-center sticky left-12 bg-card z-10 border-r border-border" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="text-center sticky left-12 bg-card z-10 border-r border-b border-border" onClick={(e) => e.stopPropagation()}>
                     {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
                       <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
                     )}
                   </TableCell>
-                  <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px] border-r border-border">
+                  <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px] border-r border-b border-border">
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[180px]">{item.name}</span>
                       {activeTab === 'campanhas' && (
@@ -560,7 +560,7 @@ const Campaigns = () => {
                     <TableCell 
                       key={col.id} 
                       className={cn(
-                        "text-center border-r border-border",
+                        "text-center border-r border-b border-border",
                         index === visibleColumns.length - 1 && "border-r-0"
                       )}
                     >
