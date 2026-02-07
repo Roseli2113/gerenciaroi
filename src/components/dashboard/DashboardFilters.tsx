@@ -81,6 +81,10 @@ export function DashboardFilters({ filters }: DashboardFiltersProps) {
       refreshAll(),
       refreshSales()
     ]);
+    const { toast } = await import('sonner');
+    toast.success('Dados Atualizados', {
+      style: { background: '#16a34a', color: '#ffffff', border: 'none' },
+    });
   };
 
   const isRefreshing = campaignsLoading || salesLoading;
