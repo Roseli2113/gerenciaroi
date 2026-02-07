@@ -147,13 +147,15 @@ const Campaigns = () => {
 
   // Get filtered data based on selection
   const getFilteredAdSets = () => {
-    if (!selectedCampaignId) return adSets;
-    return adSets.filter(as => as.campaignId === selectedCampaignId);
+    let filtered = selectedCampaignId ? adSets.filter(as => as.campaignId === selectedCampaignId) : adSets;
+    // Only show ad sets with actual spend
+    return filtered.filter(as => as.spent > 0);
   };
 
   const getFilteredAds = () => {
-    if (!selectedAdSetId) return ads;
-    return ads.filter(ad => ad.adsetId === selectedAdSetId);
+    let filtered = selectedAdSetId ? ads.filter(ad => ad.adsetId === selectedAdSetId) : ads;
+    // Only show ads with actual spend
+    return filtered.filter(ad => ad.spent > 0);
   };
 
   const displayData = activeTab === 'campanhas' ? campaigns : 
@@ -328,9 +330,9 @@ const Campaigns = () => {
         <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent bg-muted/30">
-              <TableHead className="w-12 sticky left-0 bg-muted/30 z-10 border-r border-border"><Checkbox /></TableHead>
-              <TableHead className="text-center font-semibold sticky left-12 bg-muted/30 z-10 border-r border-border">STATUS</TableHead>
-              <TableHead className="font-semibold sticky left-24 bg-muted/30 z-10 min-w-[200px] border-r border-border">CONTA</TableHead>
+              <TableHead className="w-[48px] sticky left-0 bg-muted/30 z-20 border-r border-border"><Checkbox /></TableHead>
+              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-muted/30 z-20 border-r border-border">STATUS</TableHead>
+              <TableHead className="font-semibold sticky left-[108px] bg-muted/30 z-20 min-w-[200px] border-r border-border">CONTA</TableHead>
               {visibleColumns.map((col, index) => (
                 <TableHead 
                   key={col.id} 
@@ -347,13 +349,13 @@ const Campaigns = () => {
           <TableBody>
             {activeAccounts.map((account) => (
               <TableRow key={account.id} className="border-b border-border">
-                <TableCell className="sticky left-0 bg-card z-10 border-r border-b border-border">
+                <TableCell className="w-[48px] sticky left-0 bg-card z-10 border-r border-b border-border">
                   <Checkbox />
                 </TableCell>
-                <TableCell className="text-center sticky left-12 bg-card z-10 border-r border-b border-border">
+                <TableCell className="w-[60px] text-center sticky left-[48px] bg-card z-10 border-r border-b border-border">
                   <Switch checked={account.is_active} disabled />
                 </TableCell>
-                <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px] border-r border-b border-border">
+                <TableCell className="font-medium sticky left-[108px] bg-card z-10 min-w-[200px] border-r border-b border-border">
                   {account.name}
                 </TableCell>
                 {visibleColumns.map((col, index) => {
@@ -403,9 +405,9 @@ const Campaigns = () => {
             ))}
             {/* Summary row */}
             <TableRow className="border-border bg-muted/20 font-semibold">
-              <TableCell className="sticky left-0 bg-muted/20 z-10 border-r border-border" />
-              <TableCell className="sticky left-12 bg-muted/20 z-10 border-r border-border" />
-              <TableCell className="sticky left-24 bg-muted/20 z-10 min-w-[200px] border-r border-border">
+              <TableCell className="w-[48px] sticky left-0 bg-muted/20 z-10 border-r border-border" />
+              <TableCell className="w-[60px] sticky left-[48px] bg-muted/20 z-10 border-r border-border" />
+              <TableCell className="sticky left-[108px] bg-muted/20 z-10 min-w-[200px] border-r border-border">
                 {activeAccounts.length} Conta{activeAccounts.length > 1 ? 's' : ''}
               </TableCell>
               {visibleColumns.map((col, index) => {
@@ -487,9 +489,9 @@ const Campaigns = () => {
         <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent bg-muted/30">
-              <TableHead className="w-12 sticky left-0 bg-muted/30 z-10 border-r border-border"><Checkbox /></TableHead>
-              <TableHead className="text-center font-semibold sticky left-12 bg-muted/30 z-10 border-r border-border">STATUS</TableHead>
-              <TableHead className="font-semibold sticky left-24 bg-muted/30 z-10 min-w-[200px] border-r border-border">NOME</TableHead>
+              <TableHead className="w-[48px] sticky left-0 bg-muted/30 z-20 border-r border-border"><Checkbox /></TableHead>
+              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-muted/30 z-20 border-r border-border">STATUS</TableHead>
+              <TableHead className="font-semibold sticky left-[108px] bg-muted/30 z-20 min-w-[200px] border-r border-border">NOME</TableHead>
               {visibleColumns.map((col, index) => (
                 <TableHead 
                   key={col.id} 
@@ -523,7 +525,7 @@ const Campaigns = () => {
                     else if (activeTab === 'conjuntos') handleSelectAdSet(item.id);
                   }}
                 >
-                  <TableCell className="sticky left-0 bg-card z-10 border-r border-b border-border">
+                  <TableCell className={cn("w-[48px] sticky left-0 z-10 border-r border-b border-border", isSelected ? "bg-primary/10" : "bg-card")}>
                     <Checkbox 
                       checked={isSelected} 
                       onCheckedChange={() => {
@@ -533,12 +535,12 @@ const Campaigns = () => {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </TableCell>
-                  <TableCell className="text-center sticky left-12 bg-card z-10 border-r border-b border-border" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className={cn("w-[60px] text-center sticky left-[48px] z-10 border-r border-b border-border", isSelected ? "bg-primary/10" : "bg-card")} onClick={(e) => e.stopPropagation()}>
                     {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
                       <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
                     )}
                   </TableCell>
-                  <TableCell className="font-medium sticky left-24 bg-card z-10 min-w-[200px] border-r border-b border-border">
+                  <TableCell className={cn("font-medium sticky left-[108px] z-10 min-w-[200px] border-r border-b border-border", isSelected ? "bg-primary/10" : "bg-card")}>
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[180px]">{item.name}</span>
                       {activeTab === 'campanhas' && (
