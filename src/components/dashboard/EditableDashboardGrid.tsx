@@ -1,5 +1,4 @@
-import { useCallback } from 'react';
-import { useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -18,9 +17,11 @@ import {
 } from '@dnd-kit/sortable';
 import { DraggableMetricCard } from './DraggableMetricCard';
 import { MetricsSidebar } from './MetricsSidebar';
-import { useDashboardLayout, LayoutItem, AVAILABLE_METRICS } from '@/hooks/useDashboardLayout';
+import { AVAILABLE_METRICS } from '@/hooks/useDashboardLayout';
+import type { useDashboardLayout as UseDashboardLayoutType } from '@/hooks/useDashboardLayout';
 import { useSales } from '@/hooks/useSales';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
+import type { DateRange } from '@/hooks/useDashboardFilters';
 import {
   DollarSign,
   Wallet,
@@ -38,25 +39,12 @@ import {
 } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
-  DollarSign,
-  Wallet,
-  TrendingUp,
-  BarChart3,
-  Target,
-  ShoppingCart,
-  Receipt,
-  Clock,
-  RotateCcw,
-  Users,
-  Percent,
-  CheckCircle,
+  DollarSign, Wallet, TrendingUp, BarChart3, Target,
+  ShoppingCart, Receipt, Clock, RotateCcw, Users, Percent, CheckCircle,
 };
 
 function DroppableArea({ children, isEditMode }: { children: React.ReactNode; isEditMode: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: 'dashboard-drop-area',
-  });
-
+  const { setNodeRef, isOver } = useDroppable({ id: 'dashboard-drop-area' });
   return (
     <div
       ref={setNodeRef}
@@ -69,27 +57,34 @@ function DroppableArea({ children, isEditMode }: { children: React.ReactNode; is
 
 interface EditableDashboardGridProps {
   isEditMode: boolean;
+  layoutHook: ReturnType<typeof UseDashboardLayoutType>;
+  dateRange: DateRange;
 }
 
-export function EditableDashboardGrid({ isEditMode }: EditableDashboardGridProps) {
+export function EditableDashboardGrid({ isEditMode, layoutHook, dateRange }: EditableDashboardGridProps) {
   const {
     layout,
     updateLayout,
     addMetric,
     removeMetric,
     getAvailableMetrics,
-  } = useDashboardLayout();
+  } = layoutHook;
 
   const { campaigns } = useMetaCampaigns();
-  const { metrics: salesMetrics } = useSales();
+  
+  // Filter sales by selected date range
+  const salesFilters = useMemo(() => ({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  }), [dateRange.startDate, dateRange.endDate]);
+  
+  const { metrics: salesMetrics } = useSales(salesFilters);
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
+      activationConstraint: { distance: 8 },
     })
   );
 
@@ -103,18 +98,13 @@ export function EditableDashboardGrid({ isEditMode }: EditableDashboardGridProps
   const avgTicket = totalSales > 0 ? totalRevenue / totalSales : salesMetrics.avgTicket;
   const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (value: number) =>
+    `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const formatPercent = (value: number) => {
-    return `${value.toFixed(1)}%`;
-  };
+  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
 
   const getMetricData = (metricId: string): { 
-    title: string; 
-    value: string; 
-    icon: LucideIcon; 
+    title: string; value: string; icon: LucideIcon; 
     variant: 'default' | 'success' | 'danger' | 'warning' | 'primary';
     change?: number;
   } => {
@@ -157,28 +147,21 @@ export function EditableDashboardGrid({ isEditMode }: EditableDashboardGridProps
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     if (!isEditMode) return;
-    
     const { active, over } = event;
     setActiveId(null);
-
     if (!over) return;
 
-    // Check if dragging from sidebar
     const activeData = active.data.current;
     if (activeData?.fromSidebar) {
-      const metricId = activeData.metricId;
-      addMetric(metricId);
+      addMetric(activeData.metricId);
       return;
     }
 
-    // Handle reordering
     if (active.id !== over.id) {
       const oldIndex = layout.findIndex(item => item.id === active.id);
       const newIndex = layout.findIndex(item => item.id === over.id);
-
       if (oldIndex !== -1 && newIndex !== -1) {
         const newLayout = arrayMove(layout, oldIndex, newIndex);
-        // Update x, y positions based on new order
         const updatedLayout = newLayout.map((item, index) => ({
           ...item,
           x: index % 4,
@@ -187,7 +170,7 @@ export function EditableDashboardGrid({ isEditMode }: EditableDashboardGridProps
         updateLayout(updatedLayout);
       }
     }
-  }, [layout, updateLayout, addMetric]);
+  }, [layout, updateLayout, addMetric, isEditMode]);
 
   const sortableIds = layout.map(item => item.id);
 
@@ -204,7 +187,6 @@ export function EditableDashboardGrid({ isEditMode }: EditableDashboardGridProps
             availableMetrics={getAvailableMetrics()}
             isEditMode={isEditMode}
           />
-
           <DroppableArea isEditMode={isEditMode}>
             <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -233,7 +215,6 @@ export function EditableDashboardGrid({ isEditMode }: EditableDashboardGridProps
 
       <DragOverlay>
         {activeId && (() => {
-          // Check if it's from sidebar
           if (activeId.startsWith('sidebar-')) {
             const metricId = activeId.replace('sidebar-', '');
             const metricDef = AVAILABLE_METRICS.find(m => m.id === metricId);
@@ -251,7 +232,6 @@ export function EditableDashboardGrid({ isEditMode }: EditableDashboardGridProps
               );
             }
           }
-          
           const metricData = getMetricData(activeId);
           return (
             <DraggableMetricCard

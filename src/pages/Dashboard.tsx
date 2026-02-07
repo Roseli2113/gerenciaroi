@@ -6,8 +6,12 @@ import { CampaignsList } from '@/components/dashboard/CampaignsList';
 import { EditableDashboardGrid } from '@/components/dashboard/EditableDashboardGrid';
 import { EditModeBar } from '@/components/dashboard/EditModeBar';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
+import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 
 const Dashboard = () => {
+  const dashboardLayout = useDashboardLayout();
+  const filters = useDashboardFilters();
+
   const {
     isEditMode,
     saving,
@@ -15,7 +19,7 @@ const Dashboard = () => {
     saveLayout,
     cancelEdit,
     resetLayout,
-  } = useDashboardLayout();
+  } = dashboardLayout;
 
   return (
     <MainLayout 
@@ -33,11 +37,13 @@ const Dashboard = () => {
     >
       <div className="space-y-6">
         {/* Filters */}
-        <DashboardFilters />
+        <DashboardFilters filters={filters} />
 
         {/* Editable Metrics Grid */}
         <EditableDashboardGrid 
           isEditMode={isEditMode}
+          layoutHook={dashboardLayout}
+          dateRange={filters.dateRange}
         />
 
         {/* Charts Row - Only Spending Chart now */}
