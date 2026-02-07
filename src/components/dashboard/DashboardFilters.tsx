@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 import { useSales } from '@/hooks/useSales';
+import type { PeriodKey } from '@/hooks/useDashboardFilters';
 
 interface AdAccount {
   id: string;
@@ -20,17 +21,37 @@ interface AdAccount {
   is_active: boolean;
 }
 
-export function DashboardFilters() {
+interface DashboardFiltersProps {
+  filters: {
+    selectedPeriod: PeriodKey;
+    setSelectedPeriod: (period: PeriodKey) => void;
+    selectedAccount: string;
+    setSelectedAccount: (account: string) => void;
+    selectedCampaign: string;
+    setSelectedCampaign: (campaign: string) => void;
+    selectedProduct: string;
+    setSelectedProduct: (product: string) => void;
+  };
+}
+
+export function DashboardFilters({ filters }: DashboardFiltersProps) {
   const { user } = useAuth();
   const { refreshAll, isLoading: campaignsLoading } = useMetaCampaigns();
   const { refreshSales, loading: salesLoading } = useSales();
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<string>('all');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('today');
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<string>('all');
+
+  const {
+    selectedPeriod,
+    setSelectedPeriod,
+    selectedAccount,
+    setSelectedAccount,
+    selectedCampaign,
+    setSelectedCampaign,
+    selectedProduct,
+    setSelectedProduct,
+  } = filters;
 
   // Load accounts from database
   useEffect(() => {
@@ -51,18 +72,9 @@ export function DashboardFilters() {
     loadAccounts();
   }, [user]);
 
-  // Load campaigns when account changes (mock for now - would come from meta-ads)
   useEffect(() => {
-    // This would load campaigns from the API based on selected account
-    // For now, campaigns will be loaded from the hook
     setCampaigns([]);
   }, [selectedAccount]);
-
-  const handleApplyFilters = async () => {
-    // Apply filters - trigger data reload
-    console.log('Applying filters:', { selectedAccount, selectedPeriod, selectedCampaign, selectedProduct });
-    await handleRefresh();
-  };
 
   const handleRefresh = async () => {
     await Promise.all([
@@ -77,7 +89,7 @@ export function DashboardFilters() {
     <div className="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-card border border-border">
       <div className="flex items-center gap-2">
         <Calendar className="w-4 h-4 text-muted-foreground" />
-        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+        <Select value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as PeriodKey)}>
           <SelectTrigger className="w-40 border-0 bg-muted/50">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
