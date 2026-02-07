@@ -118,8 +118,12 @@ const Campaigns = () => {
   const formatPercent = (v: number | null) => v === null ? 'N/A' : `${v.toFixed(2).replace('.', ',')}%`;
   const formatNumber = (v: number) => v.toLocaleString('pt-BR');
 
-  const handleRefresh = () => {
-    refreshAll();
+  const handleRefresh = async () => {
+    await refreshAll();
+    const { toast } = await import('sonner');
+    toast.success('Dados Atualizados', {
+      style: { background: '#16a34a', color: '#ffffff', border: 'none' },
+    });
   };
 
   const handleSaveColumns = (newColumns: ColumnConfig[]) => {
