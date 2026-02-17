@@ -1,0 +1,1 @@
+ALTER TABLE public.pixels ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
