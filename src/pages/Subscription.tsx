@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +11,12 @@ import {
 } from '@/components/ui/card';
 import { Check, Zap, Crown, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
-const plans = [
+const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
+
+const plansList = [
   {
     id: 'free',
     name: 'Free',
@@ -25,7 +30,6 @@ const plans = [
       'Suporte por email',
       '14 dias de teste grátis',
     ],
-    current: false,
   },
   {
     id: 'starter',
@@ -40,7 +44,6 @@ const plans = [
       'Relatórios básicos',
       'Suporte por email',
     ],
-    current: false,
   },
   {
     id: 'pro',
@@ -48,6 +51,7 @@ const plans = [
     price: 197,
     description: 'Para profissionais de marketing',
     icon: Crown,
+    popular: true,
     features: [
       '5 contas de anúncio',
       'Campanhas ilimitadas',
@@ -57,8 +61,6 @@ const plans = [
       'Suporte prioritário',
       'API access',
     ],
-    current: true,
-    popular: true,
   },
   {
     id: 'enterprise',
@@ -76,11 +78,61 @@ const plans = [
       'SLA garantido',
       'Treinamento exclusivo',
     ],
-    current: false,
   },
 ];
 
+const planNameMap: Record<string, string> = {
+  free: 'Free',
+  starter: 'Starter',
+  pro: 'Profissional',
+  profissional: 'Profissional',
+  enterprise: 'Enterprise',
+};
+
+const planIdMap: Record<string, string> = {
+  free: 'free',
+  starter: 'starter',
+  pro: 'pro',
+  profissional: 'pro',
+  enterprise: 'enterprise',
+};
+
 const Subscription = () => {
+  const { user } = useAuth();
+  const [userPlan, setUserPlan] = useState<string>('free');
+  const [planStatus, setPlanStatus] = useState<string>('active');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      // Super admins are always Enterprise
+      if (SUPER_ADMIN_EMAILS.includes(user.email || '')) {
+        setUserPlan('enterprise');
+        setPlanStatus('active');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan, plan_status')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profile) {
+        setUserPlan(profile.plan || 'free');
+        setPlanStatus(profile.plan_status || 'active');
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const currentPlanId = planIdMap[userPlan] || 'free';
+  const currentPlanDisplayName = planNameMap[userPlan] || 'Free';
+  const currentPlanData = plansList.find(p => p.id === currentPlanId);
+  const CurrentIcon = currentPlanData?.icon || Zap;
+
   return (
     <MainLayout title="Assinatura">
       <div className="space-y-6">
@@ -90,17 +142,26 @@ const Subscription = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-primary/20">
-                  <Crown className="w-6 h-6 text-primary" />
+                  <CurrentIcon className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Plano Atual</p>
-                  <h3 className="text-xl font-bold text-foreground">Profissional</h3>
+                  <h3 className="text-xl font-bold text-foreground">{currentPlanDisplayName}</h3>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Próxima cobrança</p>
-                <p className="font-semibold text-foreground">05/02/2026</p>
-                <Badge className="mt-1 bg-success/20 text-success border-0">Ativo</Badge>
+                {currentPlanId !== 'free' && (
+                  <>
+                    <p className="text-sm text-muted-foreground">Próxima cobrança</p>
+                    <p className="font-semibold text-foreground">05/02/2026</p>
+                  </>
+                )}
+                <Badge className={cn(
+                  "mt-1 border-0",
+                  planStatus === 'active' ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'
+                )}>
+                  {planStatus === 'active' ? 'Ativo' : planStatus === 'expired' ? 'Expirado' : 'Cancelado'}
+                </Badge>
               </div>
             </div>
           </CardContent>
@@ -108,64 +169,67 @@ const Subscription = () => {
 
         {/* Plans */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {plans.map((plan) => (
-            <Card
-              key={plan.id}
-              className={cn(
-                'relative transition-all hover:shadow-card-hover',
-                plan.current && 'border-primary ring-2 ring-primary/20',
-                plan.popular && 'scale-105'
-              )}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="gradient-primary text-primary-foreground">
-                    Mais Popular
-                  </Badge>
-                </div>
-              )}
-              <CardHeader className="text-center pt-8">
-                <div className={cn(
-                  'w-12 h-12 rounded-xl mx-auto flex items-center justify-center',
-                  plan.current ? 'bg-primary/20' : 'bg-muted'
-                )}>
-                  <plan.icon className={cn(
-                    'w-6 h-6',
-                    plan.current ? 'text-primary' : 'text-muted-foreground'
-                  )} />
-                </div>
-                <CardTitle className="mt-4">{plan.name}</CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-foreground">
-                    R$ {plan.price}
-                  </span>
-                  <span className="text-muted-foreground">/mês</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-3">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2 text-sm">
-                      <Check className="w-4 h-4 text-success shrink-0" />
-                      <span className="text-muted-foreground">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className={cn(
-                    'w-full',
-                    plan.current
-                      ? 'bg-muted text-muted-foreground hover:bg-muted'
-                      : 'gradient-primary text-primary-foreground hover:opacity-90'
-                  )}
-                  disabled={plan.current}
-                >
-                  {plan.current ? 'Plano Atual' : 'Fazer Upgrade'}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          {plansList.map((plan) => {
+            const isCurrent = plan.id === currentPlanId;
+            return (
+              <Card
+                key={plan.id}
+                className={cn(
+                  'relative transition-all hover:shadow-card-hover',
+                  isCurrent && 'border-primary ring-2 ring-primary/20',
+                  plan.popular && 'scale-105'
+                )}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="gradient-primary text-primary-foreground">
+                      Mais Popular
+                    </Badge>
+                  </div>
+                )}
+                <CardHeader className="text-center pt-8">
+                  <div className={cn(
+                    'w-12 h-12 rounded-xl mx-auto flex items-center justify-center',
+                    isCurrent ? 'bg-primary/20' : 'bg-muted'
+                  )}>
+                    <plan.icon className={cn(
+                      'w-6 h-6',
+                      isCurrent ? 'text-primary' : 'text-muted-foreground'
+                    )} />
+                  </div>
+                  <CardTitle className="mt-4">{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold text-foreground">
+                      R$ {plan.price}
+                    </span>
+                    <span className="text-muted-foreground">/mês</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-success shrink-0" />
+                        <span className="text-muted-foreground">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    className={cn(
+                      'w-full',
+                      isCurrent
+                        ? 'bg-muted text-muted-foreground hover:bg-muted'
+                        : 'gradient-primary text-primary-foreground hover:opacity-90'
+                    )}
+                    disabled={isCurrent}
+                  >
+                    {isCurrent ? 'Plano Atual' : 'Fazer Upgrade'}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Billing History */}
