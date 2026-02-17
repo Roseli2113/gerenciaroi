@@ -13,8 +13,10 @@ import {
   Zap,
   Plug,
   ShoppingCart,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAdminRole } from '@/hooks/useAdminRole';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -31,6 +33,7 @@ const menuItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { isAdmin } = useAdminRole();
 
   return (
     <aside
@@ -84,6 +87,35 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Admin area - only visible to admins */}
+        {isAdmin && (
+          <>
+            <div className="my-2 border-t border-sidebar-border" />
+            <Link
+              to="/admin"
+              className={cn(
+                'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group',
+                location.pathname === '/admin'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+              )}
+            >
+              <Shield
+                className={cn(
+                  'w-5 h-5 transition-colors',
+                  location.pathname === '/admin' ? 'text-primary' : 'group-hover:text-primary'
+                )}
+              />
+              {!collapsed && (
+                <span className="font-medium animate-fade-in-left">Área Admin</span>
+              )}
+              {location.pathname === '/admin' && !collapsed && (
+                <div className="ml-auto w-2 h-2 rounded-full bg-primary animate-pulse" />
+              )}
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* Collapse Button */}
