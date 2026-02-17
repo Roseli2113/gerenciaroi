@@ -352,10 +352,10 @@ const Campaigns = () => {
       <div className="w-full overflow-x-auto whitespace-nowrap">
         <Table className="border-separate border-spacing-0">
           <TableHeader>
-            <TableRow className="border-border hover:bg-transparent bg-muted/30">
-              <TableHead className="w-[48px] sticky left-0 bg-muted/30 z-20 border-r border-border"><Checkbox /></TableHead>
-              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-muted/30 z-20 border-r border-border">STATUS</TableHead>
-              <TableHead className="font-semibold sticky left-[108px] bg-muted/30 z-20 min-w-[200px] border-r border-border">CONTA</TableHead>
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="w-[48px] sticky left-0 bg-[#384157] z-20 border-r border-border"><Checkbox /></TableHead>
+              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-[#384157] z-20 border-r border-border">STATUS</TableHead>
+              <TableHead className="font-semibold sticky left-[108px] bg-[#384157] z-20 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">CONTA</TableHead>
               {visibleColumns.map((col, index) => (
                 <TableHead 
                   key={col.id} 
@@ -378,7 +378,7 @@ const Campaigns = () => {
                 <TableCell className="w-[60px] text-center sticky left-[48px] bg-card z-10 border-r border-b border-border">
                   <Switch checked={account.is_active} disabled />
                 </TableCell>
-                <TableCell className="font-medium sticky left-[108px] bg-card z-10 min-w-[200px] border-r border-b border-border">
+                <TableCell className="font-medium sticky left-[108px] bg-card z-10 min-w-[200px] border-r border-b border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
                   {account.name}
                 </TableCell>
                 {visibleColumns.map((col, index) => {
@@ -427,10 +427,10 @@ const Campaigns = () => {
               </TableRow>
             ))}
             {/* Summary row */}
-            <TableRow className="border-border bg-muted/20 font-semibold">
-              <TableCell className="w-[48px] sticky left-0 bg-muted/20 z-10 border-r border-border" />
-              <TableCell className="w-[60px] sticky left-[48px] bg-muted/20 z-10 border-r border-border" />
-              <TableCell className="sticky left-[108px] bg-muted/20 z-10 min-w-[200px] border-r border-border">
+            <TableRow className="border-border font-semibold">
+              <TableCell className="w-[48px] sticky left-0 bg-secondary z-10 border-r border-border" />
+              <TableCell className="w-[60px] sticky left-[48px] bg-secondary z-10 border-r border-border" />
+              <TableCell className="sticky left-[108px] bg-secondary z-10 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
                 {activeAccounts.length} Conta{activeAccounts.length > 1 ? 's' : ''}
               </TableCell>
               {visibleColumns.map((col, index) => {
@@ -467,7 +467,7 @@ const Campaigns = () => {
                     <TableCell 
                       key={col.id} 
                       className={cn(
-                        "text-center border-r border-b border-border",
+                        "text-center border-r border-b border-border bg-secondary",
                         index === visibleColumns.length - 1 && "border-r-0"
                       )}
                     >
@@ -510,10 +510,10 @@ const Campaigns = () => {
       <div className="w-full overflow-x-auto whitespace-nowrap">
         <Table className="border-separate border-spacing-0">
           <TableHeader>
-            <TableRow className="border-border hover:bg-transparent bg-muted/30">
-              <TableHead className="w-[48px] sticky left-0 bg-muted/30 z-20 border-r border-border"><Checkbox /></TableHead>
-              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-muted/30 z-20 border-r border-border">STATUS</TableHead>
-              <TableHead className="font-semibold sticky left-[108px] bg-muted/30 z-20 min-w-[200px] border-r border-border">
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="w-[48px] sticky left-0 bg-[#384157] z-20 border-r border-border"><Checkbox /></TableHead>
+              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-[#384157] z-20 border-r border-border">STATUS</TableHead>
+              <TableHead className="font-semibold sticky left-[108px] bg-[#384157] z-20 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
                 {activeTab === 'campanhas' ? 'CAMPANHA' : activeTab === 'conjuntos' ? 'CONJUNTO' : 'ANÚNCIO'}
               </TableHead>
               {visibleColumns.map((col, index) => (
@@ -564,7 +564,7 @@ const Campaigns = () => {
                       <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
                     )}
                   </TableCell>
-                  <TableCell className={cn("font-medium sticky left-[108px] z-10 min-w-[200px] border-r border-b border-border", isSelected ? "bg-primary/10" : "bg-card")}>
+                  <TableCell className={cn("font-medium sticky left-[108px] z-10 min-w-[200px] border-r border-b border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]", isSelected ? "bg-primary/10" : "bg-card")}>
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[180px]">{item.name}</span>
                       {activeTab === 'campanhas' && (
@@ -640,17 +640,17 @@ const Campaigns = () => {
                 : `${displayData.length} ANÚNCIO${displayData.length > 1 ? 'S' : ''}`;
 
               return (
-                <TableRow className="border-b border-border bg-muted/40 font-semibold">
-                  <TableCell className="w-[48px] sticky left-0 bg-muted/40 z-10 border-r border-border" />
-                  <TableCell className="w-[60px] text-center sticky left-[48px] bg-muted/40 z-10 border-r border-border" />
-                  <TableCell className="font-semibold sticky left-[108px] bg-muted/40 z-10 min-w-[200px] border-r border-border text-xs">
+                <TableRow className="border-b border-border font-semibold">
+                  <TableCell className="w-[48px] sticky left-0 bg-secondary z-10 border-r border-border" />
+                  <TableCell className="w-[60px] text-center sticky left-[48px] bg-secondary z-10 border-r border-border" />
+                  <TableCell className="font-semibold sticky left-[108px] bg-secondary z-10 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)] text-xs">
                     {itemLabel}
                   </TableCell>
                   {visibleColumns.map((col, index) => (
                     <TableCell 
                       key={col.id} 
-                      className={cn(
-                        "text-center border-r border-border",
+                       className={cn(
+                        "text-center border-r border-border bg-secondary",
                         index === visibleColumns.length - 1 && "border-r-0"
                       )}
                     >
