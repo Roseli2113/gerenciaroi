@@ -173,7 +173,7 @@ export default function Admin() {
   const totalActive = users.filter(u => getDisplayPlanStatus(u) === 'active' && getDisplayPlan(u) !== 'Free').length;
   const totalExpired = users.filter(u => u.plan_status === 'overdue').length;
   const totalCancelled = users.filter(u => u.plan_status === 'cancelled').length;
-  const totalFree = users.filter(u => getDisplayPlan(u) === 'Free' || !u.plan).length;
+  const totalFree = users.filter(u => !u.plan || u.plan === 'free').length;
   const totalProfissional = users.filter(u => u.plan === 'profissional').length;
   const totalEnterprise = users.filter(u => u.plan === 'enterprise' || isSuperAdmin(u.email)).length;
   const totalStarter = users.filter(u => u.plan === 'starter').length;
