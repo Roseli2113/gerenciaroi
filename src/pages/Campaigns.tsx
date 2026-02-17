@@ -349,7 +349,7 @@ const Campaigns = () => {
     const roas = totalSpent > 0 ? totalRevenue / totalSpent : null;
 
     return (
-      <ScrollArea className="w-full whitespace-nowrap">
+      <div className="w-full overflow-x-auto whitespace-nowrap">
         <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent bg-muted/30">
@@ -478,8 +478,7 @@ const Campaigns = () => {
             </TableRow>
           </TableBody>
         </Table>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </div>
     );
   };
 
@@ -508,7 +507,7 @@ const Campaigns = () => {
     }
 
     return (
-      <ScrollArea className="w-full whitespace-nowrap">
+      <div className="w-full overflow-x-auto whitespace-nowrap">
         <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent bg-muted/30">
@@ -663,8 +662,7 @@ const Campaigns = () => {
             })()}
           </TableBody>
         </Table>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </div>
     );
   };
 
