@@ -1,17 +1,21 @@
 import { useMemo } from 'react';
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useSales } from '@/hooks/useSales';
+import { useSales, type SalesFilters } from '@/hooks/useSales';
 
-export function SalesByHourChart() {
-  const { sales } = useSales();
+interface SalesByHourChartProps {
+  filters?: SalesFilters;
+}
+
+export function SalesByHourChart({ filters }: SalesByHourChartProps) {
+  const { sales } = useSales(filters);
 
   const data = useMemo(() => {
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({
@@ -62,11 +66,11 @@ export function SalesByHourChart() {
         </div>
       ) : (
         <ResponsiveContainer width="100%" height="85%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
-              <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.05} />
+              <linearGradient id="salesBarGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.4} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -86,16 +90,13 @@ export function SalesByHourChart() {
               allowDecimals={false}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
+            <Bar
               dataKey="vendas"
-              stroke="hsl(217, 91%, 60%)"
-              strokeWidth={2.5}
-              fill="url(#salesGradient)"
-              dot={false}
-              activeDot={{ r: 5, fill: 'hsl(217, 91%, 60%)', stroke: 'hsl(var(--card))', strokeWidth: 2 }}
+              fill="url(#salesBarGradient)"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={24}
             />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
       )}
     </div>

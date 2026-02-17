@@ -10,11 +10,15 @@ import {
   ResponsiveContainer,
   ComposedChart,
 } from 'recharts';
-import { useSales } from '@/hooks/useSales';
+import { useSales, type SalesFilters } from '@/hooks/useSales';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 
-export function ProfitByHourChart() {
-  const { sales } = useSales();
+interface ProfitByHourChartProps {
+  filters?: SalesFilters;
+}
+
+export function ProfitByHourChart({ filters }: ProfitByHourChartProps) {
+  const { sales } = useSales(filters);
   const { campaigns } = useMetaCampaigns();
 
   const data = useMemo(() => {

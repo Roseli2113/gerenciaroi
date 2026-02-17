@@ -26,16 +26,12 @@ import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 
 type WidgetId = 'profit-by-hour' | 'sales-by-hour' | 'conversion-funnel' | 'campaigns-list';
 
-const WIDGET_COMPONENTS: Record<WidgetId, React.FC> = {
-  'profit-by-hour': ProfitByHourChart,
-  'sales-by-hour': SalesByHourChart,
-  'conversion-funnel': ConversionFunnel,
-  'campaigns-list': CampaignsList,
-};
+// Widget components are rendered inline to pass filters
 
 const Dashboard = () => {
   const dashboardLayout = useDashboardLayout();
   const filters = useDashboardFilters();
+  const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([
     'profit-by-hour',
     'sales-by-hour',
@@ -99,8 +95,6 @@ const Dashboard = () => {
           <SortableContext items={widgetOrder} strategy={verticalListSortingStrategy}>
             <div className="space-y-6">
               {widgetOrder.map(widgetId => {
-                const WidgetComponent = WIDGET_COMPONENTS[widgetId];
-
                 // Profit + Sales side by side
                 if (widgetId === 'profit-by-hour') {
                   const salesIdx = widgetOrder.indexOf('sales-by-hour');
@@ -109,23 +103,21 @@ const Dashboard = () => {
                     return (
                       <div key={widgetId} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <DraggableWidgetCard id="profit-by-hour" isEditMode={isEditMode}>
-                          <ProfitByHourChart />
+                          <ProfitByHourChart filters={salesFilters} />
                         </DraggableWidgetCard>
                         <DraggableWidgetCard id="sales-by-hour" isEditMode={isEditMode}>
-                          <SalesByHourChart />
+                          <SalesByHourChart filters={salesFilters} />
                         </DraggableWidgetCard>
                       </div>
                     );
                   }
                 }
-                // Skip sales-by-hour if already rendered with profit
                 if (widgetId === 'sales-by-hour') {
                   const profitIdx = widgetOrder.indexOf('profit-by-hour');
                   const salesIdx = widgetOrder.indexOf('sales-by-hour');
                   if (profitIdx === salesIdx - 1) return null;
                 }
 
-                // Funnel + campaigns side by side
                 if (widgetId === 'conversion-funnel') {
                   const campaignsIdx = widgetOrder.indexOf('campaigns-list');
                   const funnelIdx = widgetOrder.indexOf('conversion-funnel');
@@ -148,9 +140,19 @@ const Dashboard = () => {
                   if (funnelIdx === campaignsIdx - 1) return null;
                 }
 
+                // Standalone widgets
+                const renderWidget = () => {
+                  switch (widgetId) {
+                    case 'profit-by-hour': return <ProfitByHourChart filters={salesFilters} />;
+                    case 'sales-by-hour': return <SalesByHourChart filters={salesFilters} />;
+                    case 'conversion-funnel': return <ConversionFunnel />;
+                    case 'campaigns-list': return <CampaignsList />;
+                  }
+                };
+
                 return (
                   <DraggableWidgetCard key={widgetId} id={widgetId} isEditMode={isEditMode}>
-                    <WidgetComponent />
+                    {renderWidget()}
                   </DraggableWidgetCard>
                 );
               })}
