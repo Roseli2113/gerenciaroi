@@ -1,0 +1,141 @@
+import { useMemo } from 'react';
+import {
+  AreaChart,
+  Area,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ComposedChart,
+} from 'recharts';
+import { useSales } from '@/hooks/useSales';
+import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
+
+export function ProfitByHourChart() {
+  const { sales } = useSales();
+  const { campaigns } = useMetaCampaigns();
+
+  const data = useMemo(() => {
+    const hourlyData = Array.from({ length: 24 }, (_, i) => ({
+      hour: `${String(i).padStart(2, '0')}:00`,
+      lucro: 0,
+      gastos: 0,
+    }));
+
+    // Distribute sales revenue by hour
+    sales.forEach(sale => {
+      if (sale.status === 'approved' || sale.status === 'paid') {
+        const hour = new Date(sale.created_at).getHours();
+        hourlyData[hour].lucro += Number(sale.amount);
+      }
+    });
+
+    // Distribute campaign spending evenly across hours (as approximation)
+    const totalSpent = campaigns.reduce((sum, c) => sum + c.spent, 0);
+    const spentPerHour = totalSpent / 24;
+    hourlyData.forEach(d => {
+      d.gastos = spentPerHour;
+      d.lucro = d.lucro - d.gastos; // profit = revenue - costs
+    });
+
+    return hourlyData;
+  }, [sales, campaigns]);
+
+  const formatCurrency = (value: number) => `R$ ${value.toFixed(0)}`;
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="rounded-xl border border-border bg-card p-3 shadow-lg">
+        <p className="text-sm font-medium text-foreground mb-2">{label}</p>
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center gap-2 text-sm">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: entry.color }} />
+            <span className="text-muted-foreground">
+              {entry.dataKey === 'lucro' ? 'Lucro' : 'Gastos'}:
+            </span>
+            <span className="font-semibold text-foreground">
+              R$ {Math.abs(entry.value).toFixed(2)}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 h-[400px]">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Lucro por Horário</h3>
+          <p className="text-sm text-muted-foreground">Lucro e gastos ao longo do dia</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded" style={{ background: 'hsl(217, 91%, 60%)' }} />
+            <span className="text-sm text-muted-foreground">Lucro</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded" style={{ background: 'hsl(0, 72%, 51%)' }} />
+            <span className="text-sm text-muted-foreground">Gastos</span>
+          </div>
+        </div>
+      </div>
+
+      {data.every(d => d.lucro === 0 && d.gastos === 0) ? (
+        <div className="flex items-center justify-center h-[85%] text-muted-foreground">
+          Nenhum dado disponível
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height="85%">
+          <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="expenseBarGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(0, 72%, 51%)" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(0, 72%, 51%)" stopOpacity={0.4} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis
+              dataKey="hour"
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={11}
+              tickLine={false}
+              axisLine={false}
+              interval={2}
+            />
+            <YAxis
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={formatCurrency}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar
+              dataKey="gastos"
+              fill="url(#expenseBarGradient)"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={20}
+            />
+            <Area
+              type="monotone"
+              dataKey="lucro"
+              stroke="hsl(217, 91%, 60%)"
+              strokeWidth={2.5}
+              fill="url(#profitGradient)"
+              dot={false}
+              activeDot={{ r: 5, fill: 'hsl(217, 91%, 60%)', stroke: 'hsl(var(--card))', strokeWidth: 2 }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
