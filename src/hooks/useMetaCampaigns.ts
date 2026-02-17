@@ -709,6 +709,32 @@ export function useMetaCampaigns() {
     }
   }, [accessToken]);
 
+  const updateAdSetName = useCallback(async (adsetId: string, name: string) => {
+    if (!accessToken) {
+      toast.error('Não conectado ao Meta Ads');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-ads', {
+        body: { action: 'update-adset', accessToken, adsetId, updates: { name } }
+      });
+
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      setAdSets(prev => prev.map(as =>
+        as.id === adsetId ? { ...as, name } : as
+      ));
+
+      toast.success('Nome do conjunto atualizado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' }, position: 'top-center' });
+      return true;
+    } catch (err) {
+      console.error('Error updating adset name:', err);
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar nome do conjunto');
+      return false;
+    }
+  }, [accessToken]);
+
   const getLastUpdatedText = useCallback(() => {
     if (!lastUpdated) return 'Nunca';
 
@@ -744,6 +770,7 @@ export function useMetaCampaigns() {
     updateCampaignName,
     updateAdSetBudget,
     updateAdName,
+    updateAdSetName,
     getLastUpdatedText,
     hasActiveAccount: !!activeAccountId && !!accessToken
   };
