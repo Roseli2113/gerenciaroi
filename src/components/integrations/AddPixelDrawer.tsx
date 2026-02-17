@@ -613,6 +613,7 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
           <Button onClick={handleSave} className="w-full" size="lg" disabled={saving}>
             {saving ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Salvar Dados'}
           </Button>
+          <div className="pb-16" />
         </div>
       </div>
 
