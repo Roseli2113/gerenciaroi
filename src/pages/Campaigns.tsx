@@ -45,6 +45,7 @@ const Campaigns = () => {
   const [editingAdSet, setEditingAdSet] = useState<AdSet | null>(null);
   const [editingCampaignName, setEditingCampaignName] = useState<Campaign | null>(null);
   const [editingAdName, setEditingAdName] = useState<Ad | null>(null);
+  const [editingAdSetName, setEditingAdSetName] = useState<AdSet | null>(null);
   const [showColumnDialog, setShowColumnDialog] = useState(false);
   const [activeAccounts, setActiveAccounts] = useState<ActiveAccount[]>([]);
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
@@ -66,7 +67,7 @@ const Campaigns = () => {
     campaigns, adSets, ads, isLoading, isLoadingAdSets, isLoadingAds,
     fetchCampaigns, fetchAdSets, fetchAds, refreshAll,
     toggleCampaignStatus, toggleAdSetStatus, toggleAdStatus,
-    updateCampaignBudget, updateAdSetBudget, updateCampaignName, updateAdName,
+    updateCampaignBudget, updateAdSetBudget, updateCampaignName, updateAdName, updateAdSetName,
     getLastUpdatedText, hasActiveAccount,
     selectedCampaignId, selectedAdSetId, setSelectedCampaignId, setSelectedAdSetId
   } = useMetaCampaigns();
@@ -568,7 +569,7 @@ const Campaigns = () => {
                   <TableCell className={cn("font-medium sticky left-[108px] z-10 min-w-[200px] border-r border-b border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]", isSelected ? "bg-row-selected" : "bg-card")}>
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[180px]">{item.name}</span>
-                      {(activeTab === 'campanhas' || activeTab === 'anuncios') && (
+                      {(activeTab === 'campanhas' || activeTab === 'conjuntos' || activeTab === 'anuncios') && (
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -577,6 +578,8 @@ const Campaigns = () => {
                             e.stopPropagation();
                             if (activeTab === 'campanhas') {
                               setEditingCampaignName(item as Campaign);
+                            } else if (activeTab === 'conjuntos') {
+                              setEditingAdSetName(item as AdSet);
                             } else {
                               setEditingAdName(item as Ad);
                             }
@@ -775,6 +778,14 @@ const Campaigns = () => {
           onOpenChange={(open) => !open && setEditingAdName(null)}
           currentName={editingAdName.name}
           onSave={(name) => updateAdName(editingAdName.id, name)}
+        />
+      )}
+      {editingAdSetName && (
+        <EditCampaignNameDialog
+          open={!!editingAdSetName}
+          onOpenChange={(open) => !open && setEditingAdSetName(null)}
+          currentName={editingAdSetName.name}
+          onSave={(name) => updateAdSetName(editingAdSetName.id, name)}
         />
       )}
       <ColumnCustomizationDialog
