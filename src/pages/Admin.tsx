@@ -14,9 +14,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2,
+  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard,
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
 
@@ -48,6 +51,8 @@ export default function Admin() {
   const [confirmAction, setConfirmAction] = useState<{ type: string; userId: string; email: string | null } | null>(null);
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [addingAdmin, setAddingAdmin] = useState(false);
+  const [changePlanUser, setChangePlanUser] = useState<UserProfile | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -126,6 +131,32 @@ export default function Admin() {
     toast.success('Admin removido');
     fetchUsers();
     setConfirmAction(null);
+  };
+
+  const handleChangePlan = async () => {
+    if (!changePlanUser || !selectedPlan) return;
+    const { error } = await supabase.from('profiles').update({
+      plan: selectedPlan,
+      plan_status: 'active',
+    }).eq('user_id', changePlanUser.user_id);
+    if (error) {
+      toast.error('Erro ao alterar plano: ' + error.message);
+    } else {
+      toast.success(`Plano de ${changePlanUser.email} alterado para ${selectedPlan}`);
+      fetchUsers();
+    }
+    setChangePlanUser(null);
+    setSelectedPlan('');
+  };
+
+  const getDisplayPlan = (u: UserProfile) => {
+    if (isSuperAdmin(u.email)) return 'Enterprise';
+    return u.plan || 'Free';
+  };
+
+  const getDisplayPlanStatus = (u: UserProfile) => {
+    if (isSuperAdmin(u.email)) return 'active';
+    return u.plan_status;
   };
 
   const getPlanBadge = (status: string | null) => {
@@ -208,8 +239,8 @@ export default function Admin() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{u.email || '—'}</TableCell>
                     <TableCell className="text-muted-foreground">{u.phone || '—'}</TableCell>
-                    <TableCell>{u.plan || 'Free'}</TableCell>
-                    <TableCell>{getPlanBadge(u.plan_status)}</TableCell>
+                    <TableCell>{getDisplayPlan(u)}</TableCell>
+                    <TableCell>{getPlanBadge(getDisplayPlanStatus(u))}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => { setSelectedUser(u); setDetailsOpen(true); }} title="Ver detalhes">
@@ -218,6 +249,11 @@ export default function Admin() {
                         <Button variant="ghost" size="icon" onClick={() => handleNotifyOverdue(u.email)} title="Notificar plano em atraso">
                           <Bell className="w-4 h-4 text-amber-400" />
                         </Button>
+                        {!isSuperAdmin(u.email) && (
+                          <Button variant="ghost" size="icon" onClick={() => { setChangePlanUser(u); setSelectedPlan(u.plan || 'free'); }} title="Alterar plano">
+                            <CreditCard className="w-4 h-4 text-primary" />
+                          </Button>
+                        )}
                         {!isSuperAdmin(u.email) && (
                           <>
                             <Button variant="ghost" size="icon" onClick={() => setConfirmAction({ type: u.is_blocked ? 'unblock' : 'block', userId: u.user_id, email: u.email })} title={u.is_blocked ? 'Desbloquear' : 'Bloquear'}>
@@ -290,6 +326,32 @@ export default function Admin() {
             >
               Confirmar
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Change Plan Dialog */}
+      <Dialog open={!!changePlanUser} onOpenChange={() => setChangePlanUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Plano</DialogTitle>
+            <DialogDescription>Alterar plano de {changePlanUser?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o plano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="starter">Starter</SelectItem>
+                <SelectItem value="profissional">Profissional</SelectItem>
+                <SelectItem value="enterprise">Enterprise</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangePlanUser(null)}>Cancelar</Button>
+            <Button onClick={handleChangePlan}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
