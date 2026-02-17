@@ -499,9 +499,8 @@ export default function Integrations() {
                       <p className="text-sm text-muted-foreground">Copie o código para colocar nos anúncios do Google</p>
                     </div>
                   </div>
-                  <Button onClick={() => openUtmCodeDialog('google')} className="gap-2">
-                    <List className="w-4 h-4" />
-                    Ver opções
+                  <Button disabled className="gap-2 opacity-50 cursor-not-allowed">
+                    Em Breve
                   </Button>
                 </div>
 
@@ -516,9 +515,8 @@ export default function Integrations() {
                       <p className="text-sm text-muted-foreground">Copie o código para colocar nos anúncios do Kwai</p>
                     </div>
                   </div>
-                  <Button onClick={() => openUtmCodeDialog('kwai')} className="gap-2">
-                    <List className="w-4 h-4" />
-                    Ver opções
+                  <Button disabled className="gap-2 opacity-50 cursor-not-allowed">
+                    Em Breve
                   </Button>
                 </div>
 
@@ -533,9 +531,8 @@ export default function Integrations() {
                       <p className="text-sm text-muted-foreground">Copie o código para colocar nos anúncios do TikTok</p>
                     </div>
                   </div>
-                  <Button onClick={() => openUtmCodeDialog('tiktok')} className="gap-2">
-                    <List className="w-4 h-4" />
-                    Ver opções
+                  <Button disabled className="gap-2 opacity-50 cursor-not-allowed">
+                    Em Breve
                   </Button>
                 </div>
               </CardContent>
@@ -581,22 +578,6 @@ export default function Integrations() {
                   </Button>
                 </div>
 
-                {/* Typebot */}
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                      <MessageCircle className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">Você utiliza Typebot?</p>
-                      <p className="text-sm text-muted-foreground">Assista ao passo a passo para garantir a configuração correta.</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="gap-2">
-                    <Play className="w-4 h-4" />
-                    Assistir
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
