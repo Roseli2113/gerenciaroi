@@ -595,6 +595,70 @@ const Campaigns = () => {
                 </TableRow>
               );
             })}
+            {/* Summary totals row */}
+            {displayData.length > 0 && (() => {
+              const totalSpent = displayData.reduce((sum, i) => sum + i.spent, 0);
+              const totalSales = displayData.reduce((sum, i) => sum + i.sales, 0);
+              const totalRevenue = displayData.reduce((sum, i) => sum + i.revenue, 0);
+              const totalProfit = totalRevenue - totalSpent;
+              const totalImpressions = displayData.reduce((sum, i) => sum + i.impressions, 0);
+              const totalClicks = displayData.reduce((sum, i) => sum + i.clicks, 0);
+              const totalPageViews = displayData.reduce((sum, i) => sum + i.pageViews, 0);
+              const totalIC = displayData.reduce((sum, i) => sum + i.initiatedCheckout, 0);
+              const totalCtaClicks = displayData.reduce((sum, i) => sum + i.ctaClicks, 0);
+              const totalReach = displayData.reduce((sum, i) => sum + i.reach, 0);
+              const avgCPA = totalSales > 0 ? totalSpent / totalSales : null;
+              const avgROI = totalSpent > 0 ? totalRevenue / totalSpent : null;
+              const avgCPM = totalImpressions > 0 ? (totalSpent / totalImpressions) * 1000 : null;
+              const avgCPC = totalClicks > 0 ? totalSpent / totalClicks : null;
+              const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null;
+              const avgFreq = totalReach > 0 ? totalImpressions / totalReach : null;
+              const avgCPV = totalPageViews > 0 ? totalSpent / totalPageViews : null;
+              const avgCPI = totalIC > 0 ? totalSpent / totalIC : null;
+              const convCheck = totalIC > 0 ? (totalSales / totalIC) * 100 : null;
+              const margin = totalRevenue > 0 ? ((totalRevenue - totalSpent) / totalRevenue) * 100 : null;
+              const roas = totalSpent > 0 ? totalRevenue / totalSpent : null;
+              const totalBudget = displayData.reduce((sum, i) => sum + ((i as any).budget || 0), 0);
+              const totalDeclined = displayData.reduce((sum, i) => sum + i.declinedSales, 0);
+              const totalRefunded = displayData.reduce((sum, i) => sum + i.refundedSales, 0);
+
+              const summaryItem = {
+                spent: totalSpent, sales: totalSales, revenue: totalRevenue, profit: totalProfit,
+                impressions: totalImpressions, clicks: totalClicks, pageViews: totalPageViews,
+                initiatedCheckout: totalIC, cpa: avgCPA, roi: avgROI, cpm: avgCPM, cpc: avgCPC,
+                ctr: avgCTR, frequency: avgFreq, cpv: avgCPV, costPerInitiatedCheckout: avgCPI,
+                checkoutConversion: convCheck, margin, roas, hookPlayRate: null, holdRate: null,
+                ctaClicks: totalCtaClicks, refundedSales: totalRefunded, declinedSales: totalDeclined,
+                budget: totalBudget || null, budgetType: null, reach: totalReach,
+              } as unknown as Campaign;
+
+              const itemLabel = activeTab === 'campanhas' 
+                ? `${displayData.length} CAMPANHA${displayData.length > 1 ? 'S' : ''}`
+                : activeTab === 'conjuntos'
+                ? `${displayData.length} CONJUNTO${displayData.length > 1 ? 'S' : ''}`
+                : `${displayData.length} ANÚNCIO${displayData.length > 1 ? 'S' : ''}`;
+
+              return (
+                <TableRow className="border-b border-border bg-muted/40 font-semibold">
+                  <TableCell className="w-[48px] sticky left-0 bg-muted/40 z-10 border-r border-border text-muted-foreground text-xs">N/A</TableCell>
+                  <TableCell className="w-[60px] text-center sticky left-[48px] bg-muted/40 z-10 border-r border-border text-muted-foreground text-xs">N/A</TableCell>
+                  <TableCell className="font-semibold sticky left-[108px] bg-muted/40 z-10 min-w-[200px] border-r border-border text-xs">
+                    {itemLabel}
+                  </TableCell>
+                  {visibleColumns.map((col, index) => (
+                    <TableCell 
+                      key={col.id} 
+                      className={cn(
+                        "text-center border-r border-border",
+                        index === visibleColumns.length - 1 && "border-r-0"
+                      )}
+                    >
+                      {getColumnValue(summaryItem, col.id)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })()}
           </TableBody>
         </Table>
         <ScrollBar orientation="horizontal" />
