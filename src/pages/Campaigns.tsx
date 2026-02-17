@@ -514,7 +514,9 @@ const Campaigns = () => {
             <TableRow className="border-border hover:bg-transparent bg-muted/30">
               <TableHead className="w-[48px] sticky left-0 bg-muted/30 z-20 border-r border-border"><Checkbox /></TableHead>
               <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-muted/30 z-20 border-r border-border">STATUS</TableHead>
-              <TableHead className="font-semibold sticky left-[108px] bg-muted/30 z-20 min-w-[200px] border-r border-border">NOME</TableHead>
+              <TableHead className="font-semibold sticky left-[108px] bg-muted/30 z-20 min-w-[200px] border-r border-border">
+                {activeTab === 'campanhas' ? 'CAMPANHA' : activeTab === 'conjuntos' ? 'CONJUNTO' : 'ANÚNCIO'}
+              </TableHead>
               {visibleColumns.map((col, index) => (
                 <TableHead 
                   key={col.id} 
@@ -640,8 +642,8 @@ const Campaigns = () => {
 
               return (
                 <TableRow className="border-b border-border bg-muted/40 font-semibold">
-                  <TableCell className="w-[48px] sticky left-0 bg-muted/40 z-10 border-r border-border text-muted-foreground text-xs">N/A</TableCell>
-                  <TableCell className="w-[60px] text-center sticky left-[48px] bg-muted/40 z-10 border-r border-border text-muted-foreground text-xs">N/A</TableCell>
+                  <TableCell className="w-[48px] sticky left-0 bg-muted/40 z-10 border-r border-border" />
+                  <TableCell className="w-[60px] text-center sticky left-[48px] bg-muted/40 z-10 border-r border-border" />
                   <TableCell className="font-semibold sticky left-[108px] bg-muted/40 z-10 min-w-[200px] border-r border-border text-xs">
                     {itemLabel}
                   </TableCell>
