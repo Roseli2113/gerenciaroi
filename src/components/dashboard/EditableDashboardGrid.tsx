@@ -198,8 +198,6 @@ export function EditableDashboardGrid({ isEditMode, layoutHook, dateRange }: Edi
                       id={item.id}
                       title={metricData.title}
                       value={metricData.value}
-                      change={metricData.change}
-                      changeLabel="hoje"
                       icon={metricData.icon}
                       variant={metricData.variant}
                       isEditMode={isEditMode}
