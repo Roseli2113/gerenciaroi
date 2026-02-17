@@ -512,7 +512,7 @@ const Campaigns = () => {
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
               <TableHead className="w-[48px] sticky left-0 bg-[#384157] z-20 border-r border-border"><Checkbox /></TableHead>
-              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-[#384157] z-20 border-r border-border">STATUS</TableHead>
+              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-[#384157] z-20 border-r-2 border-border">STATUS</TableHead>
               <TableHead className="font-semibold sticky left-[108px] bg-[#384157] z-20 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
                 {activeTab === 'campanhas' ? 'CAMPANHA' : activeTab === 'conjuntos' ? 'CONJUNTO' : 'ANÚNCIO'}
               </TableHead>
@@ -559,7 +559,7 @@ const Campaigns = () => {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </TableCell>
-                  <TableCell className={cn("w-[60px] text-center sticky left-[48px] z-10 border-r border-b border-border", isSelected ? "bg-row-selected" : "bg-card")} onClick={(e) => e.stopPropagation()}>
+                  <TableCell className={cn("w-[60px] text-center sticky left-[48px] z-10 border-r-2 border-b border-border", isSelected ? "bg-row-selected" : "bg-card")} onClick={(e) => e.stopPropagation()}>
                     {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
                       <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
                     )}
@@ -634,15 +634,15 @@ const Campaigns = () => {
               } as unknown as Campaign;
 
               const itemLabel = activeTab === 'campanhas' 
-                ? `${displayData.length} CAMPANHA${displayData.length > 1 ? 'S' : ''}`
+                ? `Total: ${displayData.length} CAMPANHA${displayData.length > 1 ? 'S' : ''}`
                 : activeTab === 'conjuntos'
-                ? `${displayData.length} CONJUNTO${displayData.length > 1 ? 'S' : ''}`
-                : `${displayData.length} ANÚNCIO${displayData.length > 1 ? 'S' : ''}`;
+                ? `Total: ${displayData.length} CONJUNTO${displayData.length > 1 ? 'S' : ''}`
+                : `Total: ${displayData.length} ANÚNCIO${displayData.length > 1 ? 'S' : ''}`;
 
               return (
                 <TableRow className="border-b border-border font-semibold">
                   <TableCell className="w-[48px] sticky left-0 bg-secondary z-10 border-r border-border" />
-                  <TableCell className="w-[60px] text-center sticky left-[48px] bg-secondary z-10 border-r border-border" />
+                  <TableCell className="w-[60px] text-center sticky left-[48px] bg-secondary z-10 border-r-2 border-border" />
                   <TableCell className="font-semibold sticky left-[108px] bg-secondary z-10 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)] text-xs">
                     {itemLabel}
                   </TableCell>
