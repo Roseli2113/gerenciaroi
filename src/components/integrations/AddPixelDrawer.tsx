@@ -27,6 +27,15 @@ interface AddPixelDrawerProps {
 interface MetaPixel {
   id: string;
   pixelId: string;
+  token: string;
+  apelido: string;
+  confirmed: boolean;
+}
+
+interface PixelFormState {
+  pixelId: string;
+  token: string;
+  apelido: string;
 }
 
 export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
@@ -43,12 +52,27 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
   const [purchaseProduct, setPurchaseProduct] = useState('any');
   const [ipConfig, setIpConfig] = useState('ipv6_ipv4');
 
-  const addMetaPixel = () => {
-    setMetaPixels(prev => [...prev, { id: crypto.randomUUID(), pixelId: '' }]);
+  const [pixelForm, setPixelForm] = useState<PixelFormState>({ pixelId: '', token: '', apelido: '' });
+  const [showPixelForm, setShowPixelForm] = useState(false);
+
+  const openPixelForm = () => {
+    setPixelForm({ pixelId: '', token: '', apelido: '' });
+    setShowPixelForm(true);
   };
 
-  const updateMetaPixel = (id: string, pixelId: string) => {
-    setMetaPixels(prev => prev.map(p => p.id === id ? { ...p, pixelId } : p));
+  const confirmPixel = () => {
+    if (!pixelForm.pixelId.trim()) {
+      toast.error('Informe o ID do Pixel');
+      return;
+    }
+    setMetaPixels(prev => [...prev, {
+      id: crypto.randomUUID(),
+      pixelId: pixelForm.pixelId,
+      token: pixelForm.token,
+      apelido: pixelForm.apelido,
+      confirmed: true,
+    }]);
+    setShowPixelForm(false);
   };
 
   const removeMetaPixel = (id: string) => {
@@ -130,25 +154,53 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
             <h3 className="text-lg font-semibold text-foreground">Pixels da Meta</h3>
             
             {metaPixels.map((pixel) => (
-              <div key={pixel.id} className="flex items-center gap-2">
-                <Input
-                  placeholder="ID do Pixel"
-                  value={pixel.pixelId}
-                  onChange={(e) => updateMetaPixel(pixel.id, e.target.value)}
-                  className="flex-1"
-                />
+              <div key={pixel.id} className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">
+                <span className="text-sm text-foreground font-mono">{pixel.pixelId}</span>
                 <Button 
                   variant="ghost" 
                   size="icon" 
+                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
                   onClick={() => removeMetaPixel(pixel.id)}
-                  className="text-destructive hover:text-destructive"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
             ))}
 
-            <Button variant="outline" onClick={addMetaPixel} className="gap-2">
+            {showPixelForm && (
+              <div className="space-y-3 border border-border rounded-lg p-4">
+                <div className="space-y-2">
+                  <Label>ID do Pixel Meta</Label>
+                  <Input
+                    placeholder="1342429849238924"
+                    value={pixelForm.pixelId}
+                    onChange={(e) => setPixelForm(prev => ({ ...prev, pixelId: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Token</Label>
+                  <Input
+                    placeholder="Token da API de Conversões"
+                    value={pixelForm.token}
+                    onChange={(e) => setPixelForm(prev => ({ ...prev, token: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Apelido (opcional)</Label>
+                  <Input
+                    placeholder="Apelido para identificar o Pixel"
+                    value={pixelForm.apelido}
+                    onChange={(e) => setPixelForm(prev => ({ ...prev, apelido: e.target.value }))}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowPixelForm(false)}>Fechar</Button>
+                  <Button onClick={confirmPixel}>Confirmar</Button>
+                </div>
+              </div>
+            )}
+
+            <Button variant="outline" onClick={openPixelForm} className="gap-2">
               Adicionar <Plus className="w-4 h-4" />
             </Button>
           </div>
