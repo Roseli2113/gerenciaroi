@@ -13,6 +13,21 @@ import { cn } from '@/lib/utils';
 
 const plans = [
   {
+    id: 'free',
+    name: 'Free',
+    price: 0,
+    description: 'Teste grátis por 14 dias',
+    icon: Zap,
+    features: [
+      '1 conta de anúncio',
+      'Até 5 campanhas',
+      'Relatórios básicos',
+      'Suporte por email',
+      '14 dias de teste grátis',
+    ],
+    current: false,
+  },
+  {
     id: 'starter',
     name: 'Starter',
     price: 97,
@@ -92,7 +107,7 @@ const Subscription = () => {
         </Card>
 
         {/* Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => (
             <Card
               key={plan.id}
