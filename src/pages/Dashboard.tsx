@@ -20,6 +20,7 @@ import { ConversionFunnel } from '@/components/dashboard/ConversionFunnel';
 import { CampaignsList } from '@/components/dashboard/CampaignsList';
 import { EditableDashboardGrid } from '@/components/dashboard/EditableDashboardGrid';
 import { EditModeBar } from '@/components/dashboard/EditModeBar';
+import { RevenueProgressBar } from '@/components/dashboard/RevenueProgressBar';
 import { DraggableWidgetCard } from '@/components/dashboard/DraggableWidgetCard';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
@@ -67,14 +68,17 @@ const Dashboard = () => {
     <MainLayout 
       title="Dashboard - Principal"
       headerAction={
-        <EditModeBar
-          isEditMode={isEditMode}
-          saving={saving}
-          onToggleEdit={() => setIsEditMode(true)}
-          onSave={saveLayout}
-          onCancel={cancelEdit}
-          onReset={resetLayout}
-        />
+        <div className="flex items-center gap-3">
+          <RevenueProgressBar />
+          <EditModeBar
+            isEditMode={isEditMode}
+            saving={saving}
+            onToggleEdit={() => setIsEditMode(true)}
+            onSave={saveLayout}
+            onCancel={cancelEdit}
+            onReset={resetLayout}
+          />
+        </div>
       }
     >
       <div className="space-y-6">
