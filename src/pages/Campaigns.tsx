@@ -10,11 +10,12 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
-  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown
+  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMetaCampaigns, Campaign, AdSet, Ad } from '@/hooks/useMetaCampaigns';
 import { Link } from 'react-router-dom';
+import { useTrialGuard } from '@/hooks/useTrialGuard';
 import { EditBudgetDialog } from '@/components/campaigns/EditBudgetDialog';
 import { EditAdSetBudgetDialog } from '@/components/campaigns/EditAdSetBudgetDialog';
 import { EditCampaignNameDialog } from '@/components/campaigns/EditCampaignNameDialog';
@@ -36,6 +37,7 @@ interface ActiveAccount {
 
 const Campaigns = () => {
   const { user } = useAuth();
+  const { isTrialExpired, daysRemaining } = useTrialGuard();
   const [activeTab, setActiveTab] = useState<TabType>('campanhas');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
@@ -130,6 +132,23 @@ const Campaigns = () => {
     setColumnConfig(newColumns);
     localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(newColumns));
   };
+
+  if (isTrialExpired) {
+    return (
+      <MainLayout title="Campanhas">
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <ShieldAlert className="w-16 h-16 text-warning mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">Período de teste expirado</h2>
+          <p className="text-muted-foreground text-center mb-6 max-w-md">
+            Seu período de teste gratuito de 14 dias terminou. Para continuar usando as campanhas e todos os recursos do sistema, assine um dos nossos planos.
+          </p>
+          <Button asChild className="gradient-primary text-primary-foreground">
+            <Link to="/subscription">Ver Planos e Assinar</Link>
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   if (!hasActiveAccount) {
     return (

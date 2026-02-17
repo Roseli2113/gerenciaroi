@@ -170,7 +170,7 @@ export default function Admin() {
   };
 
   const totalSubscribers = users.filter(u => u.plan && u.plan !== 'free').length;
-  const totalActive = users.filter(u => getDisplayPlanStatus(u) === 'active' && getDisplayPlan(u) !== 'Free').length;
+  const totalActive = users.filter(u => getDisplayPlanStatus(u) === 'active' && u.plan && u.plan !== 'free' && !isSuperAdmin(u.email)).length;
   const totalExpired = users.filter(u => u.plan_status === 'overdue').length;
   const totalCancelled = users.filter(u => u.plan_status === 'cancelled').length;
   const totalFree = users.filter(u => !u.plan || u.plan === 'free').length;
