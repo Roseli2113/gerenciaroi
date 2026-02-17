@@ -520,7 +520,7 @@ export function useMetaCampaigns() {
     ]);
     
     setLastUpdated(new Date());
-    toast.success('Dados atualizados!');
+    toast.success('Dados atualizados!', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
   }, [accessToken, activeAccountId, fetchCampaigns, fetchAdSets, fetchAds, selectedCampaignId, selectedAdSetId]);
 
   const toggleCampaignStatus = useCallback(async (campaignId: string, activate: boolean) => {
@@ -540,7 +540,7 @@ export function useMetaCampaigns() {
         c.id === campaignId ? { ...c, status: activate, rawStatus: activate ? 'ACTIVE' : 'PAUSED' } : c
       )));
 
-      toast.success(activate ? 'Campanha ativada' : 'Campanha pausada');
+      toast.success(activate ? 'Campanha ativada' : 'Campanha pausada', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
       return true;
     } catch (err) {
       console.error('Error toggling campaign:', err);
@@ -571,7 +571,7 @@ export function useMetaCampaigns() {
         c.id === campaignId ? { ...c, budget, budgetType } : c
       ));
 
-      toast.success('Orçamento atualizado');
+      toast.success('Orçamento atualizado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
       return true;
     } catch (err) {
       console.error('Error updating budget:', err);
@@ -597,7 +597,7 @@ export function useMetaCampaigns() {
         c.id === campaignId ? { ...c, name } : c
       ));
 
-      toast.success('Nome atualizado');
+      toast.success('Nome atualizado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
       return true;
     } catch (err) {
       console.error('Error updating name:', err);
@@ -628,7 +628,7 @@ export function useMetaCampaigns() {
         as.id === adsetId ? { ...as, budget, budgetType } : as
       ));
 
-      toast.success('Orçamento do conjunto atualizado');
+      toast.success('Orçamento do conjunto atualizado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
       return true;
     } catch (err) {
       console.error('Error updating adset budget:', err);
@@ -651,7 +651,7 @@ export function useMetaCampaigns() {
         as.id === adsetId ? { ...as, status: activate, rawStatus: activate ? 'ACTIVE' : 'PAUSED' } : as
       )));
 
-      toast.success(activate ? 'Conjunto ativado' : 'Conjunto pausado');
+      toast.success(activate ? 'Conjunto ativado' : 'Conjunto pausado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
       return true;
     } catch (err) {
       console.error('Error toggling adset:', err);
@@ -674,11 +674,37 @@ export function useMetaCampaigns() {
         ad.id === adId ? { ...ad, status: activate, rawStatus: activate ? 'ACTIVE' : 'PAUSED' } : ad
       )));
 
-      toast.success(activate ? 'Anúncio ativado' : 'Anúncio pausado');
+      toast.success(activate ? 'Anúncio ativado' : 'Anúncio pausado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
       return true;
     } catch (err) {
       console.error('Error toggling ad:', err);
       toast.error('Erro ao alterar status do anúncio');
+      return false;
+    }
+  }, [accessToken]);
+
+  const updateAdName = useCallback(async (adId: string, name: string) => {
+    if (!accessToken) {
+      toast.error('Não conectado ao Meta Ads');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-ads', {
+        body: { action: 'update-ad', accessToken, adId, updates: { name } }
+      });
+
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      setAds(prev => prev.map(ad =>
+        ad.id === adId ? { ...ad, name } : ad
+      ));
+
+      toast.success('Nome do anúncio atualizado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
+      return true;
+    } catch (err) {
+      console.error('Error updating ad name:', err);
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar nome do anúncio');
       return false;
     }
   }, [accessToken]);
@@ -717,6 +743,7 @@ export function useMetaCampaigns() {
     updateCampaignBudget,
     updateCampaignName,
     updateAdSetBudget,
+    updateAdName,
     getLastUpdatedText,
     hasActiveAccount: !!activeAccountId && !!accessToken
   };

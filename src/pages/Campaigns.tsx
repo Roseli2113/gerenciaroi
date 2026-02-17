@@ -44,6 +44,7 @@ const Campaigns = () => {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [editingAdSet, setEditingAdSet] = useState<AdSet | null>(null);
   const [editingCampaignName, setEditingCampaignName] = useState<Campaign | null>(null);
+  const [editingAdName, setEditingAdName] = useState<Ad | null>(null);
   const [showColumnDialog, setShowColumnDialog] = useState(false);
   const [activeAccounts, setActiveAccounts] = useState<ActiveAccount[]>([]);
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
@@ -65,7 +66,7 @@ const Campaigns = () => {
     campaigns, adSets, ads, isLoading, isLoadingAdSets, isLoadingAds,
     fetchCampaigns, fetchAdSets, fetchAds, refreshAll,
     toggleCampaignStatus, toggleAdSetStatus, toggleAdStatus,
-    updateCampaignBudget, updateAdSetBudget, updateCampaignName,
+    updateCampaignBudget, updateAdSetBudget, updateCampaignName, updateAdName,
     getLastUpdatedText, hasActiveAccount,
     selectedCampaignId, selectedAdSetId, setSelectedCampaignId, setSelectedAdSetId
   } = useMetaCampaigns();
@@ -567,14 +568,18 @@ const Campaigns = () => {
                   <TableCell className={cn("font-medium sticky left-[108px] z-10 min-w-[200px] border-r border-b border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]", isSelected ? "bg-row-selected" : "bg-card")}>
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[180px]">{item.name}</span>
-                      {activeTab === 'campanhas' && (
+                      {(activeTab === 'campanhas' || activeTab === 'anuncios') && (
                         <Button 
                           variant="ghost" 
                           size="icon" 
                           className="h-6 w-6 flex-shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditingCampaignName(item as Campaign);
+                            if (activeTab === 'campanhas') {
+                              setEditingCampaignName(item as Campaign);
+                            } else {
+                              setEditingAdName(item as Ad);
+                            }
                           }}
                         >
                           <Edit3 className="w-3 h-3" />
@@ -764,6 +769,14 @@ const Campaigns = () => {
         />
       )}
 
+      {editingAdName && (
+        <EditCampaignNameDialog
+          open={!!editingAdName}
+          onOpenChange={(open) => !open && setEditingAdName(null)}
+          currentName={editingAdName.name}
+          onSave={(name) => updateAdName(editingAdName.id, name)}
+        />
+      )}
       <ColumnCustomizationDialog
         open={showColumnDialog}
         onOpenChange={setShowColumnDialog}
