@@ -10,8 +10,10 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
-  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown, ShieldAlert
+  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Maximize2, Minimize2, ShieldAlert
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useMetaCampaigns, Campaign, AdSet, Ad } from '@/hooks/useMetaCampaigns';
 import { Link } from 'react-router-dom';
@@ -46,6 +48,9 @@ const Campaigns = () => {
   const [editingCampaignName, setEditingCampaignName] = useState<Campaign | null>(null);
   const [editingAdName, setEditingAdName] = useState<Ad | null>(null);
   const [editingAdSetName, setEditingAdSetName] = useState<AdSet | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterName, setFilterName] = useState('');
   const [showColumnDialog, setShowColumnDialog] = useState(false);
   const [activeAccounts, setActiveAccounts] = useState<ActiveAccount[]>([]);
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
@@ -674,8 +679,62 @@ const Campaigns = () => {
     );
   };
 
-  return (
-    <MainLayout title="Campanhas">
+  const renderDialogs = () => (
+    <>
+      {editingCampaign && (
+        <EditBudgetDialog
+          open={!!editingCampaign}
+          onOpenChange={(open) => !open && setEditingCampaign(null)}
+          campaignName={editingCampaign.name}
+          currentBudget={editingCampaign.budget}
+          budgetType={editingCampaign.budgetType}
+          onSave={(budget, type) => updateCampaignBudget(editingCampaign.id, budget, type)}
+        />
+      )}
+      {editingAdSet && (
+        <EditAdSetBudgetDialog
+          open={!!editingAdSet}
+          onOpenChange={(open) => !open && setEditingAdSet(null)}
+          adSetName={editingAdSet.name}
+          currentBudget={editingAdSet.budget}
+          budgetType={editingAdSet.budgetType}
+          onSave={(budget, type) => updateAdSetBudget(editingAdSet.id, budget, type)}
+        />
+      )}
+      {editingCampaignName && (
+        <EditCampaignNameDialog
+          open={!!editingCampaignName}
+          onOpenChange={(open) => !open && setEditingCampaignName(null)}
+          currentName={editingCampaignName.name}
+          onSave={(name) => updateCampaignName(editingCampaignName.id, name)}
+        />
+      )}
+      {editingAdName && (
+        <EditCampaignNameDialog
+          open={!!editingAdName}
+          onOpenChange={(open) => !open && setEditingAdName(null)}
+          currentName={editingAdName.name}
+          onSave={(name) => updateAdName(editingAdName.id, name)}
+        />
+      )}
+      {editingAdSetName && (
+        <EditCampaignNameDialog
+          open={!!editingAdSetName}
+          onOpenChange={(open) => !open && setEditingAdSetName(null)}
+          currentName={editingAdSetName.name}
+          onSave={(name) => updateAdSetName(editingAdSetName.id, name)}
+        />
+      )}
+      <ColumnCustomizationDialog
+        open={showColumnDialog}
+        onOpenChange={setShowColumnDialog}
+        columns={columnConfig}
+        onSave={handleSaveColumns}
+      />
+    </>
+  );
+
+  const pageContent = (
       <div className="space-y-4">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
           <TabsList className="bg-card border border-border h-auto p-0 w-full grid grid-cols-4">
@@ -710,11 +769,23 @@ const Campaigns = () => {
             >
               <Settings className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-9 w-9">
-              <ArrowUp className="w-4 h-4" />
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-9 w-9"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
-            <Button variant="outline" size="icon" className="h-9 w-9">
-              <ArrowDown className="w-4 h-4" />
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-9 w-9"
+              onClick={() => setShowFilters(!showFilters)}
+              title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
+            >
+              {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </Button>
             <Badge className="bg-success text-success-foreground border-0">✓ Todas as vendas trackeadas</Badge>
             {selectedCampaignId && activeTab === 'conjuntos' && (
@@ -738,64 +809,88 @@ const Campaigns = () => {
           </div>
         </div>
 
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 rounded-lg border border-border bg-card animate-fade-in">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                {activeTab === 'campanhas' ? 'Nome da Campanha' : activeTab === 'conjuntos' ? 'Nome do Conjunto' : 'Nome do Anúncio'}
+              </label>
+              <Input 
+                placeholder="Filtrar por nome" 
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Status</label>
+              <Select defaultValue="any">
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Qualquer</SelectItem>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="paused">Pausado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Período de Visualização</label>
+              <Select defaultValue="today">
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Hoje</SelectItem>
+                  <SelectItem value="yesterday">Ontem</SelectItem>
+                  <SelectItem value="7days">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30days">Últimos 30 dias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Conta de Anúncio</label>
+              <Select defaultValue="any">
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Qualquer</SelectItem>
+                  {activeAccounts.map(acc => (
+                    <SelectItem key={acc.id} value={acc.account_id}>{acc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Produto</label>
+              <Select defaultValue="any">
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Qualquer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
         <div className="rounded-lg border border-border bg-card overflow-hidden">{renderTable()}</div>
       </div>
+  );
 
-      {editingCampaign && (
-        <EditBudgetDialog
-          open={!!editingCampaign}
-          onOpenChange={(open) => !open && setEditingCampaign(null)}
-          campaignName={editingCampaign.name}
-          currentBudget={editingCampaign.budget}
-          budgetType={editingCampaign.budgetType}
-          onSave={(budget, type) => updateCampaignBudget(editingCampaign.id, budget, type)}
-        />
-      )}
+  if (isFullscreen) {
+    return (
+      <div className="h-screen bg-background overflow-y-auto p-6">
+        {pageContent}
+        {/* Dialogs rendered outside layout */}
+        {renderDialogs()}
+      </div>
+    );
+  }
 
-      {editingAdSet && (
-        <EditAdSetBudgetDialog
-          open={!!editingAdSet}
-          onOpenChange={(open) => !open && setEditingAdSet(null)}
-          adSetName={editingAdSet.name}
-          currentBudget={editingAdSet.budget}
-          budgetType={editingAdSet.budgetType}
-          onSave={(budget, type) => updateAdSetBudget(editingAdSet.id, budget, type)}
-        />
-      )}
-
-      {editingCampaignName && (
-        <EditCampaignNameDialog
-          open={!!editingCampaignName}
-          onOpenChange={(open) => !open && setEditingCampaignName(null)}
-          currentName={editingCampaignName.name}
-          onSave={(name) => updateCampaignName(editingCampaignName.id, name)}
-        />
-      )}
-
-      {editingAdName && (
-        <EditCampaignNameDialog
-          open={!!editingAdName}
-          onOpenChange={(open) => !open && setEditingAdName(null)}
-          currentName={editingAdName.name}
-          onSave={(name) => updateAdName(editingAdName.id, name)}
-        />
-      )}
-      {editingAdSetName && (
-        <EditCampaignNameDialog
-          open={!!editingAdSetName}
-          onOpenChange={(open) => !open && setEditingAdSetName(null)}
-          currentName={editingAdSetName.name}
-          onSave={(name) => updateAdSetName(editingAdSetName.id, name)}
-        />
-      )}
-      <ColumnCustomizationDialog
-        open={showColumnDialog}
-        onOpenChange={setShowColumnDialog}
-        columns={columnConfig}
-        onSave={handleSaveColumns}
-      />
+  return (
+    <MainLayout title="Campanhas">
+      {pageContent}
+      {renderDialogs()}
     </MainLayout>
   );
+
 };
 
 export default Campaigns;
