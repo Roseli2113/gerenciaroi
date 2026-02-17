@@ -1,11 +1,13 @@
 import {
-  AreaChart,
-  Area,
+  ComposedChart,
+  Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 import { useMemo } from 'react';
@@ -13,26 +15,39 @@ import { useMemo } from 'react';
 export function SpendingChart() {
   const { campaigns } = useMetaCampaigns();
 
-  // Generate chart data from campaigns - aggregate by date or use campaign data
   const data = useMemo(() => {
-    if (campaigns.length === 0) {
-      return [];
-    }
+    if (campaigns.length === 0) return [];
 
-    // Create data points from campaigns
-    const chartData = campaigns
+    return campaigns
       .filter(c => c.spent > 0)
-      .slice(0, 12)
+      .slice(0, 10)
       .map((campaign, index) => ({
-        date: campaign.name.slice(0, 15) || `Camp ${index + 1}`,
+        name: campaign.name.length > 18 ? campaign.name.slice(0, 18) + '…' : campaign.name || `Camp ${index + 1}`,
         gastos: campaign.spent,
-        roi: campaign.roi ? campaign.spent * campaign.roi : 0,
+        roi: campaign.roi ? campaign.roi * 100 : 0,
       }));
-
-    return chartData;
   }, [campaigns]);
 
   const formatCurrency = (value: number) => `R$ ${value.toFixed(0)}`;
+  const formatROI = (value: number) => `${value.toFixed(0)}%`;
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="rounded-xl border border-border bg-card p-3 shadow-lg">
+        <p className="text-sm font-medium text-foreground mb-2">{label}</p>
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center gap-2 text-sm">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: entry.color }} />
+            <span className="text-muted-foreground">{entry.name === 'gastos' ? 'Gastos' : 'ROI'}:</span>
+            <span className="font-semibold text-foreground">
+              {entry.name === 'gastos' ? `R$ ${entry.value.toFixed(2)}` : `${entry.value.toFixed(1)}%`}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 h-[400px]">
@@ -43,83 +58,77 @@ export function SpendingChart() {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-primary" />
+            <div className="w-3 h-3 rounded bg-primary" />
             <span className="text-sm text-muted-foreground">Gastos</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-success" />
-            <span className="text-sm text-muted-foreground">ROI</span>
+            <div className="w-3 h-3 rounded-full" style={{ background: 'hsl(142, 76%, 36%)' }} />
+            <span className="text-sm text-muted-foreground">ROI %</span>
           </div>
         </div>
       </div>
-      
+
       {data.length === 0 ? (
         <div className="flex items-center justify-center h-[85%] text-muted-foreground">
           Nenhum dado disponível
         </div>
       ) : (
         <ResponsiveContainer width="100%" height="85%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
-              <linearGradient id="colorGastos" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="colorROI" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0} />
+              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.4} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-            <XAxis 
-              dataKey="date" 
-              stroke="hsl(var(--muted-foreground))" 
+            <XAxis
+              dataKey="name"
+              stroke="hsl(var(--muted-foreground))"
               fontSize={10}
               tickLine={false}
               axisLine={false}
-              angle={-45}
+              angle={-35}
               textAnchor="end"
               height={60}
             />
-            <YAxis 
-              stroke="hsl(var(--muted-foreground))" 
+            <YAxis
+              yAxisId="left"
+              stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
               axisLine={false}
               tickFormatter={formatCurrency}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '12px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
-              formatter={(value: number, name: string) => [
-                `R$ ${value.toFixed(2)}`, 
-                name === 'gastos' ? 'Gastos' : 'ROI (R$)'
-              ]}
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="hsl(142, 76%, 36%)"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={formatROI}
             />
-            <Area
-              type="monotone"
+            <Tooltip content={<CustomTooltip />} />
+            <Bar
+              yAxisId="left"
               dataKey="gastos"
-              stroke="hsl(217, 91%, 60%)"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorGastos)"
+              fill="url(#barGradient)"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={45}
               name="gastos"
             />
-            <Area
+            <Line
+              yAxisId="right"
               type="monotone"
               dataKey="roi"
               stroke="hsl(142, 76%, 36%)"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorROI)"
+              strokeWidth={3}
+              dot={{ fill: 'hsl(142, 76%, 36%)', r: 5, strokeWidth: 2, stroke: 'hsl(var(--card))' }}
+              activeDot={{ r: 7 }}
               name="roi"
             />
-          </AreaChart>
+          </ComposedChart>
         </ResponsiveContainer>
       )}
     </div>
