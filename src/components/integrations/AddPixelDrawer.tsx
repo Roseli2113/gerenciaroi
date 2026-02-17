@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Plus, Info } from 'lucide-react';
+import { X, Plus, Info, Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -51,9 +51,12 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
   const [purchaseValueType, setPurchaseValueType] = useState('sale_value');
   const [purchaseProduct, setPurchaseProduct] = useState('any');
   const [ipConfig, setIpConfig] = useState('ipv6_ipv4');
+  const [checkoutTextError, setCheckoutTextError] = useState('');
 
   const [pixelForm, setPixelForm] = useState<PixelFormState>({ pixelId: '', token: '', apelido: '' });
   const [showPixelForm, setShowPixelForm] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [generatedPixelId, setGeneratedPixelId] = useState('');
 
   const openPixelForm = () => {
     setPixelForm({ pixelId: '', token: '', apelido: '' });
@@ -84,9 +87,18 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
       toast.error('Informe o nome do pixel');
       return;
     }
-    toast.success('Pixel salvo com sucesso!');
-    onOpenChange(false);
-    // Reset
+    if (initiateCheckoutRule === 'enabled' && !checkoutButtonText.trim()) {
+      setCheckoutTextError('O texto de detecção é obrigatório');
+      return;
+    }
+    setCheckoutTextError('');
+    const pixelId = crypto.randomUUID().replace(/-/g, '').slice(0, 24);
+    setGeneratedPixelId(pixelId);
+    setShowSuccessDialog(true);
+    toast('O PIXEL FOI SALVO COM SUCESSO', {
+      style: { backgroundColor: '#22c55e', color: '#ffffff', border: 'none' },
+    });
+    // Reset form
     setName('');
     setPixelType('meta');
     setMetaPixels([]);
@@ -99,6 +111,13 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
     setPurchaseValueType('sale_value');
     setPurchaseProduct('any');
     setIpConfig('ipv6_ipv4');
+  };
+
+  const generatedCode = `<script>\n  window.pixelId = "${generatedPixelId}";\n  var a = document.createElement("script");\n  a.setAttribute("async", "");\n  a.setAttribute("defer", "");\n  a.setAttribute("src", "https://cdn.utmify.com.br/scripts/pixel/pixel.js");\n  document.head.appendChild(a);\n</script>`;
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(generatedCode);
+    toast.success('Código copiado!');
   };
 
   if (!open) return null;
@@ -333,8 +352,14 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
                   <Input
                     placeholder="COMPRAR AGORA"
                     value={checkoutButtonText}
-                    onChange={(e) => setCheckoutButtonText(e.target.value)}
+                    onChange={(e) => {
+                      setCheckoutButtonText(e.target.value);
+                      if (e.target.value.trim()) setCheckoutTextError('');
+                    }}
                   />
+                  {checkoutTextError && (
+                    <p className="text-sm text-red-500 mt-1">{checkoutTextError}</p>
+                  )}
                 </div>
               </>
             )}
@@ -455,6 +480,37 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
           </Button>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      {showSuccessDialog && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/50" onClick={() => { setShowSuccessDialog(false); onOpenChange(false); }} />
+          <div className="fixed left-1/2 top-1/2 z-[60] -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-background border border-border rounded-lg shadow-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-foreground">Pixel criado com sucesso</h3>
+                <span className="text-green-500">✅</span>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => { setShowSuccessDialog(false); onOpenChange(false); }}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">Agora basta colocar o código abaixo na sua página de vendas:</p>
+            <div className="space-y-2">
+              <Label>Código do Pixel</Label>
+              <div className="relative">
+                <Input readOnly value={generatedCode} className="pr-10 font-mono text-xs" />
+                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={copyCode}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <Button onClick={() => { setShowSuccessDialog(false); onOpenChange(false); }} className="w-full">
+              Fechar
+            </Button>
+          </div>
+        </>
+      )}
     </TooltipProvider>
   );
 }
