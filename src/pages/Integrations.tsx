@@ -72,6 +72,7 @@ export default function Integrations() {
   const [utmScriptsDialogOpen, setUtmScriptsDialogOpen] = useState(false);
   const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
   const [pixelDrawerOpen, setPixelDrawerOpen] = useState(false);
+  const [editingPixelId, setEditingPixelId] = useState<string | null>(null);
   const [pixels, setPixels] = useState<PixelRecord[]>([]);
   const [pixelsLoading, setPixelsLoading] = useState(false);
 
@@ -660,6 +661,7 @@ export default function Integrations() {
                           {pixel.status === 'active' ? 'Desativar Pixel' : 'Ativar Pixel'}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => {
+                          setEditingPixelId(pixel.id);
                           setPixelDrawerOpen(true);
                         }}>
                           Editar Dados
@@ -676,7 +678,7 @@ export default function Integrations() {
                   </div>
                 ))}
 
-                <Button className="gap-2" onClick={() => setPixelDrawerOpen(true)}>
+                <Button className="gap-2" onClick={() => { setEditingPixelId(null); setPixelDrawerOpen(true); }}>
                   Adicionar Pixel
                 </Button>
               </CardContent>
@@ -733,8 +735,9 @@ export default function Integrations() {
         />
         <AddPixelDrawer
           open={pixelDrawerOpen}
-          onOpenChange={setPixelDrawerOpen}
+          onOpenChange={(open) => { setPixelDrawerOpen(open); if (!open) setEditingPixelId(null); }}
           onSaved={fetchPixels}
+          editingPixelId={editingPixelId}
         />
       </div>
     </MainLayout>

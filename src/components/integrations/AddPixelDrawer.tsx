@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Plus, Info, Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ interface AddPixelDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  editingPixelId?: string | null;
 }
 
 interface MetaPixel {
@@ -41,7 +42,7 @@ interface PixelFormState {
   apelido: string;
 }
 
-export function AddPixelDrawer({ open, onOpenChange, onSaved }: AddPixelDrawerProps) {
+export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: AddPixelDrawerProps) {
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -62,6 +63,64 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved }: AddPixelDrawerPr
   const [showPixelForm, setShowPixelForm] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [generatedPixelId, setGeneratedPixelId] = useState('');
+
+  const isEditing = !!editingPixelId;
+
+  // Load pixel data when editing
+  useEffect(() => {
+    if (!open) return;
+    if (editingPixelId && user) {
+      (async () => {
+        const { data: pixel } = await supabase
+          .from('pixels')
+          .select('*')
+          .eq('id', editingPixelId)
+          .single();
+        if (pixel) {
+          setName(pixel.name);
+          setPixelType(pixel.pixel_type);
+          setLeadRule(pixel.lead_rule);
+          setAddToCartRule(pixel.add_to_cart_rule);
+          setInitiateCheckoutRule(pixel.initiate_checkout_rule);
+          setCheckoutDetectionRule(pixel.checkout_detection_rule);
+          setCheckoutButtonText(pixel.checkout_button_text || '');
+          setPurchaseSendConfig(pixel.purchase_send_config);
+          setPurchaseValueType(pixel.purchase_value_type);
+          setPurchaseProduct(pixel.purchase_product);
+          setIpConfig(pixel.ip_config);
+          setGeneratedPixelId(pixel.id.replace(/-/g, '').slice(0, 24));
+        }
+        const { data: metas } = await supabase
+          .from('pixel_meta_ids')
+          .select('*')
+          .eq('pixel_id', editingPixelId);
+        if (metas) {
+          setMetaPixels(metas.map(m => ({
+            id: m.id,
+            pixelId: m.meta_pixel_id,
+            token: m.token || '',
+            apelido: m.apelido || '',
+            confirmed: true,
+          })));
+        }
+      })();
+    } else if (!editingPixelId) {
+      // Reset form for new pixel
+      setName('');
+      setPixelType('meta');
+      setMetaPixels([]);
+      setLeadRule('disabled');
+      setAddToCartRule('disabled');
+      setInitiateCheckoutRule('enabled');
+      setCheckoutDetectionRule('contains_text');
+      setCheckoutButtonText('');
+      setPurchaseSendConfig('approved_only');
+      setPurchaseValueType('sale_value');
+      setPurchaseProduct('any');
+      setIpConfig('ipv6_ipv4');
+      setGeneratedPixelId('');
+    }
+  }, [open, editingPixelId, user]);
 
   const openPixelForm = () => {
     setPixelForm({ pixelId: '', token: '', apelido: '' });
@@ -104,30 +163,42 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved }: AddPixelDrawerPr
     setSaving(true);
 
     try {
-      const { data: pixelData, error: pixelError } = await supabase
-        .from('pixels')
-        .insert({
-          user_id: user.id,
-          name,
-          pixel_type: pixelType,
-          lead_rule: leadRule,
-          add_to_cart_rule: addToCartRule,
-          initiate_checkout_rule: initiateCheckoutRule,
-          checkout_detection_rule: checkoutDetectionRule,
-          checkout_button_text: checkoutButtonText,
-          purchase_send_config: purchaseSendConfig,
-          purchase_value_type: purchaseValueType,
-          purchase_product: purchaseProduct,
-          ip_config: ipConfig,
-        })
-        .select('id')
-        .single();
+      const pixelPayload = {
+        name,
+        pixel_type: pixelType,
+        lead_rule: leadRule,
+        add_to_cart_rule: addToCartRule,
+        initiate_checkout_rule: initiateCheckoutRule,
+        checkout_detection_rule: checkoutDetectionRule,
+        checkout_button_text: checkoutButtonText,
+        purchase_send_config: purchaseSendConfig,
+        purchase_value_type: purchaseValueType,
+        purchase_product: purchaseProduct,
+        ip_config: ipConfig,
+      };
 
-      if (pixelError) throw pixelError;
+      let pixelId: string;
+
+      if (isEditing && editingPixelId) {
+        const { error } = await supabase.from('pixels').update(pixelPayload).eq('id', editingPixelId);
+        if (error) throw error;
+        pixelId = editingPixelId;
+
+        // Replace meta pixels: delete old, insert new
+        await supabase.from('pixel_meta_ids').delete().eq('pixel_id', editingPixelId);
+      } else {
+        const { data: pixelData, error: pixelError } = await supabase
+          .from('pixels')
+          .insert({ user_id: user.id, ...pixelPayload })
+          .select('id')
+          .single();
+        if (pixelError) throw pixelError;
+        pixelId = pixelData.id;
+      }
 
       if (metaPixels.length > 0) {
         const metaRows = metaPixels.map(mp => ({
-          pixel_id: pixelData.id,
+          pixel_id: pixelId,
           user_id: user.id,
           meta_pixel_id: mp.pixelId,
           token: mp.token,
@@ -137,25 +208,17 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved }: AddPixelDrawerPr
         if (metaError) throw metaError;
       }
 
-      setGeneratedPixelId(pixelData.id.replace(/-/g, '').slice(0, 24));
-      setShowSuccessDialog(true);
-      toast('O PIXEL FOI SALVO COM SUCESSO', {
+      setGeneratedPixelId(pixelId.replace(/-/g, '').slice(0, 24));
+      if (!isEditing) {
+        setShowSuccessDialog(true);
+      }
+      toast(isEditing ? 'PIXEL ATUALIZADO COM SUCESSO' : 'O PIXEL FOI SALVO COM SUCESSO', {
         style: { backgroundColor: '#22c55e', color: '#ffffff', border: 'none' },
       });
       onSaved?.();
-      // Reset form
-      setName('');
-      setPixelType('meta');
-      setMetaPixels([]);
-      setLeadRule('disabled');
-      setAddToCartRule('disabled');
-      setInitiateCheckoutRule('enabled');
-      setCheckoutDetectionRule('contains_text');
-      setCheckoutButtonText('');
-      setPurchaseSendConfig('approved_only');
-      setPurchaseValueType('sale_value');
-      setPurchaseProduct('any');
-      setIpConfig('ipv6_ipv4');
+      if (isEditing) {
+        onOpenChange(false);
+      }
     } catch (err: any) {
       toast.error('Erro ao salvar pixel: ' + (err.message || 'Erro desconhecido'));
     } finally {
@@ -184,7 +247,7 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved }: AddPixelDrawerPr
       <div className="fixed right-0 top-0 z-50 h-full w-full max-w-md bg-background border-l border-border shadow-xl overflow-y-auto animate-in slide-in-from-right duration-300">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4">
-          <h2 className="text-xl font-bold text-foreground">Adicionar Pixel</h2>
+          <h2 className="text-xl font-bold text-foreground">{isEditing ? 'Editar Pixel' : 'Adicionar Pixel'}</h2>
           <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
             <X className="w-5 h-5" />
           </Button>
@@ -215,6 +278,28 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved }: AddPixelDrawerPr
               </SelectContent>
             </Select>
           </div>
+
+          {/* Código do Pixel (only in edit mode) */}
+          {isEditing && generatedPixelId && (
+            <div className="space-y-2">
+              <Label>Código do Pixel</Label>
+              <div className="relative">
+                <Input 
+                  readOnly 
+                  value={generatedCode} 
+                  className="pr-10 font-mono text-xs" 
+                />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" 
+                  onClick={copyCode}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
 
           <Separator />
 
@@ -526,7 +611,7 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved }: AddPixelDrawerPr
 
           {/* Save Button */}
           <Button onClick={handleSave} className="w-full" size="lg" disabled={saving}>
-            {saving ? 'Salvando...' : 'Salvar Dados'}
+            {saving ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Salvar Dados'}
           </Button>
         </div>
       </div>
