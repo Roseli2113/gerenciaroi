@@ -45,6 +45,7 @@ import { ApiCredentialsCard } from '@/components/integrations/ApiCredentialsCard
 import { UtmCodesDialog } from '@/components/integrations/UtmCodesDialog';
 import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
 import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
+import { AddPixelDrawer } from '@/components/integrations/AddPixelDrawer';
 
 export default function Integrations() {
   const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
@@ -58,6 +59,7 @@ export default function Integrations() {
   const [utmCodePlatform, setUtmCodePlatform] = useState<'facebook' | 'google' | 'kwai' | 'tiktok'>('facebook');
   const [utmScriptsDialogOpen, setUtmScriptsDialogOpen] = useState(false);
   const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
+  const [pixelDrawerOpen, setPixelDrawerOpen] = useState(false);
 
   const openUtmCodeDialog = (platform: 'facebook' | 'google' | 'kwai' | 'tiktok') => {
     setUtmCodePlatform(platform);
@@ -590,7 +592,7 @@ export default function Integrations() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">Gerencie seus pixels de conversão para rastrear ações dos usuários.</p>
-                <Button className="mt-4 gap-2">
+                <Button className="mt-4 gap-2" onClick={() => setPixelDrawerOpen(true)}>
                   <Plus className="w-4 h-4" />
                   Adicionar Pixel
                 </Button>
@@ -645,6 +647,10 @@ export default function Integrations() {
           open={webhookDialogOpen}
           onOpenChange={setWebhookDialogOpen}
           onCreateWebhook={createWebhook}
+        />
+        <AddPixelDrawer
+          open={pixelDrawerOpen}
+          onOpenChange={setPixelDrawerOpen}
         />
       </div>
     </MainLayout>
