@@ -65,6 +65,9 @@
     --chart-purple: 265 89% 66%;
     --chart-pink: 330 81% 60%;
     --chart-green: 142 76% 36%;
+
+    /* Opaque selected row bg (primary/10 mixed with card) */
+    --row-selected: 217 91% 97%;
   }
 
   .dark {
@@ -128,6 +131,9 @@
 
     /* Dark gradients */
     --gradient-card: linear-gradient(135deg, hsl(230, 24%, 23%) 0%, hsl(230, 24%, 21%) 100%);
+
+    /* Opaque selected row bg (primary/10 mixed with card in dark) */
+    --row-selected: 225 30% 23%;
   }
 }
 

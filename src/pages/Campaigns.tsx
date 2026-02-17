@@ -549,7 +549,7 @@ const Campaigns = () => {
                     else if (activeTab === 'conjuntos') handleSelectAdSet(item.id);
                   }}
                 >
-                  <TableCell className={cn("w-[48px] sticky left-0 z-10 border-r border-b border-border", isSelected ? "bg-primary/10" : "bg-card")}>
+                  <TableCell className={cn("w-[48px] sticky left-0 z-10 border-r border-b border-border", isSelected ? "bg-row-selected" : "bg-card")}>
                     <Checkbox 
                       checked={isSelected} 
                       onCheckedChange={() => {
@@ -559,12 +559,12 @@ const Campaigns = () => {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </TableCell>
-                  <TableCell className={cn("w-[60px] text-center sticky left-[48px] z-10 border-r border-b border-border", isSelected ? "bg-primary/10" : "bg-card")} onClick={(e) => e.stopPropagation()}>
+                  <TableCell className={cn("w-[60px] text-center sticky left-[48px] z-10 border-r border-b border-border", isSelected ? "bg-row-selected" : "bg-card")} onClick={(e) => e.stopPropagation()}>
                     {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
                       <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
                     )}
                   </TableCell>
-                  <TableCell className={cn("font-medium sticky left-[108px] z-10 min-w-[200px] border-r border-b border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]", isSelected ? "bg-primary/10" : "bg-card")}>
+                  <TableCell className={cn("font-medium sticky left-[108px] z-10 min-w-[200px] border-r border-b border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]", isSelected ? "bg-row-selected" : "bg-card")}>
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[180px]">{item.name}</span>
                       {activeTab === 'campanhas' && (
