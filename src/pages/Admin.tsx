@@ -14,8 +14,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard,
+  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign,
 } from 'lucide-react';
+import { MetricCard } from '@/components/dashboard/MetricCard';
 import { toast } from '@/components/ui/sonner';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -168,9 +169,62 @@ export default function Admin() {
     }
   };
 
+  const totalSubscribers = users.filter(u => u.plan && u.plan !== 'free').length;
+  const totalActive = users.filter(u => getDisplayPlanStatus(u) === 'active' && getDisplayPlan(u) !== 'Free').length;
+  const totalExpired = users.filter(u => u.plan_status === 'overdue').length;
+  const totalCancelled = users.filter(u => u.plan_status === 'cancelled').length;
+  const totalFree = users.filter(u => getDisplayPlan(u) === 'Free' || !u.plan).length;
+  const totalProfissional = users.filter(u => u.plan === 'profissional').length;
+  const totalEnterprise = users.filter(u => u.plan === 'enterprise' || isSuperAdmin(u.email)).length;
+  const totalStarter = users.filter(u => u.plan === 'starter').length;
+
+  const planPrices: Record<string, number> = { starter: 49.90, profissional: 99.90, enterprise: 199.90 };
+  const totalRevenue = users.reduce((acc, u) => {
+    if (isSuperAdmin(u.email)) return acc;
+    if (u.plan_status === 'active' && u.plan && planPrices[u.plan]) {
+      return acc + planPrices[u.plan];
+    }
+    return acc;
+  }, 0);
+
   return (
     <MainLayout title="Área Admin">
       <div className="space-y-6">
+        {/* Metric Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Total de Assinantes', value: totalSubscribers, icon: Users, variant: 'primary' as const },
+            { label: 'Ativos', value: totalActive, icon: UserCheck, variant: 'success' as const },
+            { label: 'Expirados', value: totalExpired, icon: Clock, variant: 'warning' as const },
+            { label: 'Cancelados', value: totalCancelled, icon: UserX, variant: 'danger' as const },
+            { label: 'Total Free', value: totalFree, icon: Users, variant: 'default' as const },
+            { label: 'Total Starter', value: totalStarter, icon: CreditCard, variant: 'default' as const },
+            { label: 'Total Profissional', value: totalProfissional, icon: CreditCard, variant: 'primary' as const },
+            { label: 'Total Enterprise', value: totalEnterprise, icon: Crown, variant: 'warning' as const },
+          ].map(card => (
+            <MetricCard
+              key={card.label}
+              title={card.label}
+              value={String(card.value)}
+              icon={card.icon}
+              variant={card.variant}
+            />
+          ))}
+        </div>
+
+        {/* Revenue Card */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-success/20">
+              <DollarSign className="w-5 h-5 text-success" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Receita Total Mensal</p>
+              <p className="text-2xl font-bold text-success">R$ {totalRevenue.toFixed(2).replace('.', ',')}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Add Admin Section */}
         <div className="bg-card border border-border rounded-xl p-4">
           <h3 className="text-lg font-semibold text-foreground mb-3">Gerenciar Administradores</h3>
