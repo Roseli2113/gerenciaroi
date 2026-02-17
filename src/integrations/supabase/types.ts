@@ -252,6 +252,7 @@ export type Database = {
           purchase_product: string
           purchase_send_config: string
           purchase_value_type: string
+          status: string
           updated_at: string
           user_id: string
         }
@@ -269,6 +270,7 @@ export type Database = {
           purchase_product?: string
           purchase_send_config?: string
           purchase_value_type?: string
+          status?: string
           updated_at?: string
           user_id: string
         }
@@ -286,6 +288,7 @@ export type Database = {
           purchase_product?: string
           purchase_send_config?: string
           purchase_value_type?: string
+          status?: string
           updated_at?: string
           user_id?: string
         }

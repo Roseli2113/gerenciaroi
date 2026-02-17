@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,8 +46,20 @@ import { UtmCodesDialog } from '@/components/integrations/UtmCodesDialog';
 import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
 import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
 import { AddPixelDrawer } from '@/components/integrations/AddPixelDrawer';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+interface PixelRecord {
+  id: string;
+  name: string;
+  pixel_type: string;
+  purchase_product: string;
+  status: string;
+}
 
 export default function Integrations() {
+  const { user } = useAuth();
   const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
   const { webhooks, loading: webhooksLoading, createWebhook, deleteWebhook, toggleWebhookStatus } = useWebhooks();
   const [enabledAccounts, setEnabledAccounts] = useState<Record<string, boolean>>({});
@@ -60,6 +72,39 @@ export default function Integrations() {
   const [utmScriptsDialogOpen, setUtmScriptsDialogOpen] = useState(false);
   const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
   const [pixelDrawerOpen, setPixelDrawerOpen] = useState(false);
+  const [pixels, setPixels] = useState<PixelRecord[]>([]);
+  const [pixelsLoading, setPixelsLoading] = useState(false);
+
+  const fetchPixels = useCallback(async () => {
+    if (!user) return;
+    setPixelsLoading(true);
+    const { data, error } = await supabase
+      .from('pixels')
+      .select('id, name, pixel_type, purchase_product, status')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    if (!error && data) setPixels(data);
+    setPixelsLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    fetchPixels();
+  }, [fetchPixels]);
+
+  const togglePixelStatus = async (pixel: PixelRecord) => {
+    const newStatus = pixel.status === 'active' ? 'inactive' : 'active';
+    const { error } = await supabase.from('pixels').update({ status: newStatus }).eq('id', pixel.id);
+    if (error) { toast.error('Erro ao atualizar status'); return; }
+    toast.success(newStatus === 'active' ? 'Pixel ativado' : 'Pixel desativado');
+    fetchPixels();
+  };
+
+  const deletePixel = async (pixelId: string) => {
+    const { error } = await supabase.from('pixels').delete().eq('id', pixelId);
+    if (error) { toast.error('Erro ao deletar pixel'); return; }
+    toast.success('Pixel deletado com sucesso');
+    fetchPixels();
+  };
 
   const openUtmCodeDialog = (platform: 'facebook' | 'google' | 'kwai' | 'tiktok') => {
     setUtmCodePlatform(platform);
@@ -588,12 +633,50 @@ export default function Integrations() {
           <TabsContent value="pixel" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Pixel de Conversão</CardTitle>
+                <CardTitle>Pixels</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Gerencie seus pixels de conversão para rastrear ações dos usuários.</p>
-                <Button className="mt-4 gap-2" onClick={() => setPixelDrawerOpen(true)}>
-                  <Plus className="w-4 h-4" />
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground">Utilize Pixels para aumentar a inteligência das campanhas:</p>
+                
+                {pixelsLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
+
+                {pixels.map((pixel) => (
+                  <div key={pixel.id} className="border border-border rounded-lg p-4 flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="font-medium text-foreground">{pixel.name}</p>
+                      <p className="text-sm text-muted-foreground">ID: {pixel.id.replace(/-/g, '').slice(0, 24)}</p>
+                      <p className="text-sm text-muted-foreground">Tipo: {pixel.pixel_type === 'meta' ? 'Meta' : pixel.pixel_type === 'google' ? 'Google' : 'TikTok'}</p>
+                      <p className="text-sm text-muted-foreground">Produto: {pixel.purchase_product === 'any' ? 'Qualquer' : 'Específico'}</p>
+                      <p className="text-sm text-muted-foreground">Status: {pixel.status === 'active' ? 'Ativado' : 'Desativado'}</p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => togglePixelStatus(pixel)}>
+                          {pixel.status === 'active' ? 'Desativar Pixel' : 'Ativar Pixel'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setPixelDrawerOpen(true);
+                        }}>
+                          Editar Dados
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => deletePixel(pixel.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Deletar Pixel
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ))}
+
+                <Button className="gap-2" onClick={() => setPixelDrawerOpen(true)}>
                   Adicionar Pixel
                 </Button>
               </CardContent>
@@ -651,6 +734,7 @@ export default function Integrations() {
         <AddPixelDrawer
           open={pixelDrawerOpen}
           onOpenChange={setPixelDrawerOpen}
+          onSaved={fetchPixels}
         />
       </div>
     </MainLayout>
