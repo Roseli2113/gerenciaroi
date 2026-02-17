@@ -18,10 +18,13 @@ import {
 } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AddPixelDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSaved?: () => void;
 }
 
 interface MetaPixel {
@@ -38,8 +41,10 @@ interface PixelFormState {
   apelido: string;
 }
 
-export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
+export function AddPixelDrawer({ open, onOpenChange, onSaved }: AddPixelDrawerProps) {
+  const { user } = useAuth();
   const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
   const [pixelType, setPixelType] = useState('meta');
   const [metaPixels, setMetaPixels] = useState<MetaPixel[]>([]);
   const [leadRule, setLeadRule] = useState('disabled');
@@ -82,7 +87,7 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
     setMetaPixels(prev => prev.filter(p => p.id !== id));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       toast.error('Informe o nome do pixel');
       return;
@@ -91,26 +96,71 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
       setCheckoutTextError('O texto de detecção é obrigatório');
       return;
     }
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
     setCheckoutTextError('');
-    const pixelId = crypto.randomUUID().replace(/-/g, '').slice(0, 24);
-    setGeneratedPixelId(pixelId);
-    setShowSuccessDialog(true);
-    toast('O PIXEL FOI SALVO COM SUCESSO', {
-      style: { backgroundColor: '#22c55e', color: '#ffffff', border: 'none' },
-    });
-    // Reset form
-    setName('');
-    setPixelType('meta');
-    setMetaPixels([]);
-    setLeadRule('disabled');
-    setAddToCartRule('disabled');
-    setInitiateCheckoutRule('enabled');
-    setCheckoutDetectionRule('contains_text');
-    setCheckoutButtonText('');
-    setPurchaseSendConfig('approved_only');
-    setPurchaseValueType('sale_value');
-    setPurchaseProduct('any');
-    setIpConfig('ipv6_ipv4');
+    setSaving(true);
+
+    try {
+      const { data: pixelData, error: pixelError } = await supabase
+        .from('pixels')
+        .insert({
+          user_id: user.id,
+          name,
+          pixel_type: pixelType,
+          lead_rule: leadRule,
+          add_to_cart_rule: addToCartRule,
+          initiate_checkout_rule: initiateCheckoutRule,
+          checkout_detection_rule: checkoutDetectionRule,
+          checkout_button_text: checkoutButtonText,
+          purchase_send_config: purchaseSendConfig,
+          purchase_value_type: purchaseValueType,
+          purchase_product: purchaseProduct,
+          ip_config: ipConfig,
+        })
+        .select('id')
+        .single();
+
+      if (pixelError) throw pixelError;
+
+      if (metaPixels.length > 0) {
+        const metaRows = metaPixels.map(mp => ({
+          pixel_id: pixelData.id,
+          user_id: user.id,
+          meta_pixel_id: mp.pixelId,
+          token: mp.token,
+          apelido: mp.apelido,
+        }));
+        const { error: metaError } = await supabase.from('pixel_meta_ids').insert(metaRows);
+        if (metaError) throw metaError;
+      }
+
+      setGeneratedPixelId(pixelData.id.replace(/-/g, '').slice(0, 24));
+      setShowSuccessDialog(true);
+      toast('O PIXEL FOI SALVO COM SUCESSO', {
+        style: { backgroundColor: '#22c55e', color: '#ffffff', border: 'none' },
+      });
+      onSaved?.();
+      // Reset form
+      setName('');
+      setPixelType('meta');
+      setMetaPixels([]);
+      setLeadRule('disabled');
+      setAddToCartRule('disabled');
+      setInitiateCheckoutRule('enabled');
+      setCheckoutDetectionRule('contains_text');
+      setCheckoutButtonText('');
+      setPurchaseSendConfig('approved_only');
+      setPurchaseValueType('sale_value');
+      setPurchaseProduct('any');
+      setIpConfig('ipv6_ipv4');
+    } catch (err: any) {
+      toast.error('Erro ao salvar pixel: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const generatedCode = `<script>\n  window.pixelId = "${generatedPixelId}";\n  var a = document.createElement("script");\n  a.setAttribute("async", "");\n  a.setAttribute("defer", "");\n  a.setAttribute("src", "https://cdn.utmify.com.br/scripts/pixel/pixel.js");\n  document.head.appendChild(a);\n</script>`;
@@ -475,8 +525,8 @@ export function AddPixelDrawer({ open, onOpenChange }: AddPixelDrawerProps) {
           </div>
 
           {/* Save Button */}
-          <Button onClick={handleSave} className="w-full" size="lg">
-            Salvar Dados
+          <Button onClick={handleSave} className="w-full" size="lg" disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar Dados'}
           </Button>
         </div>
       </div>

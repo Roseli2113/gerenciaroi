@@ -199,6 +199,98 @@ export type Database = {
         }
         Relationships: []
       }
+      pixel_meta_ids: {
+        Row: {
+          apelido: string | null
+          created_at: string
+          id: string
+          meta_pixel_id: string
+          pixel_id: string
+          token: string | null
+          user_id: string
+        }
+        Insert: {
+          apelido?: string | null
+          created_at?: string
+          id?: string
+          meta_pixel_id: string
+          pixel_id: string
+          token?: string | null
+          user_id: string
+        }
+        Update: {
+          apelido?: string | null
+          created_at?: string
+          id?: string
+          meta_pixel_id?: string
+          pixel_id?: string
+          token?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pixel_meta_ids_pixel_id_fkey"
+            columns: ["pixel_id"]
+            isOneToOne: false
+            referencedRelation: "pixels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pixels: {
+        Row: {
+          add_to_cart_rule: string
+          checkout_button_text: string | null
+          checkout_detection_rule: string
+          created_at: string
+          id: string
+          initiate_checkout_rule: string
+          ip_config: string
+          lead_rule: string
+          name: string
+          pixel_type: string
+          purchase_product: string
+          purchase_send_config: string
+          purchase_value_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          add_to_cart_rule?: string
+          checkout_button_text?: string | null
+          checkout_detection_rule?: string
+          created_at?: string
+          id?: string
+          initiate_checkout_rule?: string
+          ip_config?: string
+          lead_rule?: string
+          name: string
+          pixel_type?: string
+          purchase_product?: string
+          purchase_send_config?: string
+          purchase_value_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          add_to_cart_rule?: string
+          checkout_button_text?: string | null
+          checkout_detection_rule?: string
+          created_at?: string
+          id?: string
+          initiate_checkout_rule?: string
+          ip_config?: string
+          lead_rule?: string
+          name?: string
+          pixel_type?: string
+          purchase_product?: string
+          purchase_send_config?: string
+          purchase_value_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
