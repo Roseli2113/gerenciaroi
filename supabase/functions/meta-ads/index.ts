@@ -348,7 +348,7 @@ serve(async (req) => {
         : `${baseUrl}/${sourceEntityId}/copies`;
 
       const copyBody: any = {
-        status_option: statusOption || "INHERITED",
+        status_option: statusOption || "INHERITED_FROM_SOURCE",
       };
       if (scheduledDate) {
         copyBody.start_time = scheduledDate;
