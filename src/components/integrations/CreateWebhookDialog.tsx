@@ -120,8 +120,10 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Generate webhook URL for platforms that need it
-  const webhookUrl = `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver`;
+  // Generate webhook URL for platforms that need it (include platform param)
+  const webhookUrl = selectedPlatform 
+    ? `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver?platform=${selectedPlatform.toLowerCase()}`
+    : `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver`;
 
   const filteredPlatforms = PLATFORMS.filter(platform =>
     platform.toLowerCase().includes(searchTerm.toLowerCase())
