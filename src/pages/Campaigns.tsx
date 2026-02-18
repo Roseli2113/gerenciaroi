@@ -3,6 +3,9 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -10,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
-  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Maximize2, Minimize2, ShieldAlert
+  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Maximize2, Minimize2, ShieldAlert, MoreVertical, BarChart3, Copy, Pin, Filter, Trash2, Power, PowerOff
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -523,6 +526,7 @@ const Campaigns = () => {
               <TableHead className="font-semibold sticky left-[108px] bg-[#384157] z-20 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
                 {activeTab === 'campanhas' ? 'CAMPANHA' : activeTab === 'conjuntos' ? 'CONJUNTO' : 'ANÚNCIO'}
               </TableHead>
+              <TableHead className="w-[48px] text-center font-semibold border-r border-border"></TableHead>
               {visibleColumns.map((col, index) => (
                 <TableHead 
                   key={col.id} 
@@ -595,6 +599,49 @@ const Campaigns = () => {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell className="w-[48px] text-center border-r border-b border-border" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-52">
+                        <DropdownMenuItem className="gap-2">
+                          <BarChart3 className="w-4 h-4" /> Gráfico comparativo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="gap-2">
+                          <Copy className="w-4 h-4" /> Duplicar {activeTab === 'campanhas' ? 'campanha' : activeTab === 'conjuntos' ? 'conjunto' : 'anúncio'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="gap-2" onClick={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')}>
+                          {item.status ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                          {item.status ? 'Desativar' : 'Ativar'}
+                        </DropdownMenuItem>
+                        {(activeTab === 'campanhas' || activeTab === 'conjuntos') && (
+                          <DropdownMenuItem className="gap-2" onClick={() => {
+                            if (activeTab === 'campanhas') setEditingCampaign(item as Campaign);
+                            else setEditingAdSet(item as AdSet);
+                          }}>
+                            <Pencil className="w-4 h-4" /> Alterar orçamento
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem className="gap-2">
+                          <Pin className="w-4 h-4" /> Fixar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="gap-2" onClick={() => navigator.clipboard.writeText(item.id)}>
+                          <Copy className="w-4 h-4" /> Copiar ID
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="gap-2">
+                          <Filter className="w-4 h-4" /> Filtrar selecionadas
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
+                          <Trash2 className="w-4 h-4" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                   {visibleColumns.map((col, index) => (
                     <TableCell 
                       key={col.id} 
@@ -659,6 +706,7 @@ const Campaigns = () => {
                   <TableCell className="font-semibold sticky left-[108px] bg-secondary z-10 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)] text-xs">
                     {itemLabel}
                   </TableCell>
+                  <TableCell className="w-[48px] bg-secondary border-r border-border" />
                   {visibleColumns.map((col, index) => (
                     <TableCell 
                       key={col.id} 
