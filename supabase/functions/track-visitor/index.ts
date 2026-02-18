@@ -39,8 +39,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Clean up stale sessions (older than 60 seconds)
-    const cutoff = new Date(Date.now() - 60000).toISOString();
+    // Clean up stale sessions (older than 30 seconds)
+    const cutoff = new Date(Date.now() - 30000).toISOString();
     await supabase.from('live_visitors').delete().lt('last_seen_at', cutoff);
 
     return new Response(JSON.stringify({ ok: true }), {

@@ -97,19 +97,19 @@ export function LiveVisitorsCard() {
 
   const fetchVisitors = async () => {
     if (!user) return;
-    const cutoff = new Date(Date.now() - 60000).toISOString();
+    const cutoff = new Date(Date.now() - 30000).toISOString();
     const { data } = await supabase
       .from('live_visitors')
       .select('*')
       .eq('user_id', user.id)
       .gt('last_seen_at', cutoff)
       .order('last_seen_at', { ascending: false });
-    if (data) setVisitors(data as LiveVisitor[]);
+    setVisitors((data as LiveVisitor[]) || []);
   };
 
   useEffect(() => {
     fetchVisitors();
-    const interval = setInterval(fetchVisitors, 10000);
+    const interval = setInterval(fetchVisitors, 5000);
     return () => clearInterval(interval);
   }, [user]);
 
