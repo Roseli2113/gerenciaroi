@@ -149,6 +149,42 @@ export type Database = {
         }
         Relationships: []
       }
+      live_visitors: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          last_seen_at: string
+          page_url: string | null
+          region: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          page_url?: string | null
+          region?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          page_url?: string | null
+          region?: string | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meta_ad_accounts: {
         Row: {
           account_id: string

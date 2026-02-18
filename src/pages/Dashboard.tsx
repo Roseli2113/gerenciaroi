@@ -22,6 +22,7 @@ import { EditableDashboardGrid } from '@/components/dashboard/EditableDashboardG
 import { EditModeBar } from '@/components/dashboard/EditModeBar';
 import { RevenueProgressBar } from '@/components/dashboard/RevenueProgressBar';
 import { DraggableWidgetCard } from '@/components/dashboard/DraggableWidgetCard';
+import { LiveVisitorsCard } from '@/components/dashboard/LiveVisitorsCard';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 
@@ -83,6 +84,9 @@ const Dashboard = () => {
     >
       <div className="space-y-6">
         <DashboardFilters filters={filters} />
+
+        {/* Live Visitors Card */}
+        <LiveVisitorsCard />
 
         <EditableDashboardGrid 
           isEditMode={isEditMode}
