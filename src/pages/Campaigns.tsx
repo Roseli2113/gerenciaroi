@@ -26,6 +26,8 @@ import { EditAdSetBudgetDialog } from '@/components/campaigns/EditAdSetBudgetDia
 import { EditCampaignNameDialog } from '@/components/campaigns/EditCampaignNameDialog';
 import { ColumnCustomizationDialog, ColumnConfig, ALL_COLUMNS, DEFAULT_VISIBLE } from '@/components/campaigns/ColumnCustomizationDialog';
 import { MetricTooltip } from '@/components/campaigns/MetricTooltip';
+import { DuplicateCampaignDialog } from '@/components/campaigns/DuplicateCampaignDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -56,6 +58,10 @@ const Campaigns = () => {
   const [filterName, setFilterName] = useState('');
   const [showColumnDialog, setShowColumnDialog] = useState(false);
   const [activeAccounts, setActiveAccounts] = useState<ActiveAccount[]>([]);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
+  const [filterSelectedOnly, setFilterSelectedOnly] = useState(false);
+  const [duplicatingItem, setDuplicatingItem] = useState<{ id: string; name: string; type: 'campaign' | 'adset' | 'ad' } | null>(null);
+  const [deletingItem, setDeletingItem] = useState<{ id: string; name: string; type: 'campaign' | 'adset' | 'ad' } | null>(null);
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
     const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
     if (saved) {
@@ -76,6 +82,7 @@ const Campaigns = () => {
     fetchCampaigns, fetchAdSets, fetchAds, refreshAll,
     toggleCampaignStatus, toggleAdSetStatus, toggleAdStatus,
     updateCampaignBudget, updateAdSetBudget, updateCampaignName, updateAdName, updateAdSetName,
+    duplicateItem, deleteItem,
     getLastUpdatedText, hasActiveAccount,
     selectedCampaignId, selectedAdSetId, setSelectedCampaignId, setSelectedAdSetId
   } = useMetaCampaigns();
@@ -191,9 +198,23 @@ const Campaigns = () => {
     return filtered.filter(ad => ad.spent > 0);
   };
 
-  const displayData = activeTab === 'campanhas' ? campaigns : 
+  const rawDisplayData = activeTab === 'campanhas' ? campaigns : 
                       activeTab === 'conjuntos' ? getFilteredAdSets() : 
                       getFilteredAds();
+
+  // Apply pinning: pinned items first
+  const sortedWithPins = [...rawDisplayData].sort((a, b) => {
+    const aPinned = pinnedIds.has(a.id);
+    const bPinned = pinnedIds.has(b.id);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return 0;
+  });
+
+  // Apply filter selected only
+  const displayData = filterSelectedOnly && selectedItems.length > 0
+    ? sortedWithPins.filter(item => selectedItems.includes(item.id))
+    : sortedWithPins;
 
   // Get visible columns in correct order
   const visibleColumns = columnConfig.filter(c => c.visible);
@@ -610,7 +631,10 @@ const Campaigns = () => {
                         <DropdownMenuItem className="gap-2">
                           <BarChart3 className="w-4 h-4" /> Gráfico comparativo
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
+                        <DropdownMenuItem className="gap-2" onClick={() => {
+                          const type = activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad';
+                          setDuplicatingItem({ id: item.id, name: item.name, type });
+                        }}>
                           <Copy className="w-4 h-4" /> Duplicar {activeTab === 'campanhas' ? 'campanha' : activeTab === 'conjuntos' ? 'conjunto' : 'anúncio'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -626,17 +650,35 @@ const Campaigns = () => {
                             <Pencil className="w-4 h-4" /> Alterar orçamento
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem className="gap-2">
-                          <Pin className="w-4 h-4" /> Fixar
+                        <DropdownMenuItem className="gap-2" onClick={() => {
+                          setPinnedIds(prev => {
+                            const next = new Set(prev);
+                            if (next.has(item.id)) next.delete(item.id);
+                            else next.add(item.id);
+                            return next;
+                          });
+                          import('sonner').then(({ toast: t }) => {
+                            t.success(pinnedIds.has(item.id) ? 'Item desafixado' : 'Item fixado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
+                          });
+                        }}>
+                          <Pin className={cn("w-4 h-4", pinnedIds.has(item.id) && "text-primary")} /> {pinnedIds.has(item.id) ? 'Desafixar' : 'Fixar'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2" onClick={() => navigator.clipboard.writeText(item.id)}>
+                        <DropdownMenuItem className="gap-2" onClick={() => {
+                          navigator.clipboard.writeText(item.id);
+                          import('sonner').then(({ toast: t }) => {
+                            t.success('ID copiado', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
+                          });
+                        }}>
                           <Copy className="w-4 h-4" /> Copiar ID
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
-                          <Filter className="w-4 h-4" /> Filtrar selecionadas
+                        <DropdownMenuItem className="gap-2" onClick={() => setFilterSelectedOnly(!filterSelectedOnly)}>
+                          <Filter className="w-4 h-4" /> {filterSelectedOnly ? 'Mostrar todas' : 'Filtrar selecionadas'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
+                        <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => {
+                          const type = activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad';
+                          setDeletingItem({ id: item.id, name: item.name, type });
+                        }}>
                           <Trash2 className="w-4 h-4" /> Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -779,6 +821,40 @@ const Campaigns = () => {
         columns={columnConfig}
         onSave={handleSaveColumns}
       />
+      {duplicatingItem && (
+        <DuplicateCampaignDialog
+          open={!!duplicatingItem}
+          onOpenChange={(open) => !open && setDuplicatingItem(null)}
+          itemName={duplicatingItem.name}
+          itemType={duplicatingItem.type === 'campaign' ? 'campanha' : duplicatingItem.type === 'adset' ? 'conjunto' : 'anúncio'}
+          accounts={activeAccounts}
+          currentAccountId={activeAccounts[0]?.account_id}
+          onDuplicate={async (_targetAccountId, copies) => {
+            return await duplicateItem(duplicatingItem.id, duplicatingItem.type, copies);
+          }}
+        />
+      )}
+      {deletingItem && (
+        <Dialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirmar exclusão</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir "{deletingItem.name}"? Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeletingItem(null)}>Cancelar</Button>
+              <Button variant="destructive" onClick={async () => {
+                await deleteItem(deletingItem.id, deletingItem.type);
+                setDeletingItem(null);
+              }}>
+                Excluir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 

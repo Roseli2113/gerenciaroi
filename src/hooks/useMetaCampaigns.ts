@@ -735,6 +735,69 @@ export function useMetaCampaigns() {
     }
   }, [accessToken]);
 
+  const duplicateItem = useCallback(async (sourceId: string, type: 'campaign' | 'adset' | 'ad', copies: number) => {
+    if (!accessToken) {
+      toast.error('Não conectado ao Meta Ads');
+      return false;
+    }
+
+    try {
+      const body: any = { action: 'duplicate-campaign', accessToken, sourceId, type, copies };
+      if (type === 'campaign') body.campaignId = sourceId;
+      else if (type === 'adset') body.adsetId = sourceId;
+      else body.adId = sourceId;
+
+      const { data, error } = await supabase.functions.invoke('meta-ads', { body });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      toast.success(`${type === 'campaign' ? 'Campanha' : type === 'adset' ? 'Conjunto' : 'Anúncio'} duplicado com sucesso!`, {
+        style: { background: '#16a34a', color: '#ffffff', border: 'none' }
+      });
+
+      // Refresh data
+      if (type === 'campaign') await fetchCampaigns();
+      else if (type === 'adset') await fetchAdSets(selectedCampaignId || undefined);
+      else await fetchAds(selectedAdSetId || undefined);
+
+      return true;
+    } catch (err) {
+      console.error('Error duplicating:', err);
+      toast.error(err instanceof Error ? err.message : 'Erro ao duplicar');
+      return false;
+    }
+  }, [accessToken, fetchCampaigns, fetchAdSets, fetchAds, selectedCampaignId, selectedAdSetId]);
+
+  const deleteItem = useCallback(async (id: string, type: 'campaign' | 'adset' | 'ad') => {
+    if (!accessToken) {
+      toast.error('Não conectado ao Meta Ads');
+      return false;
+    }
+
+    try {
+      const body: any = { action: 'delete-campaign', accessToken };
+      if (type === 'campaign') body.campaignId = id;
+      else if (type === 'adset') body.adsetId = id;
+      else body.adId = id;
+
+      const { data, error } = await supabase.functions.invoke('meta-ads', { body });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      // Remove from local state
+      if (type === 'campaign') setCampaigns(prev => prev.filter(c => c.id !== id));
+      else if (type === 'adset') setAdSets(prev => prev.filter(as => as.id !== id));
+      else setAds(prev => prev.filter(ad => ad.id !== id));
+
+      toast.success(`${type === 'campaign' ? 'Campanha' : type === 'adset' ? 'Conjunto' : 'Anúncio'} excluído`, {
+        style: { background: '#16a34a', color: '#ffffff', border: 'none' }
+      });
+      return true;
+    } catch (err) {
+      console.error('Error deleting:', err);
+      toast.error(err instanceof Error ? err.message : 'Erro ao excluir');
+      return false;
+    }
+  }, [accessToken]);
+
   const getLastUpdatedText = useCallback(() => {
     if (!lastUpdated) return 'Nunca';
 
@@ -771,6 +834,8 @@ export function useMetaCampaigns() {
     updateAdSetBudget,
     updateAdName,
     updateAdSetName,
+    duplicateItem,
+    deleteItem,
     getLastUpdatedText,
     hasActiveAccount: !!activeAccountId && !!accessToken
   };

@@ -331,6 +331,54 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "duplicate-campaign") {
+      const { sourceId, copies, type } = await req.json().catch(() => ({}));
+      // type: 'campaign' | 'adset' | 'ad'
+      const entityType = type || 'campaign';
+      const numCopies = copies || 1;
+      const sourceEntityId = sourceId || campaignId;
+
+      if (!sourceEntityId) {
+        return new Response(JSON.stringify({ error: "Source ID is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Use the copies endpoint for campaigns/adsets
+      const copyEndpoint = entityType === 'campaign' 
+        ? `${baseUrl}/${sourceEntityId}/copies`
+        : entityType === 'adset'
+        ? `${baseUrl}/${sourceEntityId}/copies`
+        : `${baseUrl}/${sourceEntityId}/copies`;
+
+      const results = [];
+      for (let i = 0; i < numCopies; i++) {
+        const response = await fetch(`${copyEndpoint}?access_token=${accessToken}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status_option: "PAUSED",
+          })
+        });
+        const data = await response.json();
+        if (data.error) {
+          return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        results.push(data);
+      }
+
+      return new Response(JSON.stringify({ success: true, results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "delete-campaign") {
+      const entityId = campaignId || adsetId || adId;
+      if (!entityId) {
+        return new Response(JSON.stringify({ error: "Entity ID is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const url = `${baseUrl}/${entityId}?access_token=${accessToken}`;
+      const response = await fetch(url, { method: "DELETE" });
+      const data = await response.json();
+      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
