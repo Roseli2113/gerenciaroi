@@ -47,6 +47,7 @@ import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
 import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
 import { AddPixelDrawer } from '@/components/integrations/AddPixelDrawer';
 import { IntegrationTestTab } from '@/components/integrations/IntegrationTestTab';
+import { LiveTrackingScriptCard } from '@/components/integrations/LiveTrackingScriptCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -629,6 +630,9 @@ export default function Integrations() {
 
               </CardContent>
             </Card>
+
+            {/* Live Tracking Script */}
+            <LiveTrackingScriptCard />
           </TabsContent>
 
           {/* Pixel Tab */}
