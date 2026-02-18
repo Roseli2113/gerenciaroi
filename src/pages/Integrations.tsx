@@ -46,6 +46,7 @@ import { UtmCodesDialog } from '@/components/integrations/UtmCodesDialog';
 import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
 import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
 import { AddPixelDrawer } from '@/components/integrations/AddPixelDrawer';
+import { IntegrationTestTab } from '@/components/integrations/IntegrationTestTab';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -703,18 +704,7 @@ export default function Integrations() {
 
           {/* Testes Tab */}
           <TabsContent value="testes" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ambiente de Testes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Teste suas integrações antes de ir para produção.</p>
-                <Button className="mt-4 gap-2">
-                  <TestTube className="w-4 h-4" />
-                  Iniciar Teste
-                </Button>
-              </CardContent>
-            </Card>
+            <IntegrationTestTab />
           </TabsContent>
         </Tabs>
 
