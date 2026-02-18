@@ -86,7 +86,9 @@ const Dashboard = () => {
         <DashboardFilters filters={filters} />
 
         {/* Live Visitors Card */}
-        <LiveVisitorsCard />
+        <DraggableWidgetCard id="live-visitors" isEditMode={isEditMode}>
+          <LiveVisitorsCard />
+        </DraggableWidgetCard>
 
         <EditableDashboardGrid 
           isEditMode={isEditMode}
