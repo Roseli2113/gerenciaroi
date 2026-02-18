@@ -16,12 +16,16 @@ export function LiveTrackingScriptCard() {
   var uid="${user?.id || 'SEU_USER_ID'}";
   var sid=Math.random().toString(36).substr(2,12)+Date.now().toString(36);
   var url="https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/track-visitor";
+  var geo={country:null,region:null,city:null};
   function send(action){
-    var data=JSON.stringify({user_id:uid,session_id:sid,page_url:location.href,action:action});
+    var data=JSON.stringify({user_id:uid,session_id:sid,page_url:location.href,action:action,country:geo.country,region:geo.region,city:geo.city});
     if(navigator.sendBeacon){navigator.sendBeacon(url,data)}
     else{fetch(url,{method:"POST",body:data,headers:{"Content-Type":"application/json"},keepalive:true})}
   }
-  send("heartbeat");
+  fetch("https://ipapi.co/json/").then(function(r){return r.json()}).then(function(d){
+    geo.country=d.country_name||null;geo.region=d.region||null;geo.city=d.city||null;
+    send("heartbeat");
+  }).catch(function(){send("heartbeat")});
   setInterval(function(){send("heartbeat")},15000);
   window.addEventListener("beforeunload",function(){send("leave")});
   document.addEventListener("visibilitychange",function(){

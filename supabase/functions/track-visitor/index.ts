@@ -18,42 +18,32 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json();
-    const { user_id, session_id, page_url, action } = body;
+    const { user_id, session_id, page_url, action, country: clientCountry, region: clientRegion, city: clientCity } = body;
 
-    if (!user_id || !session_id) {
-      return new Response(JSON.stringify({ error: 'Missing user_id or session_id' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Use client-side geo data if available, otherwise fallback to IP-based
+    let country = clientCountry || null;
+    let region = clientRegion || null;
+    let city = clientCity || null;
 
-    // If action is "leave", delete the session
-    if (action === 'leave') {
-      await supabase.from('live_visitors').delete().eq('session_id', session_id);
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get geolocation from IP using free API
-    let country = null, region = null, city = null;
-    try {
-      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                 req.headers.get('cf-connecting-ip') || '';
-      
-      if (ip && ip !== '127.0.0.1' && ip !== '::1') {
-        const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=country,regionName,city&lang=pt-BR`);
-        if (geoRes.ok) {
-          const geo = await geoRes.json();
-          if (geo.country) {
-            country = geo.country;
-            region = geo.regionName || null;
-            city = geo.city || null;
+    if (!country) {
+      try {
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                   req.headers.get('cf-connecting-ip') || '';
+        
+        if (ip && ip !== '127.0.0.1' && ip !== '::1') {
+          const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=country,regionName,city&lang=pt-BR`);
+          if (geoRes.ok) {
+            const geo = await geoRes.json();
+            if (geo.country) {
+              country = geo.country;
+              region = geo.regionName || null;
+              city = geo.city || null;
+            }
           }
         }
+      } catch (e) {
+        console.log('Geo lookup failed:', e);
       }
-    } catch (e) {
-      console.log('Geo lookup failed:', e);
     }
 
     // Upsert visitor session
