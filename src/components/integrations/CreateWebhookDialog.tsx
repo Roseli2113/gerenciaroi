@@ -71,8 +71,8 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
     'Clickbank', 'BuyGoods', 'Digistore', 'Maxweb'
   ];
 
-  // Lowify - needs a webhook URL to copy
-  if (platform === 'Lowify') {
+  // Platforms that only need name + webhook URL to copy
+  if (PLATFORMS_WITH_WEBHOOK_URL.includes(platform)) {
     return [
       ...commonFields,
       { id: 'webhookUrl', label: 'URL do Webhook', type: 'readonly' },
