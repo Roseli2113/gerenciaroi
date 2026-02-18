@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { useSaleNotification } from '@/hooks/useSaleNotification';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -9,6 +10,9 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, title, headerAction }: MainLayoutProps) {
+  // Initialize sale notification listener globally
+  useSaleNotification();
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar />

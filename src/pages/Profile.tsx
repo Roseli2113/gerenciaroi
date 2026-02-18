@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Save, User, Mail, Loader2, Calendar, Camera, Upload } from 'lucide-react';
+import { Save, User, Mail, Loader2, Calendar, Camera, Upload, Volume2, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useSaleNotification, SOUND_OPTIONS, type SoundId } from '@/hooks/useSaleNotification';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -20,6 +22,7 @@ const Profile = () => {
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { selectedSound, updateSound, previewSound } = useSaleNotification();
 
   useEffect(() => {
     if (user) {
@@ -275,6 +278,46 @@ const Profile = () => {
                 </>
               )}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Notification Sound Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Volume2 className="h-5 w-5" />
+              Som de Notificação de Venda
+            </CardTitle>
+            <CardDescription>
+              Escolha o som que será tocado quando uma nova venda for recebida
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={selectedSound}
+              onValueChange={(value) => updateSound(value as SoundId)}
+              className="space-y-3"
+            >
+              {SOUND_OPTIONS.map((sound) => (
+                <div key={sound.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50">
+                  <div className="flex items-center gap-3">
+                    <RadioGroupItem value={sound.id} id={sound.id} />
+                    <Label htmlFor={sound.id} className="cursor-pointer font-medium">
+                      {sound.label}
+                    </Label>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => previewSound(sound.id)}
+                    className="gap-1"
+                  >
+                    <Play className="h-3 w-3" />
+                    Ouvir
+                  </Button>
+                </div>
+              ))}
+            </RadioGroup>
           </CardContent>
         </Card>
 
