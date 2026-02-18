@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -34,13 +34,19 @@ const Dashboard = () => {
   const dashboardLayout = useDashboardLayout();
   const filters = useDashboardFilters();
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
-  const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([
-    'profit-by-hour',
-    'sales-by-hour',
-    'conversion-funnel',
-    'campaigns-list',
-    'live-visitors',
-  ]);
+  const WIDGET_ORDER_KEY = 'gerencia-roi-widget-order';
+  const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>(() => {
+    try {
+      const saved = localStorage.getItem(WIDGET_ORDER_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return ['profit-by-hour', 'sales-by-hour', 'conversion-funnel', 'campaigns-list', 'live-visitors'];
+  });
+
+  // Persist widget order
+  useEffect(() => {
+    localStorage.setItem(WIDGET_ORDER_KEY, JSON.stringify(widgetOrder));
+  }, [widgetOrder]);
 
   const {
     isEditMode,

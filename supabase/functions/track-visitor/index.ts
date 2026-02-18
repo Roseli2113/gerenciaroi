@@ -18,43 +18,14 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json();
-    const { user_id, session_id, page_url, action, country: clientCountry, region: clientRegion, city: clientCity } = body;
+    const { user_id, session_id, page_url, action } = body;
 
-    // Use client-side geo data if available, otherwise fallback to IP-based
-    let country = clientCountry || null;
-    let region = clientRegion || null;
-    let city = clientCity || null;
-
-    if (!country) {
-      try {
-        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                   req.headers.get('cf-connecting-ip') || '';
-        
-        if (ip && ip !== '127.0.0.1' && ip !== '::1') {
-          const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=country,regionName,city&lang=pt-BR`);
-          if (geoRes.ok) {
-            const geo = await geoRes.json();
-            if (geo.country) {
-              country = geo.country;
-              region = geo.regionName || null;
-              city = geo.city || null;
-            }
-          }
-        }
-      } catch (e) {
-        console.log('Geo lookup failed:', e);
-      }
-    }
-
-    // Upsert visitor session
+    // Upsert visitor session (no geo data)
     const { error } = await supabase.from('live_visitors').upsert(
       {
         user_id,
         session_id,
         page_url: page_url || null,
-        country,
-        region,
-        city,
         last_seen_at: new Date().toISOString(),
       },
       { onConflict: 'session_id' }
