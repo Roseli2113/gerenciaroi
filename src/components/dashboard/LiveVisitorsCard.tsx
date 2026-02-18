@@ -14,97 +14,59 @@ interface LiveVisitor {
   last_seen_at: string;
 }
 
-// Animated pulse line component
+// Animated pulse line component using SVG for reliable rendering
 function PulseLineGraph({ count }: { count: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [offset, setOffset] = useState(0);
   const animRef = useRef<number>(0);
-  const offsetRef = useRef(0);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-
-    const w = rect.width;
-    const h = rect.height;
-    const amplitude = Math.min(h * 0.35, 16 + count * 2);
-    const speed = 1.2;
-
-    const draw = () => {
-      offsetRef.current += speed;
-      ctx.clearRect(0, 0, w, h);
-
-      // Gradient fill
-      const grad = ctx.createLinearGradient(0, 0, w, 0);
-      const style = getComputedStyle(document.documentElement);
-      const primary = style.getPropertyValue('--primary').trim();
-      grad.addColorStop(0, `hsla(${primary}, 0.05)`);
-      grad.addColorStop(0.5, `hsla(${primary}, 0.15)`);
-      grad.addColorStop(1, `hsla(${primary}, 0.05)`);
-
-      // Draw wave fill
-      ctx.beginPath();
-      ctx.moveTo(0, h);
-      for (let x = 0; x <= w; x++) {
-        const y = h / 2 + Math.sin((x + offsetRef.current) * 0.04) * amplitude
-          + Math.sin((x + offsetRef.current * 0.7) * 0.02) * (amplitude * 0.5);
-        ctx.lineTo(x, y);
-      }
-      ctx.lineTo(w, h);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // Draw wave line
-      const lineGrad = ctx.createLinearGradient(0, 0, w, 0);
-      lineGrad.addColorStop(0, `hsla(${primary}, 0.2)`);
-      lineGrad.addColorStop(0.3, `hsla(${primary}, 0.8)`);
-      lineGrad.addColorStop(0.7, `hsla(${primary}, 0.8)`);
-      lineGrad.addColorStop(1, `hsla(${primary}, 0.2)`);
-
-      ctx.beginPath();
-      for (let x = 0; x <= w; x++) {
-        const y = h / 2 + Math.sin((x + offsetRef.current) * 0.04) * amplitude
-          + Math.sin((x + offsetRef.current * 0.7) * 0.02) * (amplitude * 0.5);
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.strokeStyle = lineGrad;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Glow dot at right edge
-      const lastY = h / 2 + Math.sin((w + offsetRef.current) * 0.04) * amplitude
-        + Math.sin((w + offsetRef.current * 0.7) * 0.02) * (amplitude * 0.5);
-      ctx.beginPath();
-      ctx.arc(w - 2, lastY, 4, 0, Math.PI * 2);
-      ctx.fillStyle = `hsl(${primary})`;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(w - 2, lastY, 8, 0, Math.PI * 2);
-      ctx.fillStyle = `hsla(${primary}, 0.2)`;
-      ctx.fill();
-
-      animRef.current = requestAnimationFrame(draw);
+    const animate = () => {
+      setOffset(prev => prev + 1.2);
+      animRef.current = requestAnimationFrame(animate);
     };
-
-    animRef.current = requestAnimationFrame(draw);
+    animRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animRef.current);
-  }, [count]);
+  }, []);
+
+  const W = 300;
+  const H = 60;
+  const amplitude = Math.min(H * 0.35, 12 + count * 2);
+
+  // Build wave path
+  let pathD = `M 0 ${H}`;
+  let lineD = '';
+  for (let x = 0; x <= W; x += 2) {
+    const y = H / 2 + Math.sin((x + offset) * 0.04) * amplitude
+      + Math.sin((x + offset * 0.7) * 0.02) * (amplitude * 0.5);
+    pathD += ` L ${x} ${y}`;
+    lineD += (x === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+  }
+  pathD += ` L ${W} ${H} Z`;
+
+  // Dot position at right edge
+  const dotY = H / 2 + Math.sin((W + offset) * 0.04) * amplitude
+    + Math.sin((W + offset * 0.7) * 0.02) * (amplitude * 0.5);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="w-full h-full"
-      style={{ display: 'block' }}
-    />
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="waveFill" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
+          <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
+        </linearGradient>
+        <linearGradient id="waveLine" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+          <stop offset="30%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
+          <stop offset="70%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+        </linearGradient>
+      </defs>
+      <path d={pathD} fill="url(#waveFill)" />
+      <path d={lineD} fill="none" stroke="url(#waveLine)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <circle cx={W - 2} cy={dotY} r="6" fill="hsl(var(--primary))" opacity="0.25" />
+      <circle cx={W - 2} cy={dotY} r="3" fill="hsl(var(--primary))" />
+    </svg>
   );
 }
 
