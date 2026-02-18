@@ -46,13 +46,12 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-4 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center">
-            <img src={logoImg} alt="Gerencia ROI" className="w-10 h-10 object-contain" />
+          <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center">
+            <img src={logoImg} alt="Gerencia ROI" className="w-12 h-12 object-contain" />
           </div>
           {!collapsed && (
             <div className="animate-fade-in-left">
               <h1 className="font-bold text-lg text-sidebar-foreground">Gerencia ROI</h1>
-              <p className="text-xs text-muted-foreground">Meta Ads Manager</p>
             </div>
           )}
         </Link>
