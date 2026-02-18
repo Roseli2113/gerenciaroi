@@ -735,14 +735,14 @@ export function useMetaCampaigns() {
     }
   }, [accessToken]);
 
-  const duplicateItem = useCallback(async (sourceId: string, type: 'campaign' | 'adset' | 'ad', copies: number) => {
+  const duplicateItem = useCallback(async (sourceId: string, type: 'campaign' | 'adset' | 'ad', copies: number, statusOption?: string, scheduledDate?: string) => {
     if (!accessToken) {
       toast.error('Não conectado ao Meta Ads');
       return false;
     }
 
     try {
-      const body: any = { action: 'duplicate-campaign', accessToken, sourceId, type, copies };
+      const body: any = { action: 'duplicate-campaign', accessToken, sourceId, type, copies, statusOption: statusOption || 'INHERITED', scheduledDate };
       if (type === 'campaign') body.campaignId = sourceId;
       else if (type === 'adset') body.adsetId = sourceId;
       else body.adId = sourceId;

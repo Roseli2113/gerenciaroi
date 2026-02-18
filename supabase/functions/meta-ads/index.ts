@@ -34,7 +34,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, accessToken, adAccountId, campaignId, adsetId, adId, dateRange, updates, sourceId, copies, type } = await req.json();
+    const { action, accessToken, adAccountId, campaignId, adsetId, adId, dateRange, updates, sourceId, copies, type, statusOption, scheduledDate } = await req.json();
 
     if (!accessToken) {
       return new Response(
@@ -347,14 +347,19 @@ serve(async (req) => {
         ? `${baseUrl}/${sourceEntityId}/copies`
         : `${baseUrl}/${sourceEntityId}/copies`;
 
+      const copyBody: any = {
+        status_option: statusOption || "INHERITED",
+      };
+      if (scheduledDate) {
+        copyBody.start_time = scheduledDate;
+      }
+
       const results = [];
       for (let i = 0; i < numCopies; i++) {
         const response = await fetch(`${copyEndpoint}?access_token=${accessToken}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status_option: "INHERITED",
-          })
+          body: JSON.stringify(copyBody)
         });
         const data = await response.json();
         if (data.error) {

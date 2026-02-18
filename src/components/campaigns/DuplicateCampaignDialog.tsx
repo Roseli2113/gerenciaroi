@@ -3,7 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CalendarIcon, Power, PowerOff } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface DuplicateCampaignDialogProps {
   open: boolean;
@@ -12,7 +16,7 @@ interface DuplicateCampaignDialogProps {
   itemType: 'campanha' | 'conjunto' | 'anúncio';
   accounts?: Array<{ id: string; name: string; account_id: string }>;
   currentAccountId?: string;
-  onDuplicate: (targetAccountId: string | null, copies: number) => Promise<boolean>;
+  onDuplicate: (targetAccountId: string | null, copies: number, statusOption: string, scheduledDate?: string) => Promise<boolean>;
 }
 
 export function DuplicateCampaignDialog({
@@ -28,25 +32,42 @@ export function DuplicateCampaignDialog({
   const [copies, setCopies] = useState(1);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [statusOption, setStatusOption] = useState<'INHERITED' | 'PAUSED'>('INHERITED');
+  const [useSchedule, setUseSchedule] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
+  const [scheduledTime, setScheduledTime] = useState('00:00');
 
   const otherAccounts = accounts.filter(a => a.account_id !== currentAccountId);
 
   const handleDuplicate = async () => {
     setIsLoading(true);
     const targetAccount = selectedOption === 'other' ? selectedAccountId : null;
-    const success = await onDuplicate(targetAccount, copies);
+    
+    let isoDate: string | undefined;
+    if (useSchedule && scheduledDate) {
+      const [hours, minutes] = scheduledTime.split(':').map(Number);
+      const dt = new Date(scheduledDate);
+      dt.setHours(hours, minutes, 0, 0);
+      isoDate = dt.toISOString();
+    }
+
+    const success = await onDuplicate(targetAccount, copies, statusOption, isoDate);
     setIsLoading(false);
     if (success) {
       onOpenChange(false);
       setCopies(1);
       setSelectedOption('same');
       setSelectedAccountId(null);
+      setStatusOption('INHERITED');
+      setUseSchedule(false);
+      setScheduledDate(undefined);
+      setScheduledTime('00:00');
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Duplique sua {itemType}</DialogTitle>
           <DialogDescription>
@@ -110,6 +131,94 @@ export function DuplicateCampaignDialog({
             <p className="text-xs text-muted-foreground pl-4">Nenhuma outra conta disponível.</p>
           )}
 
+          {/* Status selector */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-2 block">Status da cópia</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-colors text-sm font-medium",
+                  statusOption === 'INHERITED'
+                    ? "border-primary bg-primary/5 text-foreground"
+                    : "border-border hover:border-muted-foreground/50 text-muted-foreground"
+                )}
+                onClick={() => setStatusOption('INHERITED')}
+              >
+                <Power className="w-4 h-4" />
+                Ativa
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-colors text-sm font-medium",
+                  statusOption === 'PAUSED'
+                    ? "border-primary bg-primary/5 text-foreground"
+                    : "border-border hover:border-muted-foreground/50 text-muted-foreground"
+                )}
+                onClick={() => setStatusOption('PAUSED')}
+              >
+                <PowerOff className="w-4 h-4" />
+                Pausada
+              </button>
+            </div>
+          </div>
+
+          {/* Schedule toggle */}
+          <div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useSchedule}
+                onChange={(e) => setUseSchedule(e.target.checked)}
+                className="rounded border-border"
+              />
+              <span className="text-muted-foreground text-xs">Agendar ativação</span>
+            </label>
+          </div>
+
+          {/* Date & time picker */}
+          {useSchedule && (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">Data</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-9 justify-start text-left font-normal text-sm",
+                        !scheduledDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {scheduledDate ? format(scheduledDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduledDate}
+                      onSelect={setScheduledDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="w-28">
+                <label className="text-xs text-muted-foreground mb-1 block">Horário</label>
+                <Input
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Copy count */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Quantidade de cópias</label>
@@ -140,4 +249,3 @@ export function DuplicateCampaignDialog({
     </Dialog>
   );
 }
-
