@@ -116,6 +116,39 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_tests: {
+        Row: {
+          created_at: string
+          id: string
+          link: string
+          platform: string
+          source: string
+          status: string
+          use_pixel: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link: string
+          platform: string
+          source: string
+          status?: string
+          use_pixel?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string
+          platform?: string
+          source?: string
+          status?: string
+          use_pixel?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       meta_ad_accounts: {
         Row: {
           account_id: string
