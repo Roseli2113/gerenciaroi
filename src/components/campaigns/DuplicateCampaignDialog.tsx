@@ -32,7 +32,7 @@ export function DuplicateCampaignDialog({
   const [copies, setCopies] = useState(1);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [statusOption, setStatusOption] = useState<'INHERITED' | 'PAUSED'>('INHERITED');
+  const [statusOption, setStatusOption] = useState<'ACTIVE' | 'PAUSED'>('ACTIVE');
   const [useSchedule, setUseSchedule] = useState(false);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [scheduledTime, setScheduledTime] = useState('00:00');
@@ -58,7 +58,7 @@ export function DuplicateCampaignDialog({
       setCopies(1);
       setSelectedOption('same');
       setSelectedAccountId(null);
-      setStatusOption('INHERITED');
+      setStatusOption('ACTIVE');
       setUseSchedule(false);
       setScheduledDate(undefined);
       setScheduledTime('00:00');
@@ -139,11 +139,11 @@ export function DuplicateCampaignDialog({
                 type="button"
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-colors text-sm font-medium",
-                  statusOption === 'INHERITED'
+                  statusOption === 'ACTIVE'
                     ? "border-primary bg-primary/5 text-foreground"
                     : "border-border hover:border-muted-foreground/50 text-muted-foreground"
                 )}
-                onClick={() => setStatusOption('INHERITED')}
+                onClick={() => setStatusOption('ACTIVE')}
               >
                 <Power className="w-4 h-4" />
                 Ativa

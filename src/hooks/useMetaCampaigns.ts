@@ -742,7 +742,7 @@ export function useMetaCampaigns() {
     }
 
     try {
-      const body: any = { action: 'duplicate-campaign', accessToken, sourceId, type, copies, statusOption: statusOption || 'INHERITED', scheduledDate };
+      const body: any = { action: 'duplicate-campaign', accessToken, sourceId, type, copies, statusOption: statusOption || 'ACTIVE', scheduledDate };
       if (type === 'campaign') body.campaignId = sourceId;
       else if (type === 'adset') body.adsetId = sourceId;
       else body.adId = sourceId;
