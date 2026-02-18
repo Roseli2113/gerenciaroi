@@ -829,8 +829,8 @@ const Campaigns = () => {
           itemType={duplicatingItem.type === 'campaign' ? 'campanha' : duplicatingItem.type === 'adset' ? 'conjunto' : 'anúncio'}
           accounts={activeAccounts}
           currentAccountId={activeAccounts[0]?.account_id}
-          onDuplicate={async (_targetAccountId, copies) => {
-            return await duplicateItem(duplicatingItem.id, duplicatingItem.type, copies);
+          onDuplicate={async (_targetAccountId, copies, statusOption, scheduledDate) => {
+            return await duplicateItem(duplicatingItem.id, duplicatingItem.type, copies, statusOption, scheduledDate);
           }}
         />
       )}
