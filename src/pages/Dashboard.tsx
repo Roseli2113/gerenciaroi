@@ -85,11 +85,6 @@ const Dashboard = () => {
       <div className="space-y-6">
         <DashboardFilters filters={filters} />
 
-        {/* Live Visitors Card */}
-        <DraggableWidgetCard id="live-visitors" isEditMode={isEditMode}>
-          <LiveVisitorsCard />
-        </DraggableWidgetCard>
-
         <EditableDashboardGrid 
           isEditMode={isEditMode}
           layoutHook={dashboardLayout}
@@ -169,6 +164,11 @@ const Dashboard = () => {
             </div>
           </SortableContext>
         </DndContext>
+
+        {/* Live Visitors Card - below charts */}
+        <DraggableWidgetCard id="live-visitors" isEditMode={isEditMode}>
+          <LiveVisitorsCard />
+        </DraggableWidgetCard>
       </div>
     </MainLayout>
   );
