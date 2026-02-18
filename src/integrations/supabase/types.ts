@@ -372,6 +372,10 @@ export type Database = {
           id: string
           is_blocked: boolean | null
           notification_sound: string | null
+          notify_email: boolean | null
+          notify_push: boolean | null
+          notify_slack: boolean | null
+          notify_sms: boolean | null
           phone: string | null
           plan: string | null
           plan_status: string | null
@@ -386,6 +390,10 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           notification_sound?: string | null
+          notify_email?: boolean | null
+          notify_push?: boolean | null
+          notify_slack?: boolean | null
+          notify_sms?: boolean | null
           phone?: string | null
           plan?: string | null
           plan_status?: string | null
@@ -400,6 +408,10 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           notification_sound?: string | null
+          notify_email?: boolean | null
+          notify_push?: boolean | null
+          notify_slack?: boolean | null
+          notify_sms?: boolean | null
           phone?: string | null
           plan?: string | null
           plan_status?: string | null

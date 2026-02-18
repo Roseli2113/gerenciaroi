@@ -1,6 +1,9 @@
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
@@ -8,8 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useSaleNotification, SOUND_OPTIONS, type SoundId } from '@/hooks/useSaleNotification';
 
 const notifications = [
   {
@@ -46,14 +53,59 @@ const notifications = [
   },
 ];
 
-const notificationSettings = [
-  { id: 'email', label: 'Notificações por Email', description: 'Receba alertas importantes no seu email', icon: Mail },
-  { id: 'push', label: 'Notificações Push', description: 'Alertas em tempo real no navegador', icon: Bell },
-  { id: 'sms', label: 'Notificações SMS', description: 'Mensagens de texto para alertas críticos', icon: Smartphone },
-  { id: 'slack', label: 'Integração Slack', description: 'Envie notificações para seu canal Slack', icon: MessageSquare },
-];
-
 const Notifications = () => {
+  const { user } = useAuth();
+  const { selectedSound, updateSound, previewSound } = useSaleNotification();
+  const [settings, setSettings] = useState({
+    notify_email: true,
+    notify_push: true,
+    notify_sms: false,
+    notify_slack: false,
+  });
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('notify_email, notify_push, notify_sms, notify_slack')
+        .eq('user_id', user.id)
+        .single();
+      if (data) {
+        setSettings({
+          notify_email: data.notify_email ?? true,
+          notify_push: data.notify_push ?? true,
+          notify_sms: data.notify_sms ?? false,
+          notify_slack: data.notify_slack ?? false,
+        });
+      }
+      setLoaded(true);
+    };
+    load();
+  }, [user]);
+
+  const toggleSetting = async (key: keyof typeof settings) => {
+    const newValue = !settings[key];
+    setSettings(prev => ({ ...prev, [key]: newValue }));
+    if (!user) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [key]: newValue, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id);
+    if (error) {
+      setSettings(prev => ({ ...prev, [key]: !newValue }));
+      toast.error('Erro ao salvar configuração');
+    }
+  };
+
+  const settingsList = [
+    { id: 'notify_email' as const, label: 'Notificações por Email', description: 'Receba alertas importantes no seu email', icon: Mail },
+    { id: 'notify_push' as const, label: 'Notificações Push', description: 'Alertas em tempo real no navegador', icon: Bell },
+    { id: 'notify_sms' as const, label: 'Notificações SMS', description: 'Mensagens de texto para alertas críticos', icon: Smartphone },
+    { id: 'notify_slack' as const, label: 'Integração Slack', description: 'Envie notificações para seu canal Slack', icon: MessageSquare },
+  ];
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'success':
@@ -120,34 +172,81 @@ const Notifications = () => {
             </div>
           </div>
 
-          {/* Notification Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Configurações</CardTitle>
-              <CardDescription>
-                Escolha como deseja receber notificações
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {notificationSettings.map((setting) => (
-                <div
-                  key={setting.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-muted/30"
-                >
-                  <div className="flex items-center gap-3">
-                    <setting.icon className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-sm">{setting.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {setting.description}
-                      </p>
+          {/* Settings Column */}
+          <div className="space-y-6">
+            {/* Notification Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Configurações</CardTitle>
+                <CardDescription>
+                  Escolha como deseja receber notificações
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {settingsList.map((setting) => (
+                  <div
+                    key={setting.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-muted/30"
+                  >
+                    <div className="flex items-center gap-3">
+                      <setting.icon className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-sm">{setting.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {setting.description}
+                        </p>
+                      </div>
                     </div>
+                    <Switch
+                      checked={settings[setting.id]}
+                      onCheckedChange={() => toggleSetting(setting.id)}
+                      disabled={!loaded}
+                    />
                   </div>
-                  <Switch defaultChecked={setting.id === 'email' || setting.id === 'push'} />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Sale Notification Sound */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Volume2 className="h-5 w-5" />
+                  Som de Venda
+                </CardTitle>
+                <CardDescription>
+                  Som tocado quando uma nova venda é recebida
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={selectedSound}
+                  onValueChange={(value) => updateSound(value as SoundId)}
+                  className="space-y-3"
+                >
+                  {SOUND_OPTIONS.map((sound) => (
+                    <div key={sound.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50">
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value={sound.id} id={`notif-${sound.id}`} />
+                        <Label htmlFor={`notif-${sound.id}`} className="cursor-pointer font-medium">
+                          {sound.label}
+                        </Label>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => previewSound(sound.id)}
+                        className="gap-1"
+                      >
+                        <Play className="h-3 w-3" />
+                        Ouvir
+                      </Button>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </MainLayout>
