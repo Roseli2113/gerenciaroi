@@ -26,7 +26,7 @@ import { LiveVisitorsCard } from '@/components/dashboard/LiveVisitorsCard';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 
-type WidgetId = 'profit-by-hour' | 'sales-by-hour' | 'conversion-funnel' | 'campaigns-list';
+type WidgetId = 'profit-by-hour' | 'sales-by-hour' | 'conversion-funnel' | 'campaigns-list' | 'live-visitors';
 
 // Widget components are rendered inline to pass filters
 
@@ -39,6 +39,7 @@ const Dashboard = () => {
     'sales-by-hour',
     'conversion-funnel',
     'campaigns-list',
+    'live-visitors',
   ]);
 
   const {
@@ -152,6 +153,7 @@ const Dashboard = () => {
                     case 'sales-by-hour': return <SalesByHourChart filters={salesFilters} />;
                     case 'conversion-funnel': return <ConversionFunnel />;
                     case 'campaigns-list': return <CampaignsList />;
+                    case 'live-visitors': return <LiveVisitorsCard />;
                   }
                 };
 
@@ -165,10 +167,6 @@ const Dashboard = () => {
           </SortableContext>
         </DndContext>
 
-        {/* Live Visitors Card - below charts */}
-        <DraggableWidgetCard id="live-visitors" isEditMode={isEditMode}>
-          <LiveVisitorsCard />
-        </DraggableWidgetCard>
       </div>
     </MainLayout>
   );
