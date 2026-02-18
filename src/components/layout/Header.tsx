@@ -63,10 +63,10 @@ export function Header({ title, headerAction }: HeaderProps) {
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
-    <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
-      <div className="flex items-center gap-4">
-        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-        {headerAction}
+    <header className="h-14 md:h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-3 md:px-6">
+      <div className="flex items-center gap-2 md:gap-4 ml-10 md:ml-0 min-w-0">
+        <h2 className="text-base md:text-xl font-semibold text-foreground truncate">{title}</h2>
+        <div className="hidden sm:flex items-center">{headerAction}</div>
       </div>
 
       <div className="flex items-center gap-3">
