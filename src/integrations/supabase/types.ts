@@ -371,6 +371,7 @@ export type Database = {
           email: string | null
           id: string
           is_blocked: boolean | null
+          notification_sound: string | null
           phone: string | null
           plan: string | null
           plan_status: string | null
@@ -384,6 +385,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_blocked?: boolean | null
+          notification_sound?: string | null
           phone?: string | null
           plan?: string | null
           plan_status?: string | null
@@ -397,6 +399,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_blocked?: boolean | null
+          notification_sound?: string | null
           phone?: string | null
           plan?: string | null
           plan_status?: string | null
