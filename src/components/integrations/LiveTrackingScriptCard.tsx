@@ -10,22 +10,20 @@ export function LiveTrackingScriptCard() {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
 
+  const userId = user?.id || 'SEU_USER_ID';
+
   const script = `<!-- Gerencia ROI - Rastreamento ao Vivo -->
 <script>
 (function(){
-  var uid="${user?.id || 'SEU_USER_ID'}";
+  var uid="${userId}";
   var sid=Math.random().toString(36).substr(2,12)+Date.now().toString(36);
-  var url="https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/track-visitor";
-  var geo={country:null,region:null,city:null};
+  var url="${import.meta.env.VITE_SUPABASE_URL || 'https://zwylxoajyyjflvvcwpvz.supabase.co'}/functions/v1/track-visitor";
   function send(action){
-    var data=JSON.stringify({user_id:uid,session_id:sid,page_url:location.href,action:action,country:geo.country,region:geo.region,city:geo.city});
+    var data=JSON.stringify({user_id:uid,session_id:sid,page_url:location.href,action:action});
     if(navigator.sendBeacon){navigator.sendBeacon(url,data)}
     else{fetch(url,{method:"POST",body:data,headers:{"Content-Type":"application/json"},keepalive:true})}
   }
-  fetch("https://ipapi.co/json/").then(function(r){return r.json()}).then(function(d){
-    geo.country=d.country_name||null;geo.region=d.region||null;geo.city=d.city||null;
-    send("heartbeat");
-  }).catch(function(){send("heartbeat")});
+  send("heartbeat");
   setInterval(function(){send("heartbeat")},15000);
   window.addEventListener("beforeunload",function(){send("leave")});
   document.addEventListener("visibilitychange",function(){

@@ -14,58 +14,79 @@ interface LiveVisitor {
   last_seen_at: string;
 }
 
-// Animated pulse line component using SVG for reliable rendering
-function PulseLineGraph({ count }: { count: number }) {
-  const [offset, setOffset] = useState(0);
+// Animated bar graph that pulses and scrolls left to right
+function PulseBarGraph({ count }: { count: number }) {
+  const [bars, setBars] = useState<number[]>([]);
   const animRef = useRef<number>(0);
+  const barsRef = useRef<number[]>([]);
 
   useEffect(() => {
+    // Initialize bars
+    const numBars = 30;
+    barsRef.current = Array.from({ length: numBars }, () => Math.random() * 0.5 + 0.2);
+    setBars([...barsRef.current]);
+
     const animate = () => {
-      setOffset(prev => prev + 1.2);
-      animRef.current = requestAnimationFrame(animate);
+      // Shift bars left and add a new bar on the right
+      barsRef.current.shift();
+      const base = Math.min(0.3 + count * 0.05, 0.9);
+      const newBar = Math.random() * (1 - base * 0.5) * base + base * 0.3;
+      barsRef.current.push(newBar);
+      setBars([...barsRef.current]);
+      animRef.current = setTimeout(() => {
+        animRef.current = requestAnimationFrame(() => animate());
+      }, 120) as unknown as number;
     };
-    animRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animRef.current);
-  }, []);
+
+    // Use setTimeout to control speed
+    const startTimeout = setTimeout(() => {
+      const step = () => {
+        barsRef.current.shift();
+        const base = Math.min(0.3 + count * 0.05, 0.9);
+        const newBar = Math.random() * (1 - base * 0.5) * base + base * 0.3;
+        barsRef.current.push(newBar);
+        setBars([...barsRef.current]);
+      };
+      const interval = setInterval(step, 150);
+      animRef.current = interval as unknown as number;
+    }, 100);
+
+    return () => {
+      clearTimeout(startTimeout);
+      clearInterval(animRef.current);
+    };
+  }, [count]);
 
   const W = 300;
   const H = 60;
-  const amplitude = Math.min(H * 0.35, 12 + count * 2);
-
-  // Build wave path
-  let pathD = `M 0 ${H}`;
-  let lineD = '';
-  for (let x = 0; x <= W; x += 2) {
-    const y = H / 2 + Math.sin((x + offset) * 0.04) * amplitude
-      + Math.sin((x + offset * 0.7) * 0.02) * (amplitude * 0.5);
-    pathD += ` L ${x} ${y}`;
-    lineD += (x === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
-  }
-  pathD += ` L ${W} ${H} Z`;
-
-  // Dot position at right edge
-  const dotY = H / 2 + Math.sin((W + offset) * 0.04) * amplitude
-    + Math.sin((W + offset * 0.7) * 0.02) * (amplitude * 0.5);
+  const barWidth = W / bars.length - 2;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
       <defs>
-        <linearGradient id="waveFill" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
-          <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
-        </linearGradient>
-        <linearGradient id="waveLine" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
-          <stop offset="30%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
-          <stop offset="70%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
-          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+        <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
         </linearGradient>
       </defs>
-      <path d={pathD} fill="url(#waveFill)" />
-      <path d={lineD} fill="none" stroke="url(#waveLine)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      <circle cx={W - 2} cy={dotY} r="6" fill="hsl(var(--primary))" opacity="0.25" />
-      <circle cx={W - 2} cy={dotY} r="3" fill="hsl(var(--primary))" />
+      {bars.map((h, i) => {
+        const barH = h * H * 0.85;
+        const x = i * (barWidth + 2) + 1;
+        const y = H - barH;
+        const opacity = 0.4 + (i / bars.length) * 0.6;
+        return (
+          <rect
+            key={i}
+            x={x}
+            y={y}
+            width={barWidth}
+            height={barH}
+            rx={2}
+            fill="url(#barGrad)"
+            opacity={opacity}
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -114,18 +135,26 @@ export function LiveVisitorsCard() {
             Visitantes ao Vivo
           </CardTitle>
           <div className="flex items-center gap-2">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
-            </span>
+            {visitors.length > 0 && (
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
+              </span>
+            )}
             <span className="text-2xl font-bold text-foreground">{visitors.length}</span>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0 px-0 pb-0">
-        <div className="h-16 w-full">
-          <PulseLineGraph count={visitors.length} />
-        </div>
+        {visitors.length > 0 ? (
+          <div className="h-16 w-full">
+            <PulseBarGraph count={visitors.length} />
+          </div>
+        ) : (
+          <div className="h-16 flex items-center justify-center">
+            <p className="text-xs text-muted-foreground">Nenhum visitante no momento</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
