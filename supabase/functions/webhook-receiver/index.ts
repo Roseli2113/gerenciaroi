@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     // Get the webhook token from query params or headers
     const url = new URL(req.url)
     const webhookToken = url.searchParams.get('token') || req.headers.get('x-webhook-token')
-    const platform = url.searchParams.get('platform') || 'lowify'
+    let platform = url.searchParams.get('platform') || 'unknown'
 
     // Parse the incoming payload
     const payload: LowifyPayload = await req.json()
@@ -83,6 +83,10 @@ Deno.serve(async (req) => {
       } else {
         webhookConfig = webhook
         userId = webhook.user_id
+        // Use the platform from the webhook config if not explicitly provided in URL
+        if (!url.searchParams.get('platform')) {
+          platform = webhook.platform
+        }
       }
     }
 
