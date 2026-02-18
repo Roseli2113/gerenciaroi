@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,23 +14,56 @@ import {
 import { Copy, Check, ExternalLink, RefreshCw, TestTube, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TestResult {
   id: string;
   source: string;
   platform: string;
   link: string;
+  use_pixel: boolean;
   status: 'success' | 'error' | 'pending';
-  date: string;
+  created_at: string;
 }
 
 export function IntegrationTestTab() {
+  const { user } = useAuth();
   const [trafficSource, setTrafficSource] = useState('');
   const [platform, setPlatform] = useState('');
   const [usePixel, setUsePixel] = useState(false);
   const [testLink, setTestLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTests = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('integration_tests')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (!error && data) {
+      setTestResults(data.map(t => ({
+        id: t.id,
+        source: t.source,
+        platform: t.platform,
+        link: t.link,
+        use_pixel: t.use_pixel,
+        status: t.status as TestResult['status'],
+        created_at: t.created_at,
+      })));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTests();
+  }, [user]);
 
   const copyLink = () => {
     if (!testLink) {
@@ -42,21 +75,48 @@ export function IntegrationTestTab() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const runTest = () => {
+  const runTest = async () => {
     if (!testLink || !trafficSource || !platform) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
+
     window.open(testLink, '_blank');
-    const newResult: TestResult = {
-      id: Date.now().toString(),
-      source: trafficSource,
-      platform,
-      link: testLink,
-      status: 'pending',
-      date: new Date().toLocaleString('pt-BR'),
-    };
-    setTestResults(prev => [newResult, ...prev]);
+
+    const { data, error } = await supabase
+      .from('integration_tests')
+      .insert({
+        user_id: user.id,
+        source: trafficSource,
+        platform,
+        link: testLink,
+        use_pixel: usePixel,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error('Erro ao salvar teste');
+      return;
+    }
+
+    if (data) {
+      setTestResults(prev => [{
+        id: data.id,
+        source: data.source,
+        platform: data.platform,
+        link: data.link,
+        use_pixel: data.use_pixel,
+        status: data.status as TestResult['status'],
+        created_at: data.created_at,
+      }, ...prev]);
+    }
+
     toast.success('Teste iniciado! Siga o funil até o checkout.');
   };
 
@@ -161,9 +221,10 @@ export function IntegrationTestTab() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => toast.info('Atualizando...')}
+              onClick={fetchTests}
+              disabled={loading}
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
             </Button>
           </div>
         </CardHeader>
@@ -195,7 +256,7 @@ export function IntegrationTestTab() {
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="w-3 h-3" />
-                    {result.date}
+                    {new Date(result.created_at).toLocaleString('pt-BR')}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{result.link}</p>
                 </div>
