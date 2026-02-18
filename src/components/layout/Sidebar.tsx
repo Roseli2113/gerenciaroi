@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import logoImg from '@/assets/Logo_gerencia_roi.png';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -45,8 +46,8 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-4 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
-            <Zap className="w-6 h-6 text-primary-foreground" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center">
+            <img src={logoImg} alt="Gerencia ROI" className="w-10 h-10 object-contain" />
           </div>
           {!collapsed && (
             <div className="animate-fade-in-left">
