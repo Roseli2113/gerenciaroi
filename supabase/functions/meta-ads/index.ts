@@ -34,7 +34,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, accessToken, adAccountId, campaignId, adsetId, adId, dateRange, updates } = await req.json();
+    const { action, accessToken, adAccountId, campaignId, adsetId, adId, dateRange, updates, sourceId, copies, type } = await req.json();
 
     if (!accessToken) {
       return new Response(
@@ -332,8 +332,6 @@ serve(async (req) => {
     }
 
     if (action === "duplicate-campaign") {
-      const { sourceId, copies, type } = await req.json().catch(() => ({}));
-      // type: 'campaign' | 'adset' | 'ad'
       const entityType = type || 'campaign';
       const numCopies = copies || 1;
       const sourceEntityId = sourceId || campaignId;
