@@ -745,15 +745,19 @@ export default function Integrations() {
           {/* WhatsApp Tab */}
           <TabsContent value="whatsapp" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>WhatsApp Business</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Conecte seu WhatsApp Business para automações e notificações.</p>
-                <Button className="mt-4 gap-2">
-                  <MessageCircle className="w-4 h-4" />
-                  Conectar WhatsApp
-                </Button>
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <MessageCircle className="w-8 h-8 text-green-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-foreground">WhatsApp Business</h3>
+                  <p className="text-muted-foreground mt-2 max-w-sm">
+                    Em breve você poderá conectar seu WhatsApp Business para automações e notificações diretas.
+                  </p>
+                </div>
+                <Badge className="bg-warning/20 text-warning border-warning/30 text-sm px-4 py-1">
+                  Em Breve
+                </Badge>
               </CardContent>
             </Card>
           </TabsContent>
