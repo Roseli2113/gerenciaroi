@@ -35,56 +35,48 @@ export function EditModeBar({
 
   return (
     <div className={cn(
-      "flex items-center justify-between gap-4 p-3 rounded-lg",
+      "flex items-center gap-2 p-2 rounded-lg",
       "bg-primary text-primary-foreground"
     )}>
-      <div className="flex items-center gap-3">
-        <Pencil className="h-4 w-4" />
-        <span className="text-sm font-medium">
-          Você está editando esse dashboard para:
-        </span>
-        <div className="flex items-center gap-2 bg-primary-foreground/20 px-3 py-1 rounded-md">
-          <Monitor className="h-4 w-4" />
-          <span className="text-sm">Desktop</span>
-        </div>
+      <div className="flex items-center gap-1.5 bg-primary-foreground/20 px-2.5 py-1 rounded-md">
+        <Monitor className="h-3.5 w-3.5" />
+        <span className="text-xs">Desktop</span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onReset}
-          className="gap-2 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Redefinir configurações
-        </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onReset}
+        className="gap-1.5 text-xs h-7 px-2 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
+      >
+        <RotateCcw className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Redefinir</span>
+      </Button>
 
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onCancel}
-          className="gap-2"
-        >
-          <X className="h-4 w-4" />
-          Cancelar
-        </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={onCancel}
+        className="gap-1.5 text-xs h-7 px-2"
+      >
+        <X className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Cancelar</span>
+      </Button>
 
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onSave}
-          disabled={saving}
-          className="gap-2 bg-white text-primary hover:bg-white/90"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          Salvar
-        </Button>
-      </div>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={onSave}
+        disabled={saving}
+        className="gap-1.5 text-xs h-7 px-2 bg-white text-primary hover:bg-white/90"
+      >
+        {saving ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Save className="h-3.5 w-3.5" />
+        )}
+        Salvar
+      </Button>
     </div>
   );
 }

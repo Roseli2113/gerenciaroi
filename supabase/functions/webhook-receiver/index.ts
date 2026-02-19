@@ -90,20 +90,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // If no token, try to find by platform (for platforms that don't use tokens)
-    if (!webhookConfig && platform) {
-      const { data: webhooks, error: webhookError } = await supabase
-        .from('webhooks')
-        .select('*')
-        .eq('platform', platform.toLowerCase())
-        .eq('status', 'active')
-        .limit(1)
-
-      if (!webhookError && webhooks && webhooks.length > 0) {
-        webhookConfig = webhooks[0]
-        userId = webhooks[0].user_id
-      }
-    }
+    // If no webhook found by token, reject the request
+    // We no longer fall back to platform-only matching as it could route events to the wrong user
 
     if (!userId) {
       console.error('No valid webhook configuration found')
