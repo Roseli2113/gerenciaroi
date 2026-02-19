@@ -16,7 +16,9 @@ export default function OnboardingStrategy() {
 
   const handleContinue = () => {
     if (selected) {
-      navigate('/integrations');
+      navigate('/onboarding/setup', {
+        state: { platform: 'Meta', strategy: strategies.find(s => s.id === selected)?.label }
+      });
     }
   };
 

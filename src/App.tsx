@@ -24,6 +24,7 @@ import Admin from "./pages/Admin";
 import Landing from "./pages/Landing";
 import Onboarding from "./pages/Onboarding";
 import OnboardingStrategy from "./pages/OnboardingStrategy";
+import OnboardingSetup from "./pages/OnboardingSetup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/landing" element={<Landing />} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/onboarding/strategy" element={<ProtectedRoute><OnboardingStrategy /></ProtectedRoute>} />
+              <Route path="/onboarding/setup" element={<ProtectedRoute><OnboardingSetup /></ProtectedRoute>} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/privacidade" element={<Privacy />} />
               <Route path="/termos" element={<Terms />} />
