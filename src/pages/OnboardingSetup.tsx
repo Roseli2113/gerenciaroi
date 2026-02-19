@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, Facebook } from 'lucide-react';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
+import { Switch } from '@/components/ui/switch';
 import logoGerenciaRoi from '@/assets/Logo_gerencia_roi.png';
 
 const steps = [
@@ -15,22 +16,248 @@ const steps = [
 export default function OnboardingSetup() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isConnected, connection, connect, isLoading } = useMetaAuth();
+  const { isConnected, connection, connect, isLoading, toggleAccountActive, refreshAdAccounts } = useMetaAuth();
 
-  // Get params from location state
   const platform = (location.state as any)?.platform || 'Meta';
   const strategy = (location.state as any)?.strategy || 'Página de Vendas';
 
-  // Determine completed steps based on connection status
-  const completedSteps = isConnected
-    ? ['conexao-meta', 'contas-meta', 'plataforma-vendas']
-    : [];
-  const currentStep = isConnected ? 'pagina-vendas' : 'conexao-meta';
+  // currentStepIndex: which step the user is currently on
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [activeAccounts, setActiveAccounts] = useState<Record<string, boolean>>({});
+  const [activateAll, setActivateAll] = useState(false);
 
-  const getStepState = (stepId: string) => {
-    if (completedSteps.includes(stepId)) return 'completed';
-    if (stepId === currentStep) return 'current';
+  // When Meta connects, advance to step 1 (Contas Meta)
+  useEffect(() => {
+    if (isConnected && currentStepIndex === 0) {
+      setCurrentStepIndex(1);
+    }
+  }, [isConnected]);
+
+  // Initialize active accounts from connection
+  useEffect(() => {
+    if (connection?.adAccounts) {
+      const initial: Record<string, boolean> = {};
+      connection.adAccounts.forEach(acc => {
+        initial[acc.id] = acc.is_active ?? false;
+      });
+      setActiveAccounts(initial);
+    }
+  }, [connection?.adAccounts]);
+
+  const getStepState = (index: number) => {
+    if (index < currentStepIndex) return 'completed';
+    if (index === currentStepIndex) return 'current';
     return 'pending';
+  };
+
+  const handleToggleAccount = async (accountId: string, value: boolean) => {
+    setActiveAccounts(prev => ({ ...prev, [accountId]: value }));
+    await toggleAccountActive(accountId, value);
+  };
+
+  const handleActivateAll = (value: boolean) => {
+    setActivateAll(value);
+    if (connection?.adAccounts) {
+      const updated: Record<string, boolean> = {};
+      connection.adAccounts.forEach(acc => {
+        updated[acc.id] = value;
+      });
+      setActiveAccounts(updated);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentStepIndex < steps.length - 1) {
+      setCurrentStepIndex(prev => prev + 1);
+    } else {
+      navigate('/integrations');
+    }
+  };
+
+  const canAdvance = () => {
+    if (currentStepIndex === 0) return isConnected;
+    return true;
+  };
+
+  const getAccountStatus = (status: number) => {
+    return status === 1 ? 'Ativa' : 'Desabilitada';
+  };
+
+  const renderMainContent = () => {
+    const stepId = steps[currentStepIndex]?.id;
+
+    if (stepId === 'conexao-meta') {
+      return (
+        <div className="flex-1 p-8 max-w-2xl">
+          <h1 className="text-white text-2xl font-semibold mb-6">
+            Conecte com sua conta do Meta Ads:
+          </h1>
+
+          <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl p-6 mb-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+                <Facebook className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-white font-semibold text-lg">Meta Ads</span>
+            </div>
+
+            <p className="text-white/60 text-sm mb-4">Conecte seus perfis por aqui:</p>
+
+            {isConnected && connection ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-[hsl(220,20%,18%)] border border-white/10 rounded-lg px-4 py-3">
+                  <span className="text-white text-sm font-medium">{connection.user.name}</span>
+                  <button className="text-white/40 hover:text-white transition-colors text-lg leading-none">⋯</button>
+                </div>
+                <button
+                  onClick={connect}
+                  disabled={isLoading}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-5 py-2.5 rounded-lg text-sm font-semibold"
+                >
+                  Adicionar perfil
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={connect}
+                disabled={isLoading}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
+              >
+                {isLoading ? 'Conectando...' : 'Conectar Meta Ads'}
+              </button>
+            )}
+          </div>
+
+          <div>
+            <p className="text-white font-medium text-sm mb-1">Precisa de ajuda?</p>
+            <p className="text-white/50 text-sm">
+              Assista ao tutorial para garantir que suas vendas serão marcadas com sucesso.{' '}
+              <a
+                href="https://www.youtube.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+              >
+                Assistir agora
+              </a>
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (stepId === 'contas-meta') {
+      const accounts = connection?.adAccounts || [];
+      return (
+        <div className="flex-1 p-8 max-w-2xl">
+          <h1 className="text-white text-2xl font-semibold mb-6">
+            Escolha suas contas de anúncio da Meta:
+          </h1>
+
+          <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <span className="text-white font-semibold">Contas de Anúncio (Meta)</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white/60 text-sm">Ativar todas:</span>
+                <Switch
+                  checked={activateAll}
+                  onCheckedChange={handleActivateAll}
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-3 border-b border-white/5">
+              <p className="text-white/50 text-sm">Escolha suas contas de anúncio:</p>
+            </div>
+
+            {/* Account list */}
+            <div className="divide-y divide-white/5 max-h-96 overflow-y-auto">
+              {accounts.length === 0 ? (
+                <div className="px-6 py-8 text-center text-white/40 text-sm">
+                  Nenhuma conta de anúncio encontrada.
+                </div>
+              ) : (
+                accounts.map(acc => (
+                  <div key={acc.id} className="flex items-center justify-between px-6 py-4">
+                    <div>
+                      <p className="text-white text-sm font-medium">{acc.name}</p>
+                      <p className="text-white/50 text-xs">status: {getAccountStatus(acc.account_status)}</p>
+                    </div>
+                    <Switch
+                      checked={activeAccounts[acc.id] ?? false}
+                      onCheckedChange={(val) => handleToggleAccount(acc.id, val)}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (stepId === 'plataforma-vendas') {
+      return (
+        <div className="flex-1 p-8 max-w-2xl">
+          <h1 className="text-white text-2xl font-semibold mb-6">
+            Conecte sua plataforma de vendas:
+          </h1>
+          <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl p-6">
+            <p className="text-white/60 text-sm mb-4">
+              Para que o painel mostre suas métricas de vendas, conecte sua plataforma de e-commerce ou checkout.
+            </p>
+            <p className="text-white/40 text-sm">
+              Configure seus webhooks na aba de <strong className="text-white/60">Integrações</strong> após concluir o setup.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (stepId === 'pagina-vendas') {
+      return (
+        <div className="flex-1 p-8 max-w-2xl">
+          <h1 className="text-white text-2xl font-semibold mb-6">
+            Configure sua página de vendas:
+          </h1>
+          <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl p-6">
+            <p className="text-white/60 text-sm mb-4">
+              Instale o script de rastreamento na sua página de vendas para monitorar visitantes e conversões.
+            </p>
+            <p className="text-white/40 text-sm">
+              Você poderá configurar o pixel e os scripts na aba de <strong className="text-white/60">Integrações</strong>.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (stepId === 'utms-meta') {
+      return (
+        <div className="flex-1 p-8 max-w-2xl">
+          <h1 className="text-white text-2xl font-semibold mb-6">
+            Configure as UTMs da Meta:
+          </h1>
+          <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl p-6">
+            <p className="text-white/60 text-sm mb-4">
+              As UTMs permitem rastrear de qual campanha, conjunto ou anúncio vieram suas vendas.
+            </p>
+            <p className="text-white/40 text-sm">
+              Acesse a aba de <strong className="text-white/60">UTMs</strong> nas Integrações para gerar e configurar seus códigos.
+            </p>
+          </div>
+          <div className="mt-6 bg-primary/10 border border-primary/30 rounded-xl p-5">
+            <p className="text-primary font-semibold text-base mb-1">🎉 Configuração COMPLETA!</p>
+            <p className="text-white/60 text-sm">
+              Seu painel está configurado. Acesse o dashboard para ver suas métricas.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -79,7 +306,7 @@ export default function OnboardingSetup() {
           {/* Steps */}
           <div className="flex flex-col gap-0">
             {steps.map((step, index) => {
-              const state = getStepState(step.id);
+              const state = getStepState(index);
               return (
                 <div key={step.id} className="flex items-start gap-3">
                   <div className="flex flex-col items-center">
@@ -126,76 +353,20 @@ export default function OnboardingSetup() {
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col">
-          <div className="flex-1 p-8 max-w-2xl">
-            <h1 className="text-white text-2xl font-semibold mb-6">
-              Conecte com sua conta do Meta Ads:
-            </h1>
-
-            {/* Meta Ads Card */}
-            <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl p-6 mb-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-                  <Facebook className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-white font-semibold text-lg">Meta Ads</span>
-              </div>
-
-              <p className="text-white/60 text-sm mb-4">Conecte seus perfis por aqui:</p>
-
-              {isConnected && connection ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-[hsl(220,20%,18%)] border border-white/10 rounded-lg px-4 py-3">
-                    <span className="text-white text-sm font-medium">{connection.user.name}</span>
-                    <button className="text-white/40 hover:text-white transition-colors text-lg leading-none">⋯</button>
-                  </div>
-                  <button
-                    onClick={connect}
-                    disabled={isLoading}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-5 py-2.5 rounded-lg text-sm font-semibold"
-                  >
-                    Adicionar perfil
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={connect}
-                  disabled={isLoading}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
-                >
-                  {isLoading ? 'Conectando...' : 'Conectar Meta Ads'}
-                </button>
-              )}
-            </div>
-
-            {/* Help Section */}
-            <div>
-              <p className="text-white font-medium text-sm mb-1">Precisa de ajuda?</p>
-              <p className="text-white/50 text-sm">
-                Assista ao tutorial para garantir que suas vendas serão marcadas com sucesso.{' '}
-                <a
-                  href="https://www.youtube.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
-                >
-                  Assistir agora
-                </a>
-              </p>
-            </div>
-          </div>
+          {renderMainContent()}
 
           {/* Footer */}
           <footer className="border-t border-white/10 px-8 py-4 flex items-center justify-center">
             <button
-              onClick={() => navigate('/integrations')}
-              disabled={!isConnected}
+              onClick={handleNext}
+              disabled={!canAdvance()}
               className={`px-10 py-3 rounded-lg font-semibold text-sm transition-all
-                ${isConnected
+                ${canAdvance()
                   ? 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
                   : 'bg-white/10 text-white/30 cursor-not-allowed'
                 }`}
             >
-              Próximo Passo
+              {currentStepIndex === steps.length - 1 ? 'Concluir' : 'Próximo Passo'}
             </button>
           </footer>
         </main>
