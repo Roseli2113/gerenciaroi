@@ -51,11 +51,15 @@ const Dashboard = () => {
     return localStorage.getItem(SETUP_BANNER_KEY) === 'true';
   });
 
-  // Auto-hide banner when setup is complete
+  // Auto-hide banner when setup is complete; re-show when setup becomes incomplete again
   useEffect(() => {
     if (isSetupComplete) {
       setBannerDismissed(true);
       localStorage.setItem(SETUP_BANNER_KEY, 'true');
+    } else {
+      // Setup became incomplete again — reset dismissal so banner reappears
+      setBannerDismissed(false);
+      localStorage.removeItem(SETUP_BANNER_KEY);
     }
   }, [isSetupComplete]);
 
