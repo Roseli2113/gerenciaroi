@@ -11,51 +11,26 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play, Trash2, BellOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSaleNotification, SOUND_OPTIONS, type SoundId } from '@/hooks/useSaleNotification';
 
-const notifications = [
-  {
-    id: '1',
-    type: 'success',
-    title: 'Regra executada com sucesso',
-    message: 'Orçamento da campanha "Conversão - Produto Premium" aumentado em 20%',
-    time: 'há 25 min',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'warning',
-    title: 'CPA acima do esperado',
-    message: 'A campanha "Awareness - Lançamento" está com CPA de R$ 18,90',
-    time: 'há 1 hora',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'info',
-    title: 'ROI positivo detectado',
-    message: 'Campanha "Remarketing" atingiu ROI de 320%',
-    time: 'há 2 horas',
-    read: true,
-  },
-  {
-    id: '4',
-    type: 'danger',
-    title: 'Campanha pausada automaticamente',
-    message: 'A campanha "Tráfego - Blog Posts" foi pausada devido ao CPA alto',
-    time: 'há 4 horas',
-    read: true,
-  },
-];
+interface Notification {
+  id: string;
+  type: 'success' | 'warning' | 'info' | 'danger';
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+}
 
 const Notifications = () => {
   const { user } = useAuth();
   const { selectedSound, updateSound, previewSound } = useSaleNotification();
+  const [notificationsList, setNotificationsList] = useState<Notification[]>([]);
   const [settings, setSettings] = useState({
     notify_email: true,
     notify_push: true,
@@ -99,6 +74,14 @@ const Notifications = () => {
     }
   };
 
+  const deleteNotification = (id: string) => {
+    setNotificationsList(prev => prev.filter(n => n.id !== id));
+  };
+
+  const markAllRead = () => {
+    setNotificationsList(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
   const settingsList = [
     { id: 'notify_email' as const, label: 'Notificações por Email', description: 'Receba alertas importantes no seu email', icon: Mail },
     { id: 'notify_push' as const, label: 'Notificações Push', description: 'Alertas em tempo real no navegador', icon: Bell },
@@ -129,46 +112,72 @@ const Notifications = () => {
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Recentes</h3>
-              <Button variant="ghost" size="sm">
-                Marcar todas como lidas
-              </Button>
+              {notificationsList.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={markAllRead}>
+                  Marcar todas como lidas
+                </Button>
+              )}
             </div>
 
             <div className="space-y-3">
-              {notifications.map((notification) => (
-                <Card key={notification.id} className={cn(
-                  'transition-all hover:shadow-card-hover',
-                  !notification.read && 'border-primary/30 bg-primary/5'
-                )}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className={cn(
-                        'p-2 rounded-xl',
-                        notification.type === 'success' && 'bg-success/20',
-                        notification.type === 'warning' && 'bg-warning/20',
-                        notification.type === 'info' && 'bg-primary/20',
-                        notification.type === 'danger' && 'bg-destructive/20',
-                      )}>
-                        {getIcon(notification.type)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-foreground">{notification.title}</h4>
-                          {!notification.read && (
-                            <div className="w-2 h-2 rounded-full bg-primary" />
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {notification.time}
-                        </p>
-                      </div>
+              {notificationsList.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center gap-3">
+                    <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                      <BellOff className="w-7 h-7 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Nenhuma notificação</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Você ainda não tem notificações. Elas aparecerão aqui quando suas regras forem executadas.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                notificationsList.map((notification) => (
+                  <Card key={notification.id} className={cn(
+                    'transition-all hover:shadow-card-hover',
+                    !notification.read && 'border-primary/30 bg-primary/5'
+                  )}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className={cn(
+                          'p-2 rounded-xl shrink-0',
+                          notification.type === 'success' && 'bg-success/20',
+                          notification.type === 'warning' && 'bg-warning/20',
+                          notification.type === 'info' && 'bg-primary/20',
+                          notification.type === 'danger' && 'bg-destructive/20',
+                        )}>
+                          {getIcon(notification.type)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-foreground">{notification.title}</h4>
+                            {!notification.read && (
+                              <div className="w-2 h-2 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {notification.time}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => deleteNotification(notification.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
 
