@@ -14,52 +14,26 @@ interface LiveVisitor {
   last_seen_at: string;
 }
 
-// Animated bar graph that pulses and scrolls left to right
+// Animated bar graph: each bar represents one active visitor, scrolling left to right
 function PulseBarGraph({ count }: { count: number }) {
-  const [bars, setBars] = useState<number[]>([]);
-  const animRef = useRef<number>(0);
-  const barsRef = useRef<number[]>([]);
+  const [offset, setOffset] = useState(0);
+  const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    // Initialize bars
-    const numBars = 30;
-    barsRef.current = Array.from({ length: numBars }, () => Math.random() * 0.5 + 0.2);
-    setBars([...barsRef.current]);
-
-    const animate = () => {
-      // Shift bars left and add a new bar on the right
-      barsRef.current.shift();
-      const base = Math.min(0.3 + count * 0.05, 0.9);
-      const newBar = Math.random() * (1 - base * 0.5) * base + base * 0.3;
-      barsRef.current.push(newBar);
-      setBars([...barsRef.current]);
-      animRef.current = setTimeout(() => {
-        animRef.current = requestAnimationFrame(() => animate());
-      }, 120) as unknown as number;
-    };
-
-    // Use setTimeout to control speed
-    const startTimeout = setTimeout(() => {
-      const step = () => {
-        barsRef.current.shift();
-        const base = Math.min(0.3 + count * 0.05, 0.9);
-        const newBar = Math.random() * (1 - base * 0.5) * base + base * 0.3;
-        barsRef.current.push(newBar);
-        setBars([...barsRef.current]);
-      };
-      const interval = setInterval(step, 150);
-      animRef.current = interval as unknown as number;
-    }, 100);
-
+    if (count <= 0) return;
+    animRef.current = setInterval(() => {
+      setOffset(prev => prev + 1);
+    }, 200);
     return () => {
-      clearTimeout(startTimeout);
-      clearInterval(animRef.current);
+      if (animRef.current) clearInterval(animRef.current);
     };
   }, [count]);
 
   const W = 300;
   const H = 60;
-  const barWidth = W / bars.length - 2;
+  const maxBars = Math.min(count, 30);
+  const barWidth = maxBars > 0 ? Math.min(W / maxBars - 2, 20) : 10;
+  const totalBarSpace = maxBars * (barWidth + 2);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
@@ -69,11 +43,13 @@ function PulseBarGraph({ count }: { count: number }) {
           <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
         </linearGradient>
       </defs>
-      {bars.map((h, i) => {
-        const barH = h * H * 0.85;
-        const x = i * (barWidth + 2) + 1;
+      {Array.from({ length: maxBars }, (_, i) => {
+        // Each bar has a unique height that oscillates based on offset
+        const seed = (i * 7 + 3) % 11;
+        const wave = Math.sin((offset + i * 2) * 0.15 + seed) * 0.3 + 0.6;
+        const barH = wave * H * 0.85;
+        const x = i * (barWidth + 2) + (W - totalBarSpace) / 2;
         const y = H - barH;
-        const opacity = 0.4 + (i / bars.length) * 0.6;
         return (
           <rect
             key={i}
@@ -83,7 +59,7 @@ function PulseBarGraph({ count }: { count: number }) {
             height={barH}
             rx={2}
             fill="url(#barGrad)"
-            opacity={opacity}
+            opacity={0.7 + (i / maxBars) * 0.3}
           />
         );
       })}
@@ -127,7 +103,7 @@ export function LiveVisitorsCard() {
   }, [user]);
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
+    <Card className="overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
