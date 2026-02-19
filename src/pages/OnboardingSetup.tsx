@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Check, Facebook, Wifi, Cloud } from 'lucide-react';
+import { Check, Facebook, Wifi, Cloud, Code2, Eye, Copy, Download } from 'lucide-react';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
 import { useWebhooks } from '@/hooks/useWebhooks';
 import { useApiCredentials } from '@/hooks/useApiCredentials';
+import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
 import { CreateCredentialDialog } from '@/components/integrations/CreateCredentialDialog';
+import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
 import logoGerenciaRoi from '@/assets/Logo_gerencia_roi.png';
+import { toast } from 'sonner';
 
 const steps = [
   { id: 'conexao-meta', label: 'Conexão Meta' },
@@ -23,6 +27,7 @@ export default function OnboardingSetup() {
   const { isConnected, connection, connect, isLoading, toggleAccountActive, refreshAdAccounts } = useMetaAuth();
   const { createWebhook } = useWebhooks();
   const { createCredential } = useApiCredentials();
+  const { user } = useAuth();
 
   const platform = (location.state as any)?.platform || 'Meta';
   const strategy = (location.state as any)?.strategy || 'Página de Vendas';
@@ -33,6 +38,9 @@ export default function OnboardingSetup() {
   const [activateAll, setActivateAll] = useState(false);
   const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
   const [isCredentialDialogOpen, setIsCredentialDialogOpen] = useState(false);
+  const [isUtmScriptsOpen, setIsUtmScriptsOpen] = useState(false);
+  const [utmScriptInstalled, setUtmScriptInstalled] = useState(false);
+  const [liveScriptCopied, setLiveScriptCopied] = useState(false);
 
   // When Meta connects, advance to step 1 (Contas Meta)
   useEffect(() => {
@@ -267,17 +275,118 @@ export default function OnboardingSetup() {
     }
 
     if (stepId === 'pagina-vendas') {
+      const userId = user?.id || 'SEU_USER_ID';
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zwylxoajyyjflvvcwpvz.supabase.co';
+      const liveScript = `<!-- Gerencia ROI - Visitantes ao Vivo -->
+<script>
+(function(){
+  var uid="${userId}";
+  var sid=Math.random().toString(36).substr(2,12)+Date.now().toString(36);
+  var url="${supabaseUrl}/functions/v1/track-visitor";
+  function send(action){
+    var data=JSON.stringify({user_id:uid,session_id:sid,page_url:location.href,action:action});
+    if(navigator.sendBeacon){navigator.sendBeacon(url,data)}
+    else{fetch(url,{method:"POST",body:data,headers:{"Content-Type":"application/json"},keepalive:true})}
+  }
+  send("heartbeat");
+  setInterval(function(){send("heartbeat")},15000);
+  window.addEventListener("beforeunload",function(){send("leave")});
+  document.addEventListener("visibilitychange",function(){
+    if(document.hidden){send("leave")}else{send("heartbeat")}
+  });
+})();
+</script>`;
+
+      const handleCopyLiveScript = () => {
+        navigator.clipboard.writeText(liveScript);
+        setLiveScriptCopied(true);
+        toast.success('Script copiado!');
+        setTimeout(() => setLiveScriptCopied(false), 2000);
+      };
+
       return (
-        <div className="flex-1 p-8 max-w-2xl">
-          <h1 className="text-white text-2xl font-semibold mb-6">
-            Configure sua página de vendas:
+        <div className="flex-1 p-8 max-w-3xl">
+          <h1 className="text-foreground text-2xl font-semibold mb-6">
+            Instale o script na sua página de vendas:
           </h1>
-          <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl p-6">
-            <p className="text-white/60 text-sm mb-4">
-              Instale o script de rastreamento na sua página de vendas para monitorar visitantes e conversões.
-            </p>
-            <p className="text-white/40 text-sm">
-              Você poderá configurar o pixel e os scripts na aba de <strong className="text-white/60">Integrações</strong>.
+
+          {/* Scripts Card */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden mb-5">
+            <div className="px-6 py-4 border-b border-border">
+              <span className="text-foreground font-semibold text-base">Scripts</span>
+            </div>
+
+            {/* UTM Script Row */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                  <Code2 className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-foreground font-medium text-sm">Script de UTMs</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">Use esse script nas suas PVs para capturar as UTMs</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsUtmScriptsOpen(true)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shrink-0"
+              >
+                <Download className="w-4 h-4" />
+                Ver opções
+              </button>
+            </div>
+
+            {/* Live Visitors Script Row */}
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center shrink-0">
+                    <Eye className="w-5 h-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-foreground font-medium text-sm">Script de Visitantes ao Vivo</p>
+                    <p className="text-muted-foreground text-xs mt-0.5">Rastreie visitantes em tempo real na sua página</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCopyLiveScript}
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shrink-0"
+                >
+                  {liveScriptCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {liveScriptCopied ? 'Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <pre className="bg-muted/50 border border-border rounded-lg p-3 text-xs overflow-x-auto max-h-36 overflow-y-auto">
+                <code className="text-foreground/70">{liveScript}</code>
+              </pre>
+            </div>
+          </div>
+
+          {/* Confirmation checkbox */}
+          <div className="flex items-center gap-3 mb-6">
+            <Checkbox
+              id="utm-installed"
+              checked={utmScriptInstalled}
+              onCheckedChange={(val) => setUtmScriptInstalled(!!val)}
+            />
+            <label htmlFor="utm-installed" className="text-foreground text-sm cursor-pointer select-none">
+              Já instalei o script de UTMs
+            </label>
+          </div>
+
+          {/* Help */}
+          <div>
+            <p className="text-foreground font-medium text-sm mb-1">Precisa de ajuda?</p>
+            <p className="text-muted-foreground text-sm">
+              Assista ao tutorial para garantir que suas vendas serão marcadas com sucesso.{' '}
+              <a
+                href="https://www.youtube.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+              >
+                Assistir agora
+              </a>
             </p>
           </div>
         </div>
@@ -433,6 +542,11 @@ export default function OnboardingSetup() {
         open={isCredentialDialogOpen}
         onOpenChange={setIsCredentialDialogOpen}
         onCreate={createCredential}
+      />
+
+      <UtmScriptsDialog
+        open={isUtmScriptsOpen}
+        onOpenChange={setIsUtmScriptsOpen}
       />
     </div>
   );
