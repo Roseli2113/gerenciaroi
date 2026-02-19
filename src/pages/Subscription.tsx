@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Check, Zap, Crown, Rocket } from 'lucide-react';
+import { Check, Zap, Crown, Rocket, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,82 +19,99 @@ const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.c
 const plansList = [
   {
     id: 'free',
-    name: 'Free',
+    name: 'Gratuito',
     price: 0,
     description: 'Teste grátis por 14 dias',
     icon: Zap,
     features: [
-      '1 conta de anúncio',
-      'Até 5 campanhas',
+      '1 Dashboard',
+      '1 Conta de Anúncio',
+      '1 Webhook',
+      '1 Pixel de Otimização',
+      'Até 10 Campanhas',
       'Relatórios básicos',
+      'Leads ao vivo no Site',
       'Suporte por email',
       '14 dias de teste grátis',
     ],
   },
   {
-    id: 'starter',
-    name: 'Starter',
-    price: 97,
+    id: 'premium',
+    name: 'Premium',
+    price: 27,
     description: 'Para quem está começando',
-    icon: Zap,
+    icon: Star,
     features: [
+      '1 Dashboard',
       '1 conta de anúncio',
-      'Até 10 campanhas',
-      '5 regras automáticas',
+      '3 Webhook',
+      '3 Pixel de Otimização',
+      'Até 100 campanhas',
+      'Regras automáticas',
       'Relatórios básicos',
-      'Suporte por email',
+      'Leads ao vivo no Site',
+      'Suporte Vip',
     ],
   },
   {
-    id: 'pro',
-    name: 'Profissional',
-    price: 197,
-    description: 'Para profissionais de marketing',
+    id: 'advanced',
+    name: 'Avançado',
+    price: 67,
+    description: 'Recomendado para quem já possui uma operação.',
     icon: Crown,
     popular: true,
     features: [
-      '5 contas de anúncio',
-      'Campanhas ilimitadas',
-      'Regras ilimitadas',
-      'Relatórios avançados',
-      'UTM tracking',
-      'Suporte prioritário',
-      'API access',
+      '3 Dashboard',
+      '3 conta de anúncio',
+      '100 Webhook',
+      '100 Pixel de Otimização',
+      'Até 300 campanhas',
+      'Regras automáticas',
+      'Relatórios básicos',
+      'Leads ao vivo no Site',
+      'Suporte Vip',
     ],
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 497,
-    description: 'Para agências e empresas',
+    id: 'monster',
+    name: 'Monster',
+    price: 147,
+    description: 'Recomendado para quem já é um monstro da escala.',
     icon: Rocket,
     features: [
-      'Contas ilimitadas',
-      'Campanhas ilimitadas',
-      'Regras ilimitadas',
-      'Relatórios personalizados',
-      'White label',
-      'Gerente de conta dedicado',
-      'SLA garantido',
-      'Treinamento exclusivo',
+      'Dashboards ILIMITADOS',
+      'Contas de Anúncio ILIMITADAS',
+      'Webhooks ILIMITADOS',
+      'Pixels de Otimização ILIMITADOS',
+      'Campanhas ILIMITADAS',
+      'Regras automáticas',
+      'Relatórios Avançado',
+      'Leads ao vivo no Site',
+      'Suporte Vip',
     ],
   },
 ];
 
 const planNameMap: Record<string, string> = {
-  free: 'Free',
-  starter: 'Starter',
-  pro: 'Profissional',
-  profissional: 'Profissional',
-  enterprise: 'Enterprise',
+  free: 'Gratuito',
+  premium: 'Premium',
+  advanced: 'Avançado',
+  pro: 'Avançado',
+  profissional: 'Avançado',
+  monster: 'Monster',
+  enterprise: 'Monster',
+  starter: 'Premium',
 };
 
 const planIdMap: Record<string, string> = {
   free: 'free',
-  starter: 'starter',
-  pro: 'pro',
-  profissional: 'pro',
-  enterprise: 'enterprise',
+  premium: 'premium',
+  starter: 'premium',
+  advanced: 'advanced',
+  pro: 'advanced',
+  profissional: 'advanced',
+  monster: 'monster',
+  enterprise: 'monster',
 };
 
 const Subscription = () => {
@@ -106,9 +123,8 @@ const Subscription = () => {
     const fetchProfile = async () => {
       if (!user) return;
 
-      // Super admins are always Enterprise
       if (SUPER_ADMIN_EMAILS.includes(user.email || '')) {
-        setUserPlan('enterprise');
+        setUserPlan('monster');
         setPlanStatus('active');
         return;
       }
@@ -129,7 +145,7 @@ const Subscription = () => {
   }, [user]);
 
   const currentPlanId = planIdMap[userPlan] || 'free';
-  const currentPlanDisplayName = planNameMap[userPlan] || 'Free';
+  const currentPlanDisplayName = planNameMap[userPlan] || 'Gratuito';
   const currentPlanData = plansList.find(p => p.id === currentPlanId);
   const CurrentIcon = currentPlanData?.icon || Zap;
 
@@ -166,6 +182,12 @@ const Subscription = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Section Header */}
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">Quatro opções para aumentar suas vendas</h2>
+          <p className="text-muted-foreground">Escolha o melhor plano para a sua operação. Todos os planos incluem rastreio das vendas em tempo real.</p>
+        </div>
 
         {/* Plans */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -241,9 +263,9 @@ const Subscription = () => {
           <CardContent>
             <div className="space-y-3">
               {[
-                { date: '05/01/2026', amount: 197, status: 'Pago', method: 'Cartão ****4532' },
-                { date: '05/12/2025', amount: 197, status: 'Pago', method: 'Cartão ****4532' },
-                { date: '05/11/2025', amount: 197, status: 'Pago', method: 'Cartão ****4532' },
+                { date: '05/01/2026', amount: 67, status: 'Pago', method: 'Cartão ****4532' },
+                { date: '05/12/2025', amount: 67, status: 'Pago', method: 'Cartão ****4532' },
+                { date: '05/11/2025', amount: 67, status: 'Pago', method: 'Cartão ****4532' },
               ].map((payment, index) => (
                 <div
                   key={index}

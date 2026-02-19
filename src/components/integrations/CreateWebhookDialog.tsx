@@ -120,9 +120,16 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Generate webhook URL for platforms that need it (include platform param)
+  // Pre-generate token for URL platforms so it can be included in the webhook URL
+  const [preGeneratedToken] = useState(() => {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  });
+
+  // Generate webhook URL for platforms that need it (include platform and token params)
   const webhookUrl = selectedPlatform 
-    ? `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver?platform=${selectedPlatform.toLowerCase()}`
+    ? `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver?platform=${selectedPlatform.toLowerCase()}&token=${preGeneratedToken}`
     : `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver`;
 
   const filteredPlatforms = PLATFORMS.filter(platform =>
@@ -173,7 +180,7 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
         clientId: formData.clientId,
         clientSecret: formData.clientSecret,
         webhookUrl: isUrlPlatform ? webhookUrl : formData.webhookUrl,
-        token: formData.token || formData.webhookToken || formData.apiKey || formData.secretKey,
+        token: isUrlPlatform ? preGeneratedToken : (formData.token || formData.webhookToken || formData.apiKey || formData.secretKey),
         pixelId: formData.pixelId,
       });
       
