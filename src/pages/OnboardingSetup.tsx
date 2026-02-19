@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Check, Facebook } from 'lucide-react';
+import { Check, Facebook, Wifi, Cloud } from 'lucide-react';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
+import { useWebhooks } from '@/hooks/useWebhooks';
+import { useApiCredentials } from '@/hooks/useApiCredentials';
 import { Switch } from '@/components/ui/switch';
+import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
+import { CreateCredentialDialog } from '@/components/integrations/CreateCredentialDialog';
 import logoGerenciaRoi from '@/assets/Logo_gerencia_roi.png';
 
 const steps = [
@@ -17,6 +21,8 @@ export default function OnboardingSetup() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isConnected, connection, connect, isLoading, toggleAccountActive, refreshAdAccounts } = useMetaAuth();
+  const { createWebhook } = useWebhooks();
+  const { createCredential } = useApiCredentials();
 
   const platform = (location.state as any)?.platform || 'Meta';
   const strategy = (location.state as any)?.strategy || 'Página de Vendas';
@@ -25,6 +31,8 @@ export default function OnboardingSetup() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [activeAccounts, setActiveAccounts] = useState<Record<string, boolean>>({});
   const [activateAll, setActivateAll] = useState(false);
+  const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
+  const [isCredentialDialogOpen, setIsCredentialDialogOpen] = useState(false);
 
   // When Meta connects, advance to step 1 (Contas Meta)
   useEffect(() => {
@@ -199,16 +207,59 @@ export default function OnboardingSetup() {
 
     if (stepId === 'plataforma-vendas') {
       return (
-        <div className="flex-1 p-8 max-w-2xl">
-          <h1 className="text-white text-2xl font-semibold mb-6">
-            Conecte sua plataforma de vendas:
+        <div className="flex-1 p-8 max-w-3xl">
+          <h1 className="text-foreground text-2xl font-semibold mb-6">
+            Conecte uma fonte de vendas:
           </h1>
-          <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl p-6">
-            <p className="text-white/60 text-sm mb-4">
-              Para que o painel mostre suas métricas de vendas, conecte sua plataforma de e-commerce ou checkout.
-            </p>
-            <p className="text-white/40 text-sm">
-              Configure seus webhooks na aba de <strong className="text-white/60">Integrações</strong> após concluir o setup.
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {/* Webhooks Card */}
+            <div className="bg-card border border-border rounded-xl p-6 flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-foreground font-semibold text-base">Webhooks</span>
+                <Wifi className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground text-sm flex-1">
+                Adicione webhooks para se conectar com as plataformas de venda:
+              </p>
+              <button
+                onClick={() => setIsWebhookDialogOpen(true)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-5 py-2.5 rounded-lg text-sm font-semibold w-fit"
+              >
+                Adicionar Webhook
+              </button>
+            </div>
+
+            {/* API Credentials Card */}
+            <div className="bg-card border border-border rounded-xl p-6 flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-foreground font-semibold text-base">Credenciais de API</span>
+                <Cloud className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground text-sm flex-1">
+                Adicione credenciais de API para integrar com outras ferramentas:
+              </p>
+              <button
+                onClick={() => setIsCredentialDialogOpen(true)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-5 py-2.5 rounded-lg text-sm font-semibold w-fit"
+              >
+                Adicionar Credencial
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-foreground font-medium text-sm mb-1">Precisa de ajuda?</p>
+            <p className="text-muted-foreground text-sm">
+              Assista ao tutorial para garantir que suas vendas serão marcadas com sucesso.{' '}
+              <a
+                href="https://www.youtube.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+              >
+                Assistir agora
+              </a>
             </p>
           </div>
         </div>
@@ -371,6 +422,18 @@ export default function OnboardingSetup() {
           </footer>
         </main>
       </div>
+
+      <CreateWebhookDialog
+        open={isWebhookDialogOpen}
+        onOpenChange={setIsWebhookDialogOpen}
+        onCreateWebhook={createWebhook}
+      />
+
+      <CreateCredentialDialog
+        open={isCredentialDialogOpen}
+        onOpenChange={setIsCredentialDialogOpen}
+        onCreate={createCredential}
+      />
     </div>
   );
 }
