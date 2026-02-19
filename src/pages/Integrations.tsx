@@ -193,6 +193,68 @@ export default function Integrations() {
           </div>
         )}
 
+        {/* Meta Ads Connection Card - always visible at top */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
+                <Facebook className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-foreground">Meta Ads</span>
+                  {isConnected ? (
+                    <Badge className="bg-success/20 text-success border-0">Conectado</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="bg-muted text-muted-foreground">Não conectado</Badge>
+                  )}
+                </div>
+                {isConnected && connection?.user ? (
+                  <p className="text-sm text-muted-foreground truncate">
+                    {connection.user.name}{connection.user.email ? ` • ${connection.user.email}` : ''}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Conecte sua conta Business Manager do Meta
+                  </p>
+                )}
+              </div>
+              <div className="shrink-0">
+                {isConnected ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={disconnect}
+                    disabled={isLoading}
+                    className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <LogOut className="w-4 h-4" />
+                    )}
+                    Desconectar
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={connect}
+                    disabled={isLoading}
+                    className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    size="sm"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Facebook className="w-4 h-4" />
+                    )}
+                    Conectar Conta
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Tabs */}
         <Tabs defaultValue="anuncios" className="space-y-6">
           <TabsList className="bg-card border border-border h-auto p-1 flex-wrap">
