@@ -30,6 +30,7 @@ import { DuplicateCampaignDialog } from '@/components/campaigns/DuplicateCampaig
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useSales } from '@/hooks/useSales';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
@@ -45,6 +46,7 @@ interface ActiveAccount {
 const Campaigns = () => {
   const { user } = useAuth();
   const { isTrialExpired, daysRemaining } = useTrialGuard();
+  const { sales } = useSales();
   const [activeTab, setActiveTab] = useState<TabType>('campanhas');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
@@ -105,6 +107,15 @@ const Campaigns = () => {
 
     loadActiveAccounts();
   }, [user]);
+
+  // Untracked sales: approved/paid sales with no UTM source in raw_data
+  const untrackedCount = sales.filter(s => {
+    if (s.status !== 'approved' && s.status !== 'paid') return false;
+    const raw = s.raw_data as Record<string, unknown> | null;
+    if (!raw) return true;
+    const src = raw.utm_source || raw.source || raw.utm || raw.fbclid;
+    return !src;
+  }).length;
 
   // When switching to conjuntos tab, fetch adsets for selected campaign
   useEffect(() => {
@@ -911,7 +922,13 @@ const Campaigns = () => {
             >
               {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </Button>
-            <Badge className="bg-success text-success-foreground border-0">✓ Todas as vendas trackeadas</Badge>
+            {untrackedCount > 0 ? (
+              <Badge className="bg-warning text-warning-foreground border-0 animate-pulse">
+                ⚠ {untrackedCount} {untrackedCount === 1 ? 'Venda não trackeada' : 'Vendas não trackeadas'}
+              </Badge>
+            ) : (
+              <Badge className="bg-success text-success-foreground border-0">✓ Todas as vendas trackeadas</Badge>
+            )}
             {selectedCampaignId && activeTab === 'conjuntos' && (
               <Badge variant="outline" className="gap-1">
                 Campanha selecionada
