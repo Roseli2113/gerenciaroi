@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +62,7 @@ interface PixelRecord {
 }
 
 export default function Integrations() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
   const { webhooks, loading: webhooksLoading, createWebhook, deleteWebhook, toggleWebhookStatus } = useWebhooks();
@@ -182,7 +184,7 @@ export default function Integrations() {
             <p className="text-sm text-muted-foreground mt-0.5">
               Deseja reiniciar a configuração?{' '}
               <button
-                onClick={disconnect}
+                onClick={() => navigate('/onboarding')}
                 className="text-primary underline hover:text-primary/80 font-medium transition-colors"
               >
                 Clique aqui para reiniciar
