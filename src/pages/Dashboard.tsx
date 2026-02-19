@@ -38,13 +38,15 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const dashboardLayout = useDashboardLayout();
   const filters = useDashboardFilters();
-  const { isConnected } = useMetaAuth();
+  const { isConnected, connection } = useMetaAuth();
   const { webhooks } = useWebhooks();
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
 
   // Setup incomplete banner
+  // Setup is complete only when: Meta connected + at least one BM account active + at least one webhook
   const hasWebhooks = webhooks && webhooks.length > 0;
-  const isSetupComplete = isConnected && hasWebhooks;
+  const hasActiveAccount = connection?.adAccounts?.some(acc => acc.is_active) ?? false;
+  const isSetupComplete = isConnected && hasActiveAccount && hasWebhooks;
   const [bannerDismissed, setBannerDismissed] = useState(() => {
     return localStorage.getItem(SETUP_BANNER_KEY) === 'true';
   });
