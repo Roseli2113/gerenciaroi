@@ -5,13 +5,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function fetchAllPages(url: string): Promise<any[]> {
-  const allData: any[] = [];
+async function fetchAllPages(url: string): Promise<unknown[]> {
+  const allData: unknown[] = [];
   let nextUrl: string | null = url;
 
   while (nextUrl) {
-    const response = await fetch(nextUrl);
-    const data = await response.json();
+    const response: Response = await fetch(nextUrl);
+    const data: Record<string, unknown> = await response.json();
 
     if (data.error) {
       throw new Error(data.error.message);

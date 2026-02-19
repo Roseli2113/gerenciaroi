@@ -177,30 +177,18 @@ export default function Integrations() {
 
         {/* Configuration Banner */}
         {isConnected && (
-          <Card className="border-success/30 bg-success/5">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                  <div>
-                    <p className="font-semibold text-foreground">Configuração COMPLETA!</p>
-                    <p className="text-sm text-muted-foreground">
-                      Conectado como <span className="text-foreground font-medium">{connection?.user.name}</span>
-                    </p>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={disconnect}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Desconectar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="bg-card border border-border rounded-lg px-4 py-3">
+            <p className="font-bold text-foreground text-sm">Configuração COMPLETA!</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Deseja reiniciar a configuração?{' '}
+              <button
+                onClick={disconnect}
+                className="text-primary underline hover:text-primary/80 font-medium transition-colors"
+              >
+                Clique aqui para reiniciar
+              </button>
+            </p>
+          </div>
         )}
 
         {/* Tabs */}
