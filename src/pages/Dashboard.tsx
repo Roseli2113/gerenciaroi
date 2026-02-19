@@ -12,6 +12,8 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
+import { X, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { ProfitByHourChart } from '@/components/dashboard/ProfitByHourChart';
@@ -25,15 +27,41 @@ import { DraggableWidgetCard } from '@/components/dashboard/DraggableWidgetCard'
 import { LiveVisitorsCard } from '@/components/dashboard/LiveVisitorsCard';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
+import { useMetaAuth } from '@/hooks/useMetaAuth';
+import { useWebhooks } from '@/hooks/useWebhooks';
 
 type WidgetId = 'profit-by-hour' | 'sales-by-hour' | 'conversion-funnel' | 'campaigns-list' | 'live-visitors';
 
-// Widget components are rendered inline to pass filters
+const SETUP_BANNER_KEY = 'gerencia-roi-setup-banner-dismissed';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const dashboardLayout = useDashboardLayout();
   const filters = useDashboardFilters();
+  const { isConnected } = useMetaAuth();
+  const { webhooks } = useWebhooks();
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
+
+  // Setup incomplete banner
+  const hasWebhooks = webhooks && webhooks.length > 0;
+  const isSetupComplete = isConnected && hasWebhooks;
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    return localStorage.getItem(SETUP_BANNER_KEY) === 'true';
+  });
+
+  // Auto-hide banner when setup is complete
+  useEffect(() => {
+    if (isSetupComplete) {
+      setBannerDismissed(true);
+      localStorage.setItem(SETUP_BANNER_KEY, 'true');
+    }
+  }, [isSetupComplete]);
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    localStorage.setItem(SETUP_BANNER_KEY, 'true');
+  };
+
   const WIDGET_ORDER_KEY = 'gerencia-roi-widget-order';
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>(() => {
     try {
@@ -92,7 +120,33 @@ const Dashboard = () => {
       <div className="space-y-6">
         <DashboardFilters filters={filters} />
 
-        <EditableDashboardGrid 
+        {/* Incomplete setup banner */}
+        {!bannerDismissed && !isSetupComplete && (
+          <div className="relative flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3">
+            <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-destructive text-sm">CONFIGURAÇÃO INCOMPLETA!</p>
+              <p className="text-sm text-destructive/80 mt-0.5">
+                Você ainda não terminou a configuração desse dashboard.{' '}
+                <button
+                  onClick={() => navigate('/onboarding')}
+                  className="underline underline-offset-2 hover:text-destructive font-medium transition-colors"
+                >
+                  Por favor, clique aqui para continuar.
+                </button>
+              </p>
+            </div>
+            <button
+              onClick={dismissBanner}
+              className="text-destructive/60 hover:text-destructive transition-colors shrink-0"
+              aria-label="Fechar aviso"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        <EditableDashboardGrid
           isEditMode={isEditMode}
           layoutHook={dashboardLayout}
           dateRange={filters.dateRange}
