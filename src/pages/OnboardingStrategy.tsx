@@ -2,22 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoGerenciaRoi from '@/assets/Logo_gerencia_roi.png';
 
-const platforms = [
-  { id: 'meta', label: 'Meta' },
-  { id: 'google', label: 'Google' },
-  { id: 'kwai', label: 'Kwai' },
-  { id: 'tiktok', label: 'TikTok' },
+const strategies = [
+  { id: 'pagina-vendas', label: 'Página de Vendas' },
+  { id: 'typebot', label: 'Typebot' },
+  { id: 'anuncio-whatsapp', label: 'Anúncio -> WhatsApp' },
+  { id: 'anuncio-presell-whatsapp', label: 'Anúncio -> Pré Sell -> WhatsApp' },
   { id: 'outras', label: 'Outras' },
 ];
 
-export default function Onboarding() {
+export default function OnboardingStrategy() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<string | null>(null);
 
   const handleContinue = () => {
-    if (selected === 'meta') {
-      navigate('/onboarding/strategy');
-    } else if (selected) {
+    if (selected) {
       navigate('/integrations');
     }
   };
@@ -42,28 +40,27 @@ export default function Onboarding() {
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-md space-y-6">
           <h1 className="text-white text-xl font-semibold text-center leading-snug">
-            Quais plataformas de anúncio você vai<br />utilizar nesse dashboard?
+            Quais estratégias abaixo você vai utilizar<br />para vender nesse dashboard?
           </h1>
 
           <div className="space-y-3">
-            {platforms.map((platform) => (
+            {strategies.map((strategy) => (
               <button
-                key={platform.id}
-                onClick={() => setSelected(platform.id)}
+                key={strategy.id}
+                onClick={() => setSelected(strategy.id)}
                 className={`w-full flex items-center gap-3 px-5 py-4 rounded-lg border text-left transition-all
-                  ${selected === platform.id
+                  ${selected === strategy.id
                     ? 'border-primary bg-primary/10 text-white'
                     : 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:border-white/20'
                   }`}
               >
-                {/* Radio circle */}
                 <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors
-                  ${selected === platform.id ? 'border-primary' : 'border-white/30'}`}>
-                  {selected === platform.id && (
+                  ${selected === strategy.id ? 'border-primary' : 'border-white/30'}`}>
+                  {selected === strategy.id && (
                     <span className="w-2.5 h-2.5 rounded-full bg-primary" />
                   )}
                 </span>
-                <span className="font-medium text-sm">{platform.label}</span>
+                <span className="font-medium text-sm">{strategy.label}</span>
               </button>
             ))}
           </div>
