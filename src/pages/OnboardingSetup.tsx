@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Check, Facebook, Wifi, Cloud, Code2, Eye, Copy, Download } from 'lucide-react';
+import { Check, Facebook, Wifi, Cloud, Code2, Eye, Copy, Download, List } from 'lucide-react';
+import { UtmCodesDialog } from '@/components/integrations/UtmCodesDialog';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
 import { useWebhooks } from '@/hooks/useWebhooks';
 import { useApiCredentials } from '@/hooks/useApiCredentials';
@@ -41,6 +42,8 @@ export default function OnboardingSetup() {
   const [isUtmScriptsOpen, setIsUtmScriptsOpen] = useState(false);
   const [utmScriptInstalled, setUtmScriptInstalled] = useState(false);
   const [liveScriptCopied, setLiveScriptCopied] = useState(false);
+  const [isUtmCodesOpen, setIsUtmCodesOpen] = useState(false);
+  const [utmsInstalled, setUtmsInstalled] = useState(false);
 
   // When Meta connects, advance to step 1 (Contas Meta)
   useEffect(() => {
@@ -396,21 +399,62 @@ export default function OnboardingSetup() {
     if (stepId === 'utms-meta') {
       return (
         <div className="flex-1 p-8 max-w-2xl">
-          <h1 className="text-white text-2xl font-semibold mb-6">
-            Configure as UTMs da Meta:
+          <h1 className="text-foreground text-2xl font-semibold mb-6">
+            Coloque as UTMs abaixo nos seus anúncios do Facebook:
           </h1>
-          <div className="bg-[hsl(220,20%,14%)] border border-white/10 rounded-xl p-6">
-            <p className="text-white/60 text-sm mb-4">
-              As UTMs permitem rastrear de qual campanha, conjunto ou anúncio vieram suas vendas.
-            </p>
-            <p className="text-white/40 text-sm">
-              Acesse a aba de <strong className="text-white/60">UTMs</strong> nas Integrações para gerar e configurar seus códigos.
-            </p>
+
+          {/* Códigos Card */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden mb-5">
+            <div className="px-6 py-4 border-b border-border">
+              <span className="text-foreground font-semibold text-base">Códigos</span>
+            </div>
+
+            {/* Facebook UTM Row */}
+            <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
+                  <Facebook className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-foreground font-medium text-sm">Código de UTMs do Facebook</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">Copie o código para colocar nos anúncios do Facebook</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsUtmCodesOpen(true)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shrink-0"
+              >
+                <List className="w-4 h-4" />
+                Ver opções
+              </button>
+            </div>
           </div>
-          <div className="mt-6 bg-primary/10 border border-primary/30 rounded-xl p-5">
-            <p className="text-primary font-semibold text-base mb-1">🎉 Configuração COMPLETA!</p>
-            <p className="text-white/60 text-sm">
-              Seu painel está configurado. Acesse o dashboard para ver suas métricas.
+
+          {/* Confirmation checkbox */}
+          <div className="flex items-center gap-3 mb-6">
+            <Checkbox
+              id="utms-installed"
+              checked={utmsInstalled}
+              onCheckedChange={(val) => setUtmsInstalled(!!val)}
+            />
+            <label htmlFor="utms-installed" className="text-foreground text-sm cursor-pointer select-none">
+              Já coloquei as UTMs nos meus anúncios do Facebook
+            </label>
+          </div>
+
+          {/* Help */}
+          <div>
+            <p className="text-foreground font-medium text-sm mb-1">Precisa de ajuda?</p>
+            <p className="text-muted-foreground text-sm">
+              Assista ao tutorial para garantir que suas vendas serão marcadas com sucesso.{' '}
+              <a
+                href="https://www.youtube.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+              >
+                Assistir agora
+              </a>
             </p>
           </div>
         </div>
@@ -547,6 +591,12 @@ export default function OnboardingSetup() {
       <UtmScriptsDialog
         open={isUtmScriptsOpen}
         onOpenChange={setIsUtmScriptsOpen}
+      />
+
+      <UtmCodesDialog
+        open={isUtmCodesOpen}
+        onOpenChange={setIsUtmCodesOpen}
+        platform="facebook"
       />
     </div>
   );
