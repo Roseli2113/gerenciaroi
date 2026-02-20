@@ -44,9 +44,9 @@ const Dashboard = () => {
   const filters = useDashboardFilters();
   const { isConnected, connection } = useMetaAuth();
   const { webhooks } = useWebhooks();
-  const { refreshAll, isLoading: campaignsLoading } = useMetaCampaigns();
+  const { campaigns, refreshAll, isLoading: campaignsLoading } = useMetaCampaigns();
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
-  const { refreshSales, loading: salesLoading } = useSales(salesFilters);
+  const { metrics: salesMetrics, refreshSales, loading: salesLoading } = useSales(salesFilters);
 
   const handleRefresh = async () => {
     await Promise.all([refreshAll(), refreshSales()]);
@@ -168,7 +168,8 @@ const Dashboard = () => {
         <EditableDashboardGrid
           isEditMode={isEditMode}
           layoutHook={dashboardLayout}
-          dateRange={filters.dateRange}
+          campaigns={campaigns}
+          salesMetrics={salesMetrics}
         />
 
         {/* Draggable widget sections */}
