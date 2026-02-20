@@ -10,8 +10,6 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
-import { useSales } from '@/hooks/useSales';
 import type { PeriodKey } from '@/hooks/useDashboardFilters';
 
 interface AdAccount {
@@ -32,15 +30,15 @@ interface DashboardFiltersProps {
     selectedProduct: string;
     setSelectedProduct: (product: string) => void;
   };
+  onRefresh?: () => Promise<void>;
+  isRefreshing?: boolean;
 }
 
-export function DashboardFilters({ filters }: DashboardFiltersProps) {
+export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: DashboardFiltersProps) {
   const { user } = useAuth();
-  const { refreshAll, isLoading: campaignsLoading } = useMetaCampaigns();
-  const { refreshSales, loading: salesLoading } = useSales();
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [products] = useState<{ id: string; name: string }[]>([]);
 
   const {
     selectedPeriod,
@@ -77,17 +75,10 @@ export function DashboardFilters({ filters }: DashboardFiltersProps) {
   }, [selectedAccount]);
 
   const handleRefresh = async () => {
-    await Promise.all([
-      refreshAll(),
-      refreshSales()
-    ]);
-    const { toast } = await import('sonner');
-    toast.success('Dados Atualizados', {
-      style: { background: '#16a34a', color: '#ffffff', border: 'none' },
-    });
+    if (onRefresh) {
+      await onRefresh();
+    }
   };
-
-  const isRefreshing = campaignsLoading || salesLoading;
 
   return (
     <div className="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-card border border-border">
@@ -154,7 +145,7 @@ export function DashboardFilters({ filters }: DashboardFiltersProps) {
         <Button 
           variant="outline"
           onClick={handleRefresh}
-          disabled={isRefreshing}
+          disabled={isRefreshing || !onRefresh}
           className="gap-2"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
