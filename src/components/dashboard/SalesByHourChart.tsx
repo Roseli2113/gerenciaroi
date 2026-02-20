@@ -25,7 +25,9 @@ export function SalesByHourChart({ filters }: SalesByHourChartProps) {
 
     sales.forEach(sale => {
       if (sale.status === 'approved' || sale.status === 'paid') {
-        const hour = new Date(sale.created_at).getHours();
+        const date = new Date(sale.created_at);
+        // Use local timezone hour to match what the user sees on their clock
+        const hour = date.getHours();
         hourlyData[hour].vendas += 1;
       }
     });
