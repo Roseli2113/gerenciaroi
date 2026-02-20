@@ -1,7 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp } from 'lucide-react';
 import { useSales } from '@/hooks/useSales';
+
+const PEAK_REVENUE_KEY = 'gerencia-roi-peak-revenue';
 
 function getNextGoal(revenue: number): number {
   const bases = [1000, 10000, 50000, 100000, 500000, 1000000];
@@ -23,8 +25,22 @@ function formatCurrency(value: number): string {
 
 export function RevenueProgressBar() {
   const { metrics } = useSales();
-  const revenue = metrics.totalRevenue;
+  const currentRevenue = metrics.totalRevenue;
 
+  // Peak revenue: only ever increases, never resets on sale deletion
+  const [peakRevenue, setPeakRevenue] = useState<number>(() => {
+    const stored = localStorage.getItem(PEAK_REVENUE_KEY);
+    return stored ? parseFloat(stored) : 0;
+  });
+
+  useEffect(() => {
+    if (currentRevenue > peakRevenue) {
+      setPeakRevenue(currentRevenue);
+      localStorage.setItem(PEAK_REVENUE_KEY, String(currentRevenue));
+    }
+  }, [currentRevenue, peakRevenue]);
+
+  const revenue = peakRevenue;
   const goal = useMemo(() => getNextGoal(revenue), [revenue]);
   const percentage = Math.min((revenue / goal) * 100, 100);
 
