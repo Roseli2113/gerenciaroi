@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Plus, Info, Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,12 +63,16 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
   const [showPixelForm, setShowPixelForm] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [generatedPixelId, setGeneratedPixelId] = useState('');
-
+  const wasOpenRef = useRef(false);
   const isEditing = !!editingPixelId;
 
-  // Load pixel data when editing
+  // Only reset/load when drawer transitions from closed → open
   useEffect(() => {
-    if (!open) return;
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+
+    if (!justOpened) return;
+
     if (editingPixelId && user) {
       (async () => {
         const { data: pixel } = await supabase
@@ -119,6 +123,7 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
       setPurchaseProduct('any');
       setIpConfig('ipv6_ipv4');
       setGeneratedPixelId('');
+      setShowPixelForm(false);
     }
   }, [open, editingPixelId, user]);
 
@@ -226,7 +231,8 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
     }
   };
 
-  const generatedCode = `<script>\n  window.pixelId = "${generatedPixelId}";\n  var a = document.createElement("script");\n  a.setAttribute("async", "");\n  a.setAttribute("defer", "");\n  a.setAttribute("src", "https://cdn.utmify.com.br/scripts/pixel/pixel.js");\n  document.head.appendChild(a);\n</script>`;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zwylxoajyyjflvvcwpvz.supabase.co';
+  const generatedCode = `<script>\n  window.pixelId = "${generatedPixelId}";\n  var a = document.createElement("script");\n  a.setAttribute("async", "");\n  a.setAttribute("defer", "");\n  a.setAttribute("src", "${supabaseUrl}/storage/v1/object/public/pixel-scripts/pixel.js");\n  document.head.appendChild(a);\n</script>`;
 
   const copyCode = () => {
     navigator.clipboard.writeText(generatedCode);
@@ -492,9 +498,9 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
                       if (e.target.value.trim()) setCheckoutTextError('');
                     }}
                   />
-                  {checkoutTextError && (
-                    <p className="text-sm text-red-500 mt-1">{checkoutTextError}</p>
-                  )}
+                   {checkoutTextError && (
+                     <p className="text-sm text-destructive mt-1">{checkoutTextError}</p>
+                   )}
                 </div>
               </>
             )}
@@ -625,7 +631,7 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-foreground">Pixel criado com sucesso</h3>
-                <span className="text-green-500">✅</span>
+                <span className="text-success">✅</span>
               </div>
               <Button variant="ghost" size="icon" onClick={() => { setShowSuccessDialog(false); onOpenChange(false); }}>
                 <X className="w-4 h-4" />
