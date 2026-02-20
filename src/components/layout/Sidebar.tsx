@@ -126,10 +126,10 @@ export function Sidebar() {
         collapsed ? 'w-20' : 'w-64'
       )}
     >
-      <div className="p-4 border-b border-sidebar-border">
+      <div className="py-2 px-4 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center">
-            <img src={logoImg} alt="Gerencia ROI" className="w-12 h-12 object-contain" />
+          <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center">
+            <img src={logoImg} alt="Gerencia ROI" className="w-14 h-14 object-contain" />
           </div>
           {!collapsed && (
             <div className="animate-fade-in-left">
