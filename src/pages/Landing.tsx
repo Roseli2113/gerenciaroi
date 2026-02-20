@@ -322,6 +322,7 @@ const Landing = () => {
                 <li><Link to="/termos" className="hover:text-foreground transition-colors">Termos de Uso</Link></li>
                 <li><Link to="/termos" className="hover:text-foreground transition-colors">Termos e Condições</Link></li>
                 <li><Link to="/privacidade" className="hover:text-foreground transition-colors">Política de Privacidade</Link></li>
+                <li><Link to="/exclusao-de-dados" className="hover:text-foreground transition-colors">Exclusão de Dados</Link></li>
               </ul>
             </div>
           </div>
