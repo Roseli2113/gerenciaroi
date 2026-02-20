@@ -29,6 +29,10 @@ import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
 import { useWebhooks } from '@/hooks/useWebhooks';
+import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
+import { useSales } from '@/hooks/useSales';
+import { toast } from 'sonner';
+
 
 type WidgetId = 'profit-by-hour' | 'sales-by-hour' | 'conversion-funnel' | 'campaigns-list' | 'live-visitors';
 
@@ -40,7 +44,19 @@ const Dashboard = () => {
   const filters = useDashboardFilters();
   const { isConnected, connection } = useMetaAuth();
   const { webhooks } = useWebhooks();
+  const { refreshAll, isLoading: campaignsLoading } = useMetaCampaigns();
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
+  const { refreshSales, loading: salesLoading } = useSales(salesFilters);
+
+  const handleRefresh = async () => {
+    await Promise.all([refreshAll(), refreshSales()]);
+    toast.success('Dados Atualizados', {
+      style: { background: '#16a34a', color: '#ffffff', border: 'none' },
+    });
+  };
+
+  const isRefreshing = campaignsLoading || salesLoading;
+
 
   // Setup incomplete banner
   // Setup is complete only when: Meta connected + at least one BM account active + at least one webhook
@@ -124,7 +140,7 @@ const Dashboard = () => {
       }
     >
       <div className="space-y-6">
-        <DashboardFilters filters={filters} />
+        <DashboardFilters filters={filters} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
 
         {/* Incomplete setup banner */}
         {!bannerDismissed && !isSetupComplete && (
