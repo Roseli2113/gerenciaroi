@@ -92,20 +92,26 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
           setPurchaseValueType(pixel.purchase_value_type);
           setPurchaseProduct(pixel.purchase_product);
           setIpConfig(pixel.ip_config);
-          setGeneratedPixelId(pixel.id.replace(/-/g, '').slice(0, 24));
+          // Do NOT set generatedPixelId here — wait for meta pixels to load
         }
         const { data: metas } = await supabase
           .from('pixel_meta_ids')
           .select('*')
-          .eq('pixel_id', editingPixelId);
+          .eq('pixel_id', editingPixelId)
+          .eq('user_id', user.id); // Always filter by current user
         if (metas) {
-          setMetaPixels(metas.map(m => ({
+          const mapped = metas.map(m => ({
             id: m.id,
             pixelId: m.meta_pixel_id,
             token: m.token || '',
             apelido: m.apelido || '',
             confirmed: true,
-          })));
+          }));
+          setMetaPixels(mapped);
+          // Use the real Meta Pixel ID from database, never a derived UUID
+          if (mapped.length > 0) {
+            setGeneratedPixelId(mapped[0].pixelId);
+          }
         }
       })();
     } else if (!editingPixelId) {
