@@ -9,14 +9,13 @@ import {
   ResponsiveContainer,
   ComposedChart,
 } from 'recharts';
-import { useSales, type SalesFilters } from '@/hooks/useSales';
+import type { Sale } from '@/hooks/useSales';
 
 interface ProfitByHourChartProps {
-  filters?: SalesFilters;
+  sales: Sale[];
 }
 
-export function ProfitByHourChart({ filters }: ProfitByHourChartProps) {
-  const { sales } = useSales(filters);
+export function ProfitByHourChart({ sales }: ProfitByHourChartProps) {
 
   const data = useMemo(() => {
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({
