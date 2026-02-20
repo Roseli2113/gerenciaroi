@@ -50,9 +50,6 @@ const Dashboard = () => {
 
   const handleRefresh = async () => {
     await Promise.all([refreshAll(), refreshSales()]);
-    toast.success('Dados Atualizados', {
-      style: { background: '#16a34a', color: '#ffffff', border: 'none' },
-    });
   };
 
   const isRefreshing = campaignsLoading || salesLoading;

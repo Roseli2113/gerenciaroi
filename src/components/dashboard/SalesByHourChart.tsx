@@ -19,14 +19,15 @@ export function SalesByHourChart({ filters }: SalesByHourChartProps) {
 
   const data = useMemo(() => {
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({
-      hour: `${String(i).padStart(2, '0')}:00`,
+      hour: `${String(i).padStart(2, '0')}h`,
+      hourLabel: `${String(i).padStart(2, '0')}:00 - ${String(i).padStart(2, '0')}:59`,
       vendas: 0,
     }));
 
     sales.forEach(sale => {
       if (sale.status === 'approved' || sale.status === 'paid') {
         const date = new Date(sale.created_at);
-        // Use local timezone hour to match what the user sees on their clock
+        // getHours() retorna a hora no fuso horário local do navegador
         const hour = date.getHours();
         hourlyData[hour].vendas += 1;
       }
@@ -37,9 +38,12 @@ export function SalesByHourChart({ filters }: SalesByHourChartProps) {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
+    // Find the full label (e.g. "23:00 - 23:59") from data
+    const entry = data.find(d => d.hour === label);
     return (
       <div className="rounded-xl border border-border bg-card p-3 shadow-lg">
-        <p className="text-sm font-medium text-foreground mb-2">{label}</p>
+        <p className="text-sm font-medium text-foreground mb-1">{entry?.hourLabel ?? label}</p>
+        <p className="text-xs text-muted-foreground mb-2">Vendas nesse período</p>
         <div className="flex items-center gap-2 text-sm">
           <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'hsl(217, 91%, 60%)' }} />
           <span className="text-muted-foreground">Vendas:</span>
