@@ -26,6 +26,7 @@ import Onboarding from "./pages/Onboarding";
 import OnboardingStrategy from "./pages/OnboardingStrategy";
 import OnboardingSetup from "./pages/OnboardingSetup";
 import NotFound from "./pages/NotFound";
+import DataDeletion from "./pages/DataDeletion";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/onboarding/setup" element={<ProtectedRoute><OnboardingSetup /></ProtectedRoute>} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/privacidade" element={<Privacy />} />
+              <Route path="/exclusao-de-dados" element={<DataDeletion />} />
               <Route path="/termos" element={<Terms />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
