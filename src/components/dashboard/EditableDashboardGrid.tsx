@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -19,9 +19,7 @@ import { DraggableMetricCard } from './DraggableMetricCard';
 import { MetricsSidebar } from './MetricsSidebar';
 import { AVAILABLE_METRICS } from '@/hooks/useDashboardLayout';
 import type { useDashboardLayout as UseDashboardLayoutType } from '@/hooks/useDashboardLayout';
-import { useSales } from '@/hooks/useSales';
-import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
-import type { DateRange } from '@/hooks/useDashboardFilters';
+import type { SalesMetrics } from '@/hooks/useSales';
 import {
   DollarSign,
   Wallet,
@@ -55,13 +53,20 @@ function DroppableArea({ children, isEditMode }: { children: React.ReactNode; is
   );
 }
 
+interface CampaignData {
+  revenue: number;
+  spent: number;
+  sales: number;
+}
+
 interface EditableDashboardGridProps {
   isEditMode: boolean;
   layoutHook: ReturnType<typeof UseDashboardLayoutType>;
-  dateRange: DateRange;
+  campaigns: CampaignData[];
+  salesMetrics: SalesMetrics;
 }
 
-export function EditableDashboardGrid({ isEditMode, layoutHook, dateRange }: EditableDashboardGridProps) {
+export function EditableDashboardGrid({ isEditMode, layoutHook, campaigns, salesMetrics }: EditableDashboardGridProps) {
   const {
     layout,
     updateLayout,
@@ -69,16 +74,6 @@ export function EditableDashboardGrid({ isEditMode, layoutHook, dateRange }: Edi
     removeMetric,
     getAvailableMetrics,
   } = layoutHook;
-
-  const { campaigns } = useMetaCampaigns();
-  
-  // Filter sales by selected date range
-  const salesFilters = useMemo(() => ({
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-  }), [dateRange.startDate, dateRange.endDate]);
-  
-  const { metrics: salesMetrics } = useSales(salesFilters);
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
