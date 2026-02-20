@@ -8,14 +8,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useSales, type SalesFilters } from '@/hooks/useSales';
+import type { Sale } from '@/hooks/useSales';
 
 interface SalesByHourChartProps {
-  filters?: SalesFilters;
+  sales: Sale[];
 }
 
-export function SalesByHourChart({ filters }: SalesByHourChartProps) {
-  const { sales } = useSales(filters);
+export function SalesByHourChart({ sales }: SalesByHourChartProps) {
 
   const data = useMemo(() => {
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({

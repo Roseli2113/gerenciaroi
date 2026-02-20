@@ -46,7 +46,7 @@ const Dashboard = () => {
   const { webhooks } = useWebhooks();
   const { campaigns, refreshAll, isLoading: campaignsLoading } = useMetaCampaigns();
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
-  const { metrics: salesMetrics, refreshSales, loading: salesLoading } = useSales(salesFilters);
+  const { sales, metrics: salesMetrics, refreshSales, loading: salesLoading } = useSales(salesFilters);
 
   const handleRefresh = async () => {
     await Promise.all([refreshAll(), refreshSales()]);
@@ -189,10 +189,10 @@ const Dashboard = () => {
                     return (
                       <div key={widgetId} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <DraggableWidgetCard id="profit-by-hour" isEditMode={isEditMode}>
-                          <ProfitByHourChart filters={salesFilters} />
+                          <ProfitByHourChart sales={sales} />
                         </DraggableWidgetCard>
                         <DraggableWidgetCard id="sales-by-hour" isEditMode={isEditMode}>
-                          <SalesByHourChart filters={salesFilters} />
+                          <SalesByHourChart sales={sales} />
                         </DraggableWidgetCard>
                       </div>
                     );
@@ -229,8 +229,8 @@ const Dashboard = () => {
                 // Standalone widgets
                 const renderWidget = () => {
                   switch (widgetId) {
-                    case 'profit-by-hour': return <ProfitByHourChart filters={salesFilters} />;
-                    case 'sales-by-hour': return <SalesByHourChart filters={salesFilters} />;
+                    case 'profit-by-hour': return <ProfitByHourChart sales={sales} />;
+                    case 'sales-by-hour': return <SalesByHourChart sales={sales} />;
                     case 'conversion-funnel': return <ConversionFunnel />;
                     case 'campaigns-list': return <CampaignsList />;
                     case 'live-visitors': return <LiveVisitorsCard />;
