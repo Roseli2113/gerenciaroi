@@ -233,6 +233,41 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
     }
   };
 
+  // Build the IC detection script based on the configured rule
+  const icButtonText = checkoutButtonText || 'Comprar';
+  const icDetectionScript = initiateCheckoutRule === 'enabled' ? `
+/* Gerencia ROI - Initiate Checkout auto-detection */
+(function(){
+  function fireIC(){
+    if(window._groi_ic_fired) return;
+    window._groi_ic_fired = true;
+    fbq('track', 'InitiateCheckout');
+    setTimeout(function(){ window._groi_ic_fired = false; }, 3000);
+  }
+  function checkEl(el){
+    if(!el) return false;
+    var txt = (el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || '').toLowerCase();
+    return txt.indexOf('${icButtonText.toLowerCase()}') > -1;
+  }
+  document.addEventListener('click', function(e){
+    var el = e.target;
+    for(var i = 0; i < 5; i++){
+      if(!el) break;
+      if(checkEl(el)){ fireIC(); break; }
+      el = el.parentElement;
+    }
+  }, true);
+  /* Also detect navigation to checkout URL */
+  var _pushState = history.pushState;
+  history.pushState = function(){
+    _pushState.apply(history, arguments);
+    if(location.href.indexOf('checkout') > -1 || location.href.indexOf('order') > -1){ fireIC(); }
+  };
+  window.addEventListener('popstate', function(){
+    if(location.href.indexOf('checkout') > -1 || location.href.indexOf('order') > -1){ fireIC(); }
+  });
+})();` : '';
+
   const generatedCode = `<!-- Gerencia ROI - Meta Pixel -->
 <script>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -241,7 +276,7 @@ n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
 document,'script','https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '${generatedPixelId}');
-fbq('track', 'PageView');
+fbq('track', 'PageView');${icDetectionScript}
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=${generatedPixelId}&ev=PageView&noscript=1"
