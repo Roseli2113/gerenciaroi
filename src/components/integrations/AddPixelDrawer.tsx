@@ -62,8 +62,10 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
   const [pixelForm, setPixelForm] = useState<PixelFormState>({ pixelId: '', token: '', apelido: '' });
   const [showPixelForm, setShowPixelForm] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [generatedPixelId, setGeneratedPixelId] = useState('');
   const wasOpenRef = useRef(false);
+
+  // Always derive pixel ID from confirmed meta pixels — never from state or UUID
+  const generatedPixelId = metaPixels.length > 0 ? metaPixels[0].pixelId : '';
   const isEditing = !!editingPixelId;
 
   // Only reset/load when drawer transitions from closed → open
@@ -108,10 +110,7 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
             confirmed: true,
           }));
           setMetaPixels(mapped);
-          // Use the real Meta Pixel ID from database, never a derived UUID
-          if (mapped.length > 0) {
-            setGeneratedPixelId(mapped[0].pixelId);
-          }
+          // metaPixels state now drives generatedPixelId automatically
         }
       })();
     } else if (!editingPixelId) {
@@ -128,7 +127,7 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
       setPurchaseValueType('sale_value');
       setPurchaseProduct('any');
       setIpConfig('ipv6_ipv4');
-      setGeneratedPixelId('');
+      // generatedPixelId is derived from metaPixels automatically
       setShowPixelForm(false);
     }
   }, [open, editingPixelId, user]);
@@ -216,10 +215,7 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
         if (metaError) throw metaError;
       }
 
-      // Use ONLY the real Meta Pixel ID — never derive from internal UUID
-      if (metaPixels.length > 0) {
-        setGeneratedPixelId(metaPixels[0].pixelId);
-      }
+      // generatedPixelId is derived from metaPixels automatically
       if (!isEditing) {
         setShowSuccessDialog(true);
       }
