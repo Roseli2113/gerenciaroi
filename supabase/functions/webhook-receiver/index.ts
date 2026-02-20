@@ -154,7 +154,7 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
     webhook_id: webhookId,
     platform: platform,
     raw_data: payload,
-    created_at: new Date().toISOString(),
+    // Let the database set created_at with now() to ensure correct UTC timestamp
   }
 
   // Parse based on platform
