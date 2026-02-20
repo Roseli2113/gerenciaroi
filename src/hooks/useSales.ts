@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -28,6 +28,10 @@ export function useSales(filters?: SalesFilters) {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Keep latest filters in a ref so refreshSales() always uses current filters
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -36,8 +40,10 @@ export function useSales(filters?: SalesFilters) {
     getUser();
   }, []);
 
-  const fetchSales = useCallback(async () => {
+  const fetchSales = useCallback(async (activeFilters?: SalesFilters) => {
     if (!userId) return;
+
+    const f = activeFilters ?? filtersRef.current;
 
     try {
       setLoading(true);
@@ -47,20 +53,20 @@ export function useSales(filters?: SalesFilters) {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status);
+      if (f?.status && f.status !== 'all') {
+        query = query.eq('status', f.status);
       }
 
-      if (filters?.platform && filters.platform !== 'all') {
-        query = query.eq('platform', filters.platform);
+      if (f?.platform && f.platform !== 'all') {
+        query = query.eq('platform', f.platform);
       }
 
-      if (filters?.startDate) {
-        query = query.gte('created_at', filters.startDate.toISOString());
+      if (f?.startDate) {
+        query = query.gte('created_at', f.startDate.toISOString());
       }
 
-      if (filters?.endDate) {
-        query = query.lte('created_at', filters.endDate.toISOString());
+      if (f?.endDate) {
+        query = query.lte('created_at', f.endDate.toISOString());
       }
 
       const { data, error } = await query;
@@ -73,13 +79,20 @@ export function useSales(filters?: SalesFilters) {
     } finally {
       setLoading(false);
     }
-  }, [userId, filters?.status, filters?.platform, filters?.startDate, filters?.endDate]);
+  }, [userId]);
 
+  // Re-fetch whenever filters change
   useEffect(() => {
     if (userId) {
-      fetchSales();
+      fetchSales(filters);
     }
-  }, [userId, fetchSales]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, filters?.status, filters?.platform, filters?.startDate, filters?.endDate, fetchSales]);
+
+  // refreshSales() is a no-arg function safe to use as onClick handler
+  const refreshSales = useCallback(() => {
+    return fetchSales(filtersRef.current);
+  }, [fetchSales]);
 
   const deleteSale = async (saleId: string) => {
     try {
@@ -132,7 +145,7 @@ export function useSales(filters?: SalesFilters) {
     sales,
     loading,
     metrics: calculateMetrics(),
-    refreshSales: fetchSales,
+    refreshSales,
     deleteSale,
   };
 }
