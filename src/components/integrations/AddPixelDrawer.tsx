@@ -234,38 +234,46 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
   };
 
   // Build the IC detection script based on the configured rule
-  const icButtonText = checkoutButtonText || 'Comprar';
   const icDetectionScript = initiateCheckoutRule === 'enabled' ? `
 /* Gerencia ROI - Initiate Checkout auto-detection */
 (function(){
+  /* Keywords that indicate a checkout URL - multilingual */
+  var IC_URL_KEYS = ['checkout','order','comprar','finalizar','pagamento','payment','pagar','carrinh','cart','basket','caja','pago','compra','purchase','buy','kasse','caisse','cassa','carrinho','pedido','thankyou','thank-you','obrigado','confirmacao','confirmation'];
+  function isCheckoutUrl(url){
+    var u = (url || '').toLowerCase();
+    for(var i=0;i<IC_URL_KEYS.length;i++){ if(u.indexOf(IC_URL_KEYS[i])>-1) return true; }
+    return false;
+  }
   function fireIC(){
     if(window._groi_ic_fired) return;
     window._groi_ic_fired = true;
     fbq('track', 'InitiateCheckout');
     setTimeout(function(){ window._groi_ic_fired = false; }, 3000);
   }
-  function checkEl(el){
-    if(!el) return false;
-    var txt = (el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || '').toLowerCase();
-    return txt.indexOf('${icButtonText.toLowerCase()}') > -1;
-  }
+  /* Detect clicks on any element whose href leads to a checkout URL */
   document.addEventListener('click', function(e){
     var el = e.target;
-    for(var i = 0; i < 5; i++){
+    for(var i=0;i<8;i++){
       if(!el) break;
-      if(checkEl(el)){ fireIC(); break; }
+      var href = el.getAttribute && (el.getAttribute('href') || el.getAttribute('action') || el.getAttribute('data-url') || '');
+      if(href && isCheckoutUrl(href)){ fireIC(); break; }
+      /* Also check if the element itself has a checkout-related class or id */
+      var cls = ((el.className || '') + ' ' + (el.id || '')).toLowerCase();
+      if(/(checkout|buy|comprar|finalizar|pagar|purchase|order|cart|basket)/i.test(cls)){ fireIC(); break; }
       el = el.parentElement;
     }
   }, true);
-  /* Also detect navigation to checkout URL */
+  /* Detect SPA navigation via pushState */
   var _pushState = history.pushState;
   history.pushState = function(){
     _pushState.apply(history, arguments);
-    if(location.href.indexOf('checkout') > -1 || location.href.indexOf('order') > -1){ fireIC(); }
+    setTimeout(function(){ if(isCheckoutUrl(location.href)) fireIC(); }, 100);
   };
   window.addEventListener('popstate', function(){
-    if(location.href.indexOf('checkout') > -1 || location.href.indexOf('order') > -1){ fireIC(); }
+    setTimeout(function(){ if(isCheckoutUrl(location.href)) fireIC(); }, 100);
   });
+  /* Detect page already on checkout on load */
+  if(isCheckoutUrl(location.href)) fireIC();
 })();` : '';
 
   const generatedCode = `<!-- Gerencia ROI - Meta Pixel -->
