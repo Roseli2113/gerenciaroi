@@ -213,7 +213,9 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
         if (metaError) throw metaError;
       }
 
-      setGeneratedPixelId(pixelId.replace(/-/g, '').slice(0, 24));
+      // Use the actual Meta Pixel ID from the first configured meta pixel
+      const firstMetaPixelId = metaPixels.length > 0 ? metaPixels[0].pixelId : pixelId.replace(/-/g, '').slice(0, 24);
+      setGeneratedPixelId(firstMetaPixelId);
       if (!isEditing) {
         setShowSuccessDialog(true);
       }
