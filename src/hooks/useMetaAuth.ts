@@ -276,7 +276,7 @@ export function useMetaAuth() {
     }
   }, [connection, user]);
 
-  const toggleAccountActive = useCallback(async (accountId: string, isActive: boolean) => {
+  const toggleAccountActive = useCallback(async (accountId: string, isActive: boolean, deactivateOthers: boolean = true) => {
     if (!user) return false;
 
     try {
@@ -288,8 +288,8 @@ export function useMetaAuth() {
 
       if (error) throw error;
       
-      // If activating, deactivate other accounts
-      if (isActive) {
+      // If activating and plan only allows one, deactivate other accounts
+      if (isActive && deactivateOthers) {
         await supabase
           .from('meta_ad_accounts')
           .update({ is_active: false })
