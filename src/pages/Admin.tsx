@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X,
+  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { toast } from '@/components/ui/sonner';
@@ -57,6 +57,8 @@ export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -183,6 +185,12 @@ export default function Admin() {
     const matchesTo = !dateTo || createdDate <= new Date(dateTo + 'T23:59:59');
     return matchesSearch && matchesFrom && matchesTo;
   });
+
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, dateFrom, dateTo]);
 
   const totalSubscribers = users.filter(u => u.plan && u.plan !== 'free').length;
   const totalActive = users.filter(u => getDisplayPlanStatus(u) === 'active' && u.plan && u.plan !== 'free' && !isSuperAdmin(u.email)).length;
@@ -326,7 +334,7 @@ export default function Admin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map(u => (
+                {paginatedUsers.map(u => (
                   <TableRow key={u.user_id}>
                     <TableCell className="font-medium text-foreground">
                       {u.display_name || '—'}
@@ -365,6 +373,24 @@ export default function Admin() {
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t border-border">
+              <span className="text-sm text-muted-foreground">
+                {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm text-foreground">{currentPage} / {totalPages}</span>
+                <Button variant="outline" size="icon" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </div>
