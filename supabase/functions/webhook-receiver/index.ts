@@ -7,6 +7,7 @@ const corsHeaders = {
 
 interface LowifyPayload {
   id?: string | number;
+  sale_id?: string;
   event?: string;
   transaction_id?: string;
   order_id?: string;
@@ -107,12 +108,38 @@ Deno.serve(async (req) => {
     // Parse the sale data based on platform
     const saleData = parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
 
-    // Insert the sale record
-    const { data: sale, error: saleError } = await supabase
-      .from('sales')
-      .insert(saleData)
-      .select()
-      .single()
+    // Try to find existing sale by transaction_id to UPDATE instead of creating duplicate
+    let sale = null
+    let saleError = null
+
+    if (saleData.transaction_id) {
+      const { data: existing } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('transaction_id', saleData.transaction_id)
+        .maybeSingle()
+
+      if (existing) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('sales')
+          .update({ status: saleData.status, raw_data: saleData.raw_data, amount: saleData.amount, payment_method: saleData.payment_method })
+          .eq('id', existing.id)
+          .select()
+          .single()
+        sale = data
+        saleError = error
+      } else {
+        const { data, error } = await supabase.from('sales').insert(saleData).select().single()
+        sale = data
+        saleError = error
+      }
+    } else {
+      const { data, error } = await supabase.from('sales').insert(saleData).select().single()
+      sale = data
+      saleError = error
+    }
 
     if (saleError) {
       console.error('Error inserting sale:', saleError)
@@ -162,7 +189,7 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
     case 'lowify':
       return {
         ...baseData,
-        transaction_id: payload.transaction_id || payload.order_id || payload.id?.toString() || null,
+        transaction_id: payload.sale_id?.toString() || payload.transaction_id || payload.order_id || payload.id?.toString() || null,
         status: mapStatus(payload.status || payload.event || 'unknown'),
         customer_name: payload.customer?.name || payload.buyer?.name || null,
         customer_email: payload.customer?.email || payload.buyer?.email || null,
@@ -179,7 +206,7 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
       // Generic parsing for unknown platforms
       return {
         ...baseData,
-        transaction_id: payload.transaction_id || payload.id?.toString() || null,
+        transaction_id: payload.sale_id?.toString() || payload.transaction_id || payload.id?.toString() || null,
         status: mapStatus(payload.status || payload.event || 'unknown'),
         customer_name: payload.customer?.name || null,
         customer_email: payload.customer?.email || null,
