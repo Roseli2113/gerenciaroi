@@ -60,6 +60,8 @@ import {
   MoreHorizontal,
   Eye,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -155,7 +157,8 @@ const Sales = () => {
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 100;
   const { sales, loading, metrics, refreshSales } = useSales({
     status: statusFilter,
     platform: platformFilter,
@@ -411,55 +414,81 @@ const Sales = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    sales.map((sale) => (
-                      <TableRow key={sale.id}>
-                        <TableCell className="font-mono text-sm">
-                          {formatDate(sale.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{sale.customer_name || '-'}</p>
-                            <p className="text-sm text-muted-foreground">{sale.customer_email || '-'}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{sale.product_name || '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {sale.platform}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(sale.status)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(getSaleAmount(sale))}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setSelectedSale(sale)}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                Ver Detalhes
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => setSaleToDelete(sale)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    (() => {
+                      const totalPages = Math.ceil(sales.length / ITEMS_PER_PAGE);
+                      const paginatedSales = sales.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+                      return (
+                        <>
+                          {paginatedSales.map((sale) => (
+                            <TableRow key={sale.id}>
+                              <TableCell className="font-mono text-sm">
+                                {formatDate(sale.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{sale.customer_name || '-'}</p>
+                                  <p className="text-sm text-muted-foreground">{sale.customer_email || '-'}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>{sale.product_name || '-'}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="capitalize">
+                                  {sale.platform}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{getStatusBadge(sale.status)}</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(getSaleAmount(sale))}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => setSelectedSale(sale)}>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      Ver Detalhes
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => setSaleToDelete(sale)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Excluir
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      );
+                    })()
                   )}
                 </TableBody>
               </Table>
             </div>
+
+            {/* Pagination */}
+            {sales.length > ITEMS_PER_PAGE && (
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-sm text-muted-foreground">
+                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, sales.length)} de {sales.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm text-foreground">{currentPage} / {Math.ceil(sales.length / ITEMS_PER_PAGE)}</span>
+                  <Button variant="outline" size="icon" disabled={currentPage === Math.ceil(sales.length / ITEMS_PER_PAGE)} onClick={() => setCurrentPage(p => p + 1)}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
