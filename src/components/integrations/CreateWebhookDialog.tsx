@@ -48,7 +48,7 @@ const PLATFORMS = [
 ];
 
 // Platforms that need a webhook URL to be provided to them (URL de conexão)
-const PLATFORMS_WITH_WEBHOOK_URL = ['Lowify', 'AdsRoi'];
+const PLATFORMS_WITH_WEBHOOK_URL = ['Lowify', 'AdsRoi', 'Logzz'];
 
 // Define platform-specific fields
 const getPlatformFields = (platform: string): { id: string; label: string; type: 'text' | 'password' | 'readonly' }[] => {
