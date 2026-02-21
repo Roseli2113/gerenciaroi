@@ -120,9 +120,8 @@ const Landing = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-3">
-            <img src={logoImg} alt="Gerencia ROI" className="w-10 h-10 rounded-lg" />
-            <span className="font-bold text-lg">Gerencia ROI</span>
+          <div className="flex items-center">
+            <img src={logoImg} alt="Gerência ROI" className="h-10 object-contain" />
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => navigate('/auth')}>
@@ -300,9 +299,8 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid sm:grid-cols-3 gap-8 mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <img src={logoImg} alt="Gerencia ROI" className="w-8 h-8 rounded-lg" />
-                <span className="font-bold">Gerencia ROI</span>
+              <div className="flex items-center mb-4">
+                <img src={logoImg} alt="Gerência ROI" className="h-8 object-contain" />
               </div>
               <p className="text-sm text-muted-foreground">
                 Gestão inteligente de campanhas de marketing digital.
