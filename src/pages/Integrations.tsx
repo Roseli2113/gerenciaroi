@@ -52,6 +52,7 @@ import { LiveTrackingScriptCard } from '@/components/integrations/LiveTrackingSc
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 interface PixelRecord {
   id: string;
@@ -66,6 +67,7 @@ export default function Integrations() {
   const { user } = useAuth();
   const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
   const { webhooks, loading: webhooksLoading, createWebhook, deleteWebhook, toggleWebhookStatus } = useWebhooks();
+  const { checkLimit } = usePlanLimits();
   const [enabledAccounts, setEnabledAccounts] = useState<Record<string, boolean>>({});
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [metaExpanded, setMetaExpanded] = useState(true);
@@ -129,6 +131,12 @@ export default function Integrations() {
 
   const toggleAccount = async (accountId: string) => {
     const newValue = !enabledAccounts[accountId];
+    
+    // If activating, check plan limit
+    if (newValue) {
+      const currentActiveCount = Object.values(enabledAccounts).filter(Boolean).length;
+      if (!checkLimit('adAccounts', currentActiveCount)) return;
+    }
     
     setTogglingIds(prev => new Set(prev).add(accountId));
     
@@ -554,7 +562,10 @@ export default function Integrations() {
                     </div>
                   ) : null}
 
-                  <Button className="gap-2" onClick={() => setWebhookDialogOpen(true)}>
+                  <Button className="gap-2" onClick={() => {
+                    if (!checkLimit('webhooks', webhooks.length)) return;
+                    setWebhookDialogOpen(true);
+                  }}>
                     <Plus className="w-4 h-4" />
                     Adicionar Webhook
                   </Button>
@@ -735,7 +746,10 @@ export default function Integrations() {
                   </div>
                 ))}
 
-                <Button className="gap-2" onClick={() => { setEditingPixelId(null); setPixelDrawerOpen(true); }}>
+                <Button className="gap-2" onClick={() => {
+                  if (!checkLimit('pixels', pixels.length)) return;
+                  setEditingPixelId(null); setPixelDrawerOpen(true);
+                }}>
                   Adicionar Pixel
                 </Button>
               </CardContent>

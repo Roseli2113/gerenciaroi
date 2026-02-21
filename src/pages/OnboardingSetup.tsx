@@ -13,6 +13,7 @@ import { CreateCredentialDialog } from '@/components/integrations/CreateCredenti
 import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
 import logoGerenciaRoi from '@/assets/Logo_gerencia_roi.png';
 import { toast } from 'sonner';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 const steps = [
   { id: 'conexao-meta', label: 'Conexão Meta' },
@@ -28,6 +29,7 @@ export default function OnboardingSetup() {
   const { isConnected, connection, connect, isLoading, toggleAccountActive, refreshAdAccounts } = useMetaAuth();
   const { createWebhook } = useWebhooks();
   const { createCredential } = useApiCredentials();
+  const { checkLimit } = usePlanLimits();
   const { user } = useAuth();
 
   const platform = (location.state as any)?.platform || 'Meta';
@@ -70,6 +72,10 @@ export default function OnboardingSetup() {
   };
 
   const handleToggleAccount = async (accountId: string, value: boolean) => {
+    if (value) {
+      const currentActiveCount = Object.values(activeAccounts).filter(Boolean).length;
+      if (!checkLimit('adAccounts', currentActiveCount)) return;
+    }
     setActiveAccounts(prev => ({ ...prev, [accountId]: value }));
     await toggleAccountActive(accountId, value);
   };
