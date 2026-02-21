@@ -14,14 +14,14 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight,
+  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight, Copy, Link2, CheckCircle2,
 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { toast } from '@/components/ui/sonner';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-
+import { useApiCredentials } from '@/hooks/useApiCredentials';
 const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
 
 interface UserProfile {
@@ -58,7 +58,9 @@ export default function Admin() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   const ITEMS_PER_PAGE = 10;
+  const { credentials } = useApiCredentials();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -249,6 +251,48 @@ export default function Admin() {
               <p className="text-2xl font-bold text-success">R$ {totalRevenue.toFixed(2).replace('.', ',')}</p>
             </div>
           </div>
+        </div>
+
+        {/* Payment Webhook URL */}
+        <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-primary/20">
+              <Link2 className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Webhook de Pagamento</h3>
+              <p className="text-sm text-muted-foreground">Configure esta URL no AdsROI para atualizar planos automaticamente</p>
+            </div>
+          </div>
+          {credentials.length > 0 ? (
+            <div className="space-y-2">
+              {credentials.filter(c => c.status === 'active').map(cred => {
+                const webhookUrl = `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/payment-webhook?token=${cred.token}`;
+                return (
+                  <div key={cred.id} className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-muted p-3 rounded-lg break-all text-foreground font-mono">
+                      {webhookUrl}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(webhookUrl);
+                        setCopiedUrl(true);
+                        toast.success('URL copiada!');
+                        setTimeout(() => setCopiedUrl(false), 2000);
+                      }}
+                      title="Copiar URL"
+                    >
+                      {copiedUrl ? <CheckCircle2 className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhuma credencial ativa. Crie uma credencial na página de <a href="/integrations" className="text-primary underline">Integrações</a> primeiro.</p>
+          )}
         </div>
 
         {/* Add Admin Section */}
