@@ -69,6 +69,9 @@ export default function Admin() {
     setLoading(false);
   };
 
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, dateFrom, dateTo]);
+
   useEffect(() => {
     if (isAdmin) fetchUsers();
   }, [isAdmin]);
@@ -189,8 +192,8 @@ export default function Admin() {
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, dateFrom, dateTo]);
+
+
 
   const totalSubscribers = users.filter(u => u.plan && u.plan !== 'free').length;
   const totalActive = users.filter(u => getDisplayPlanStatus(u) === 'active' && u.plan && u.plan !== 'free' && !isSuperAdmin(u.email)).length;
