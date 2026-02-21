@@ -206,7 +206,7 @@ export default function Admin() {
   const totalEnterprise = users.filter(u => u.plan === 'enterprise' || isSuperAdmin(u.email)).length;
   const totalStarter = users.filter(u => u.plan === 'starter').length;
 
-  const planPrices: Record<string, number> = { starter: 49.90, profissional: 99.90, enterprise: 199.90 };
+  const planPrices: Record<string, number> = { starter: 27, profissional: 67, enterprise: 147 };
   const totalRevenue = users.reduce((acc, u) => {
     if (isSuperAdmin(u.email)) return acc;
     if (u.plan_status === 'active' && u.plan && planPrices[u.plan]) {
