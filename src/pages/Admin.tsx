@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign,
+  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X,
 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { toast } from '@/components/ui/sonner';
@@ -54,6 +54,9 @@ export default function Admin() {
   const [addingAdmin, setAddingAdmin] = useState(false);
   const [changePlanUser, setChangePlanUser] = useState<UserProfile | null>(null);
   const [selectedPlan, setSelectedPlan] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -169,6 +172,18 @@ export default function Admin() {
     }
   };
 
+  const filteredUsers = users.filter(u => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q || 
+      (u.display_name?.toLowerCase().includes(q)) ||
+      (u.email?.toLowerCase().includes(q)) ||
+      (u.phone?.includes(q));
+    const createdDate = new Date(u.created_at);
+    const matchesFrom = !dateFrom || createdDate >= new Date(dateFrom);
+    const matchesTo = !dateTo || createdDate <= new Date(dateTo + 'T23:59:59');
+    return matchesSearch && matchesFrom && matchesTo;
+  });
+
   const totalSubscribers = users.filter(u => u.plan && u.plan !== 'free').length;
   const totalActive = users.filter(u => getDisplayPlanStatus(u) === 'active' && u.plan && u.plan !== 'free' && !isSuperAdmin(u.email)).length;
   const totalExpired = users.filter(u => u.plan_status === 'overdue').length;
@@ -264,8 +279,34 @@ export default function Admin() {
 
         {/* Users Table */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="text-lg font-semibold text-foreground">Usuários ({users.length})</h3>
+          <div className="p-4 border-b border-border space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">Usuários ({filteredUsers.length})</h3>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, email ou celular..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2 items-center">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">De</span>
+                  <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[150px]" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Até</span>
+                  <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[150px]" />
+                </div>
+                {(searchQuery || dateFrom || dateTo) && (
+                  <Button variant="ghost" size="icon" onClick={() => { setSearchQuery(''); setDateFrom(''); setDateTo(''); }} title="Limpar filtros" className="mt-4">
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -285,7 +326,7 @@ export default function Admin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map(u => (
+                {filteredUsers.map(u => (
                   <TableRow key={u.user_id}>
                     <TableCell className="font-medium text-foreground">
                       {u.display_name || '—'}
