@@ -580,12 +580,19 @@ const Campaigns = () => {
             <TableRow className="border-border hover:bg-transparent">
               <TableHead className="w-[48px] sticky left-0 bg-[#384157] z-20 border-r border-border">
                 <Checkbox 
-                  checked={displayData.length > 0 && selectedItems.length === displayData.length}
+                  checked={displayData.length > 0 && (
+                    activeTab === 'campanhas' ? selectedCampaignIds.length === displayData.length :
+                    activeTab === 'conjuntos' ? selectedAdSetIds.length === displayData.length :
+                    selectedItems.length === displayData.length
+                  )}
                   onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedItems(displayData.map(item => item.id));
+                    if (activeTab === 'campanhas') {
+                      setSelectedCampaignIds(checked ? displayData.map(item => item.id) : []);
+                      setSelectedAdSetIds([]);
+                    } else if (activeTab === 'conjuntos') {
+                      setSelectedAdSetIds(checked ? displayData.map(item => item.id) : []);
                     } else {
-                      setSelectedItems([]);
+                      setSelectedItems(checked ? displayData.map(item => item.id) : []);
                     }
                   }}
                 />
@@ -610,7 +617,11 @@ const Campaigns = () => {
           </TableHeader>
           <TableBody>
             {displayData.map((item) => {
-              const isSelected = selectedItems.includes(item.id);
+              const isSelected = activeTab === 'campanhas' 
+                ? selectedCampaignIds.includes(item.id)
+                : activeTab === 'conjuntos'
+                ? selectedAdSetIds.includes(item.id)
+                : selectedItems.includes(item.id);
               
               return (
                 <TableRow 
@@ -628,11 +639,17 @@ const Campaigns = () => {
                     <Checkbox 
                       checked={isSelected} 
                       onCheckedChange={() => {
-                        setSelectedItems(prev => 
-                          prev.includes(item.id) 
-                            ? prev.filter(id => id !== item.id) 
-                            : [...prev, item.id]
-                        );
+                        if (activeTab === 'campanhas') {
+                          handleSelectCampaign(item.id);
+                        } else if (activeTab === 'conjuntos') {
+                          handleSelectAdSet(item.id);
+                        } else {
+                          setSelectedItems(prev => 
+                            prev.includes(item.id) 
+                              ? prev.filter(id => id !== item.id) 
+                              : [...prev, item.id]
+                          );
+                        }
                       }}
                       onClick={(e) => e.stopPropagation()}
                     />
