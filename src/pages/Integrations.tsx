@@ -420,6 +420,11 @@ export default function Integrations() {
                               </p>
                             </div>
                             
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs text-muted-foreground">
+                                Contas ativas: {Object.values(enabledAccounts).filter(Boolean).length}/{limits.adAccounts === Infinity ? '∞' : limits.adAccounts}
+                              </p>
+                            </div>
                             <div className="space-y-2">
                               {connection.adAccounts.map((account) => {
                                 const status = getAccountStatusLabel(account.account_status);
