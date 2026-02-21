@@ -108,10 +108,12 @@ Deno.serve(async (req) => {
     // Parse the sale data based on platform
     const saleData = parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
 
-    // Try to find existing sale by transaction_id to UPDATE instead of creating duplicate
+    // Try to find existing sale to UPDATE instead of creating duplicate
     let sale = null
     let saleError = null
+    let existingId: string | null = null
 
+    // 1. Try matching by transaction_id
     if (saleData.transaction_id) {
       const { data: existing } = await supabase
         .from('sales')
@@ -119,22 +121,41 @@ Deno.serve(async (req) => {
         .eq('user_id', userId)
         .eq('transaction_id', saleData.transaction_id)
         .maybeSingle()
+      if (existing) existingId = existing.id
+    }
 
-      if (existing) {
-        // Update existing record
-        const { data, error } = await supabase
-          .from('sales')
-          .update({ status: saleData.status, raw_data: saleData.raw_data, amount: saleData.amount, payment_method: saleData.payment_method })
-          .eq('id', existing.id)
-          .select()
-          .single()
-        sale = data
-        saleError = error
-      } else {
-        const { data, error } = await supabase.from('sales').insert(saleData).select().single()
-        sale = data
-        saleError = error
-      }
+    // 2. Fallback: match by customer_email + product_id within last 30 min (handles test events with different IDs)
+    if (!existingId && saleData.customer_email && saleData.product_id) {
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      const { data: existing } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('customer_email', saleData.customer_email)
+        .eq('product_id', saleData.product_id)
+        .gte('created_at', thirtyMinAgo)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (existing) existingId = existing.id
+    }
+
+    if (existingId) {
+      // Update existing record (status change)
+      const { data, error } = await supabase
+        .from('sales')
+        .update({
+          status: saleData.status,
+          raw_data: saleData.raw_data,
+          amount: saleData.amount,
+          payment_method: saleData.payment_method,
+          transaction_id: saleData.transaction_id,
+        })
+        .eq('id', existingId)
+        .select()
+        .single()
+      sale = data
+      saleError = error
     } else {
       const { data, error } = await supabase.from('sales').insert(saleData).select().single()
       sale = data
