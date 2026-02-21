@@ -197,18 +197,24 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
 function mapStatus(status: string): string {
   const statusLower = status.toLowerCase()
   
-  // Map common status variations
-  if (['approved', 'paid', 'confirmed', 'purchase', 'sale'].some(s => statusLower.includes(s))) {
-    return 'approved'
-  }
-  if (['pending', 'waiting', 'awaiting'].some(s => statusLower.includes(s))) {
+  // IMPORTANT: Check negative/intermediate statuses FIRST to avoid false positives
+  // e.g. "waiting_payment" contains no approved keywords but must map to pending
+  if (['pending', 'waiting', 'awaiting', 'waiting_payment', 'pix_pending'].some(s => statusLower.includes(s))) {
     return 'pending'
   }
-  if (['refunded', 'refund', 'chargeback'].some(s => statusLower.includes(s))) {
+  if (['refunded', 'refund', 'chargeback', 'chargedback', 'dispute'].some(s => statusLower.includes(s))) {
     return 'refunded'
   }
-  if (['cancelled', 'canceled', 'expired'].some(s => statusLower.includes(s))) {
+  if (['cancelled', 'canceled', 'expired', 'abandoned'].some(s => statusLower.includes(s))) {
     return 'cancelled'
+  }
+  // Only map to approved if none of the above matched
+  if (['approved', 'paid', 'confirmed', 'completed'].some(s => statusLower.includes(s))) {
+    return 'approved'
+  }
+  // Generic event names like "purchase" or "sale" default to approved
+  if (['purchase', 'sale'].some(s => statusLower.includes(s))) {
+    return 'approved'
   }
   
   return statusLower
