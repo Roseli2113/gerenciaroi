@@ -15,6 +15,7 @@ const plansList = [
     price: 0,
     description: 'Teste grátis por 14 dias',
     icon: Zap,
+    checkoutUrl: null as string | null,
     features: [
       '1 Dashboard',
       '1 Conta de Anúncio',
@@ -33,6 +34,7 @@ const plansList = [
     price: 27,
     description: 'Para quem está começando',
     icon: Zap,
+    checkoutUrl: 'https://adsroi.com.br/checkout/cEKD6a?offer=offer-1771698608846&aff=[ID_AFILIADO]',
     features: [
       '1 Dashboard',
       '1 conta de anúncio',
@@ -52,6 +54,7 @@ const plansList = [
     description: 'Recomendado para quem já possui uma operação.',
     icon: Crown,
     popular: true,
+    checkoutUrl: 'https://adsroi.com.br/checkout/cEKD6a?offer=offer-1771698186014&aff=[ID_AFILIADO]',
     features: [
       '3 Dashboard',
       '3 conta de anúncio',
@@ -70,6 +73,7 @@ const plansList = [
     price: 147,
     description: 'Recomendado para quem já é um monstro da escala.',
     icon: Rocket,
+    checkoutUrl: 'https://adsroi.com.br/checkout/cEKD6a?offer=offer-1771698238795&aff=[ID_AFILIADO]',
     features: [
       'Dashboards ILIMITADOS',
       'Contas de Anúncio ILIMITADAS',
@@ -246,7 +250,13 @@ const Landing = () => {
                   <Button
                     className="w-full"
                     variant={plan.popular ? 'default' : 'outline'}
-                    onClick={() => navigate('/auth')}
+                    onClick={() => {
+                      if (plan.checkoutUrl) {
+                        window.open(plan.checkoutUrl, '_blank');
+                      } else {
+                        navigate('/auth');
+                      }
+                    }}
                   >
                     {plan.price === 0 ? 'Começar Grátis' : 'Escolher Plano'}
                   </Button>
