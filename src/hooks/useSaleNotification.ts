@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import logoImg from '@/assets/Logo_gerencia_roi.png';
 
 const SOUND_OPTIONS = [
   { id: 'cash-money', label: 'Cash Money', file: '/sounds/cash-money.mp3' },
@@ -17,6 +18,7 @@ export function useSaleNotification() {
   const { user } = useAuth();
   const [selectedSound, setSelectedSound] = useState<SoundId>('cash-money');
   const [enabled, setEnabled] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(() => Notification.permission === 'granted');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const knownSalesRef = useRef<Set<string>>(new Set());
   const initialLoadDone = useRef(false);
@@ -55,6 +57,23 @@ export function useSaleNotification() {
       .update({ notification_sound: soundId })
       .eq('user_id', user.id);
   };
+
+  const requestPushPermission = useCallback(async () => {
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') { setPushEnabled(true); return true; }
+    if (Notification.permission === 'denied') return false;
+    const result = await Notification.requestPermission();
+    const granted = result === 'granted';
+    setPushEnabled(granted);
+    return granted;
+  }, []);
+
+  const showBrowserNotification = useCallback((title: string, body: string) => {
+    if (Notification.permission !== 'granted') return;
+    try {
+      new Notification(title, { body, icon: logoImg, badge: logoImg, silent: true });
+    } catch { /* mobile Safari may not support */ }
+  }, []);
 
   const playSound = () => {
     if (!enabled || !audioRef.current) return;
@@ -104,13 +123,13 @@ export function useSaleNotification() {
           if (knownSalesRef.current.has(newSale.id)) return;
           knownSalesRef.current.add(newSale.id);
 
-          // Play sound and show toast
+          // Play sound and show toast + browser notification
           playSound();
           const amount = Number(newSale.amount || 0);
-          toast.success(`💰 Nova venda: R$ ${amount.toFixed(2)}`, {
-            description: newSale.customer_name || newSale.platform || 'Venda recebida!',
-            duration: 6000,
-          });
+          const title = `💰 Nova venda: R$ ${amount.toFixed(2)}`;
+          const body = newSale.customer_name || newSale.platform || 'Venda recebida!';
+          toast.success(title, { description: body, duration: 6000 });
+          showBrowserNotification(title, body);
         }
       )
       .subscribe();
@@ -118,7 +137,7 @@ export function useSaleNotification() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, enabled, selectedSound]);
+  }, [user, enabled, selectedSound, showBrowserNotification]);
 
   return {
     selectedSound,
@@ -126,6 +145,8 @@ export function useSaleNotification() {
     enabled,
     setEnabled,
     previewSound,
+    pushEnabled,
+    requestPushPermission,
     SOUND_OPTIONS,
   };
 }
