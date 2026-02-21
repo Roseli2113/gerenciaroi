@@ -13,7 +13,7 @@ import { Check, Zap, Crown, Rocket, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-
+import { format, addMonths } from 'date-fns';
 const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
 
 const plansList = [
@@ -118,6 +118,7 @@ const Subscription = () => {
   const { user } = useAuth();
   const [userPlan, setUserPlan] = useState<string>('free');
   const [planStatus, setPlanStatus] = useState<string>('active');
+  const [nextBillingDate, setNextBillingDate] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -131,13 +132,25 @@ const Subscription = () => {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('plan, plan_status')
+        .select('plan, plan_status, created_at')
         .eq('user_id', user.id)
         .single();
 
       if (profile) {
         setUserPlan(profile.plan || 'free');
         setPlanStatus(profile.plan_status || 'active');
+        
+        // Calculate next billing date based on account creation
+        if (profile.plan && profile.plan !== 'free') {
+          const createdAt = new Date(profile.created_at);
+          const now = new Date();
+          let next = new Date(createdAt);
+          // Advance month by month until next is in the future
+          while (next <= now) {
+            next = addMonths(next, 1);
+          }
+          setNextBillingDate(format(next, 'dd/MM/yyyy'));
+        }
       }
     };
 
@@ -166,10 +179,10 @@ const Subscription = () => {
                 </div>
               </div>
               <div className="text-right">
-                {currentPlanId !== 'free' && (
+                {currentPlanId !== 'free' && nextBillingDate && (
                   <>
                     <p className="text-sm text-muted-foreground">Próxima cobrança</p>
-                    <p className="font-semibold text-foreground">05/02/2026</p>
+                    <p className="font-semibold text-foreground">{nextBillingDate}</p>
                   </>
                 )}
                 <Badge className={cn(
