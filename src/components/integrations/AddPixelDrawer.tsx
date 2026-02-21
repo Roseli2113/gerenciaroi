@@ -296,31 +296,23 @@ export function AddPixelDrawer({ open, onOpenChange, onSaved, editingPixelId }: 
   if(isCheckoutUrl(location.href))fireIC();
 })();` : '';
 
-  // Generate fbq('init') for ALL meta pixel IDs, not just the first one
-  const allPixelInits = metaPixels
-    .filter(mp => mp.pixelId && mp.pixelId.trim() !== '')
-    .map(mp => `fbq('init', '${mp.pixelId}');`)
-    .join('\n');
+  // Build fbq('init') for each registered Meta Pixel ID
+  const validPixels = metaPixels.filter(mp => mp.pixelId && mp.pixelId.trim() !== '');
+  const initLines = validPixels.map(mp => `  fbq('init', '${mp.pixelId.trim()}');`).join('\n');
+  const noscriptLines = validPixels.map(mp => `<noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${mp.pixelId.trim()}&ev=PageView&noscript=1"/></noscript>`).join('\n');
 
-  const allNoscriptTags = metaPixels
-    .filter(mp => mp.pixelId && mp.pixelId.trim() !== '')
-    .map(mp => `<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=${mp.pixelId}&ev=PageView&noscript=1"
-/></noscript>`)
-    .join('\n');
-
-  const generatedCode = `<!-- Gerencia ROI - Meta Pixel -->
+  const generatedCode = `<!-- Meta Pixel Code -->
 <script>
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-document,'script','https://connect.facebook.net/en_US/fbevents.js');
-${allPixelInits}
-fbq('track', 'PageView');${icDetectionScript}
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+  document,'script','https://connect.facebook.net/en_US/fbevents.js');
+${initLines}
+  fbq('track', 'PageView');
 </script>
-${allNoscriptTags}`;
-
+${noscriptLines}
+<!-- End Meta Pixel Code -->`;
   const copyCode = () => {
     navigator.clipboard.writeText(generatedCode);
     toast.success('Código copiado!');
