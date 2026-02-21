@@ -54,6 +54,7 @@ interface MetaAd {
 export interface Campaign {
   id: string;
   name: string;
+  accountId?: string;
   status: boolean;
   rawStatus: string;
   budget: number | null;
@@ -89,6 +90,7 @@ export interface Campaign {
 export interface AdSet {
   id: string;
   name: string;
+  accountId?: string;
   status: boolean;
   rawStatus: string;
   budget: number | null;
@@ -125,6 +127,7 @@ export interface AdSet {
 export interface Ad {
   id: string;
   name: string;
+  accountId?: string;
   status: boolean;
   rawStatus: string;
   adsetId: string | null;
@@ -376,6 +379,7 @@ export function useMetaCampaigns() {
           return {
             id: campaign.id,
             name: campaign.name,
+            accountId: accountId,
             status: campaign.status === 'ACTIVE',
             rawStatus: campaign.status,
             budget: dailyBudget || lifetimeBudget,
@@ -441,6 +445,7 @@ export function useMetaCampaigns() {
           return {
             id: as.id,
             name: as.name,
+            accountId: accountId,
             status: as.status === 'ACTIVE',
             rawStatus: as.status,
             budget: dailyBudget || lifetimeBudget,
@@ -504,6 +509,7 @@ export function useMetaCampaigns() {
           return {
             id: ad.id,
             name: ad.name,
+            accountId: accountId,
             status: ad.status === 'ACTIVE',
             rawStatus: ad.status,
             adsetId: ad.adset_id || null,
