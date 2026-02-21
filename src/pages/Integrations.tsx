@@ -67,7 +67,7 @@ export default function Integrations() {
   const { user } = useAuth();
   const { isConnected, isLoading, connection, connect, disconnect, refreshAdAccounts, toggleAccountActive } = useMetaAuth();
   const { webhooks, loading: webhooksLoading, createWebhook, deleteWebhook, toggleWebhookStatus } = useWebhooks();
-  const { checkLimit } = usePlanLimits();
+  const { checkLimit, limits } = usePlanLimits();
   const [enabledAccounts, setEnabledAccounts] = useState<Record<string, boolean>>({});
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [metaExpanded, setMetaExpanded] = useState(true);
@@ -140,18 +140,22 @@ export default function Integrations() {
     
     setTogglingIds(prev => new Set(prev).add(accountId));
     
-    const success = await toggleAccountActive(accountId, newValue);
+    // Check if plan allows multiple accounts
+    const currentActiveCount = Object.values(enabledAccounts).filter(Boolean).length;
+    const allowsMultiple = limits.adAccounts > 1;
+    
+    const success = await toggleAccountActive(accountId, newValue, !allowsMultiple);
     
     if (success) {
-      // If activating, deactivate all others locally
-      if (newValue) {
+      if (newValue && !allowsMultiple) {
+        // Single account plan: deactivate all others locally
         const newState: Record<string, boolean> = {};
         Object.keys(enabledAccounts).forEach(id => {
           newState[id] = id === accountId;
         });
         setEnabledAccounts(newState);
       } else {
-        setEnabledAccounts(prev => ({ ...prev, [accountId]: false }));
+        setEnabledAccounts(prev => ({ ...prev, [accountId]: newValue }));
       }
     }
     
