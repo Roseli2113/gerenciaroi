@@ -88,7 +88,7 @@ const Campaigns = () => {
     updateCampaignBudget, updateAdSetBudget, updateCampaignName, updateAdName, updateAdSetName,
     duplicateItem, deleteItem,
     getLastUpdatedText, hasActiveAccount,
-    selectedCampaignId, selectedAdSetId, setSelectedCampaignId, setSelectedAdSetId
+    selectedCampaignIds, selectedAdSetIds, setSelectedCampaignIds, setSelectedAdSetIds
   } = useMetaCampaigns();
 
   // Load active accounts
@@ -124,15 +124,15 @@ const Campaigns = () => {
     setSelectedItems([]);
   }, [activeTab]);
 
-  // When switching to conjuntos tab, fetch adsets for selected campaign
+  // When switching to conjuntos tab, fetch adsets; when switching to anuncios, fetch ads
   useEffect(() => {
     if (activeTab === 'conjuntos' && hasActiveAccount) {
-      fetchAdSets(selectedCampaignId || undefined);
+      fetchAdSets();
     }
     if (activeTab === 'anuncios' && hasActiveAccount) {
-      fetchAds(selectedAdSetId || undefined);
+      fetchAds();
     }
-  }, [activeTab, hasActiveAccount, fetchAdSets, fetchAds, selectedCampaignId, selectedAdSetId]);
+  }, [activeTab, hasActiveAccount, fetchAdSets, fetchAds]);
 
   const handleToggleStatus = async (id: string, currentStatus: boolean, type: 'campaign' | 'adset' | 'ad') => {
     setTogglingIds(prev => new Set(prev).add(id));
@@ -143,12 +143,16 @@ const Campaigns = () => {
   };
 
   const handleSelectCampaign = (campaignId: string) => {
-    setSelectedCampaignId(campaignId === selectedCampaignId ? null : campaignId);
-    setSelectedAdSetId(null); // Reset adset selection when campaign changes
+    setSelectedCampaignIds(prev => 
+      prev.includes(campaignId) ? prev.filter(id => id !== campaignId) : [...prev, campaignId]
+    );
+    setSelectedAdSetIds([]); // Reset adset selection when campaign selection changes
   };
 
   const handleSelectAdSet = (adsetId: string) => {
-    setSelectedAdSetId(adsetId === selectedAdSetId ? null : adsetId);
+    setSelectedAdSetIds(prev =>
+      prev.includes(adsetId) ? prev.filter(id => id !== adsetId) : [...prev, adsetId]
+    );
   };
 
   const formatCurrency = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
@@ -205,14 +209,16 @@ const Campaigns = () => {
 
   // Get filtered data based on selection
   const getFilteredAdSets = () => {
-    let filtered = selectedCampaignId ? adSets.filter(as => as.campaignId === selectedCampaignId) : adSets;
-    // Only show ad sets with actual spend
+    let filtered = selectedCampaignIds.length > 0 
+      ? adSets.filter(as => as.campaignId && selectedCampaignIds.includes(as.campaignId)) 
+      : adSets;
     return filtered.filter(as => as.spent > 0);
   };
 
   const getFilteredAds = () => {
-    let filtered = selectedAdSetId ? ads.filter(ad => ad.adsetId === selectedAdSetId) : ads;
-    // Only show ads with actual spend
+    let filtered = selectedAdSetIds.length > 0 
+      ? ads.filter(ad => ad.adsetId && selectedAdSetIds.includes(ad.adsetId)) 
+      : ads;
     return filtered.filter(ad => ad.spent > 0);
   };
 
@@ -557,10 +563,10 @@ const Campaigns = () => {
         <div className="flex flex-col items-center justify-center py-16">
           <LayoutGrid className="w-12 h-12 text-muted-foreground mb-3" />
           <p className="text-muted-foreground">
-            {activeTab === 'conjuntos' && selectedCampaignId 
-              ? 'Nenhum conjunto encontrado para esta campanha' 
-              : activeTab === 'anuncios' && selectedAdSetId
-              ? 'Nenhum anúncio encontrado para este conjunto'
+            {activeTab === 'conjuntos' && selectedCampaignIds.length > 0 
+              ? 'Nenhum conjunto encontrado para as campanhas selecionadas' 
+              : activeTab === 'anuncios' && selectedAdSetIds.length > 0
+              ? 'Nenhum anúncio encontrado para os conjuntos selecionados'
               : 'Nenhum item com gastos hoje'}
           </p>
         </div>
@@ -936,12 +942,12 @@ const Campaigns = () => {
             <TabsTrigger value="conjuntos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
               <LayoutGrid className="w-4 h-4" />
               Conjuntos
-              {selectedCampaignId && <Badge variant="secondary" className="ml-1 text-xs">Filtrado</Badge>}
+              {selectedCampaignIds.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">Filtrado ({selectedCampaignIds.length})</Badge>}
             </TabsTrigger>
             <TabsTrigger value="anuncios" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
               <FileText className="w-4 h-4" />
               Anúncios
-              {selectedAdSetId && <Badge variant="secondary" className="ml-1 text-xs">Filtrado</Badge>}
+              {selectedAdSetIds.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">Filtrado ({selectedAdSetIds.length})</Badge>}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -981,16 +987,16 @@ const Campaigns = () => {
             ) : (
               <Badge className="bg-success text-success-foreground border-0">✓ Todas as vendas trackeadas</Badge>
             )}
-            {selectedCampaignId && activeTab === 'conjuntos' && (
+            {selectedCampaignIds.length > 0 && activeTab === 'conjuntos' && (
               <Badge variant="outline" className="gap-1">
-                Campanha selecionada
-                <button onClick={() => setSelectedCampaignId(null)} className="ml-1 hover:text-destructive">×</button>
+                {selectedCampaignIds.length} campanha{selectedCampaignIds.length > 1 ? 's' : ''} selecionada{selectedCampaignIds.length > 1 ? 's' : ''}
+                <button onClick={() => setSelectedCampaignIds([])} className="ml-1 hover:text-destructive">×</button>
               </Badge>
             )}
-            {selectedAdSetId && activeTab === 'anuncios' && (
+            {selectedAdSetIds.length > 0 && activeTab === 'anuncios' && (
               <Badge variant="outline" className="gap-1">
-                Conjunto selecionado
-                <button onClick={() => setSelectedAdSetId(null)} className="ml-1 hover:text-destructive">×</button>
+                {selectedAdSetIds.length} conjunto{selectedAdSetIds.length > 1 ? 's' : ''} selecionado{selectedAdSetIds.length > 1 ? 's' : ''}
+                <button onClick={() => setSelectedAdSetIds([])} className="ml-1 hover:text-destructive">×</button>
               </Badge>
             )}
           </div>
