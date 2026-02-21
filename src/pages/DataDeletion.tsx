@@ -1,10 +1,48 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Mail, ShieldCheck, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Trash2, Mail, ShieldCheck, AlertTriangle, ArrowLeft, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import logoImg from '@/assets/Logo_gerencia_roi.png';
 
 const DataDeletion = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      // Delete user data from all tables
+      await supabase.from('rule_execution_logs').delete().eq('user_id', user.id);
+      await supabase.from('automation_rules').delete().eq('user_id', user.id);
+      await supabase.from('sales').delete().eq('user_id', user.id);
+      await supabase.from('webhooks').delete().eq('user_id', user.id);
+      await supabase.from('api_credentials').delete().eq('user_id', user.id);
+      await supabase.from('pixel_meta_ids').delete().eq('user_id', user.id);
+      await supabase.from('pixels').delete().eq('user_id', user.id);
+      await supabase.from('meta_ad_accounts').delete().eq('user_id', user.id);
+      await supabase.from('meta_connections').delete().eq('user_id', user.id);
+      await supabase.from('dashboard_layouts').delete().eq('user_id', user.id);
+      await supabase.from('integration_tests').delete().eq('user_id', user.id);
+      await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
+      await supabase.from('profiles').delete().eq('user_id', user.id);
+      await supabase.auth.signOut();
+      toast.success('Seus dados foram excluídos com sucesso.');
+      navigate('/landing');
+    } catch (err) {
+      toast.error('Erro ao excluir dados. Tente novamente ou entre em contato pelo e-mail.');
+    } finally {
+      setDeleting(false);
+      setShowConfirm(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
@@ -142,6 +180,42 @@ const DataDeletion = () => {
             </p>
           </CardContent>
         </Card>
+
+        {/* Delete button */}
+        {user && (
+          <Card className="mb-8 border-destructive/30">
+            <CardContent className="pt-6 text-center space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Você está logado como <strong>{user.email}</strong>. Clique abaixo para excluir permanentemente todos os seus dados.
+              </p>
+              <Button variant="destructive" className="gap-2" onClick={() => setShowConfirm(true)}>
+                <Trash2 className="w-4 h-4" />
+                Excluir minha conta e dados
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Confirm dialog */}
+        <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar exclusão permanente</DialogTitle>
+              <DialogDescription>
+                Todos os seus dados serão excluídos permanentemente e você será desconectado. Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setShowConfirm(false)} disabled={deleting}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteAccount} disabled={deleting} className="gap-2">
+                {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {deleting ? 'Excluindo...' : 'Sim, excluir tudo'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Contact */}
         <div className="text-center space-y-4">
