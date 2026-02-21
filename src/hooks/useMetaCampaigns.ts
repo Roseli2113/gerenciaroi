@@ -296,14 +296,15 @@ export function useMetaCampaigns() {
   const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
   const [isLoadingAds, setIsLoadingAds] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [activeAccountIds, setActiveAccountIds] = useState<string[]>([]);
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
   const [selectedAdSetIds, setSelectedAdSetIds] = useState<string[]>([]);
 
-  // Load active account and access token
+  // Load active accounts and access token
   useEffect(() => {
-    const loadActiveAccount = async () => {
+    const loadActiveAccounts = async () => {
       if (!user) return;
 
       try {
@@ -317,69 +318,76 @@ export function useMetaCampaigns() {
           setAccessToken(connection.access_token);
         }
 
-        const { data: activeAccount } = await supabase
+        const { data: activeAccounts } = await supabase
           .from('meta_ad_accounts')
           .select('account_id')
           .eq('user_id', user.id)
-          .eq('is_active', true)
-          .maybeSingle();
+          .eq('is_active', true);
 
-        if (activeAccount) {
-          setActiveAccountId(activeAccount.account_id);
+        if (activeAccounts && activeAccounts.length > 0) {
+          const ids = activeAccounts.map(a => a.account_id);
+          setActiveAccountIds(ids);
+          setActiveAccountId(ids[0]); // Keep first for backward compat
         }
       } catch (err) {
-        console.error('Error loading active account:', err);
+        console.error('Error loading active accounts:', err);
       }
     };
 
-    loadActiveAccount();
+    loadActiveAccounts();
   }, [user]);
 
   const fetchCampaigns = useCallback(async () => {
-    if (!accessToken || !activeAccountId) return;
+    if (!accessToken || activeAccountIds.length === 0) return;
 
     setIsLoading(true);
     try {
-      const { data: campaignsData, error: campaignsError } = await supabase.functions.invoke('meta-ads', {
-        body: { action: 'get-campaigns', accessToken, adAccountId: activeAccountId }
-      });
+      // Fetch campaigns from all active accounts in parallel
+      const allCampaigns: Campaign[] = [];
 
-      if (campaignsError || campaignsData?.error) {
-        throw new Error(campaignsData?.error || campaignsError?.message);
-      }
-
-      const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-        body: { action: 'get-campaign-insights', accessToken, adAccountId: activeAccountId, dateRange: 'today' }
-      });
-
-      const insightsMap = new Map<string, CampaignInsight>();
-      if (insightsData?.insights) {
-        insightsData.insights.forEach((insight: CampaignInsight) => {
-          insightsMap.set(insight.campaign_id, insight);
+      await Promise.all(activeAccountIds.map(async (accountId) => {
+        const { data: campaignsData, error: campaignsError } = await supabase.functions.invoke('meta-ads', {
+          body: { action: 'get-campaigns', accessToken, adAccountId: accountId }
         });
-      }
 
-      const mergedCampaigns: Campaign[] = (campaignsData.campaigns || []).map((campaign: MetaCampaign) => {
-        const insight = insightsMap.get(campaign.id);
-        const metrics = parseMetrics(insight || null);
-        
-        const dailyBudget = campaign.daily_budget ? parseFloat(campaign.daily_budget) / 100 : null;
-        const lifetimeBudget = campaign.lifetime_budget ? parseFloat(campaign.lifetime_budget) / 100 : null;
+        if (campaignsError || campaignsData?.error) {
+          console.error(`Error fetching campaigns for ${accountId}:`, campaignsData?.error || campaignsError?.message);
+          return;
+        }
 
-        return {
-          id: campaign.id,
-          name: campaign.name,
-          status: campaign.status === 'ACTIVE',
-          rawStatus: campaign.status,
-          budget: dailyBudget || lifetimeBudget,
-          budgetType: dailyBudget ? 'daily' : lifetimeBudget ? 'total' : null,
-          ...metrics
-        };
-      });
+        const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
+          body: { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: 'today' }
+        });
 
-      // Filter and sort: only show campaigns with impressions/spent, active first
-      // Keep filtering for campaigns to avoid showing empty ones
-      const filteredAndSorted = sortByStatusAndImpressions(filterWithImpressions(mergedCampaigns));
+        const insightsMap = new Map<string, CampaignInsight>();
+        if (insightsData?.insights) {
+          insightsData.insights.forEach((insight: CampaignInsight) => {
+            insightsMap.set(insight.campaign_id, insight);
+          });
+        }
+
+        const mergedCampaigns: Campaign[] = (campaignsData.campaigns || []).map((campaign: MetaCampaign) => {
+          const insight = insightsMap.get(campaign.id);
+          const metrics = parseMetrics(insight || null);
+          
+          const dailyBudget = campaign.daily_budget ? parseFloat(campaign.daily_budget) / 100 : null;
+          const lifetimeBudget = campaign.lifetime_budget ? parseFloat(campaign.lifetime_budget) / 100 : null;
+
+          return {
+            id: campaign.id,
+            name: campaign.name,
+            status: campaign.status === 'ACTIVE',
+            rawStatus: campaign.status,
+            budget: dailyBudget || lifetimeBudget,
+            budgetType: dailyBudget ? 'daily' : lifetimeBudget ? 'total' : null,
+            ...metrics
+          };
+        });
+
+        allCampaigns.push(...mergedCampaigns);
+      }));
+
+      const filteredAndSorted = sortByStatusAndImpressions(filterWithImpressions(allCampaigns));
       setCampaigns(filteredAndSorted);
       setLastUpdated(new Date());
     } catch (err) {
@@ -388,62 +396,70 @@ export function useMetaCampaigns() {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, activeAccountId]);
+  }, [accessToken, activeAccountIds]);
 
   useEffect(() => {
-    if (accessToken && activeAccountId) {
+    if (accessToken && activeAccountIds.length > 0) {
       fetchCampaigns();
     }
-  }, [accessToken, activeAccountId, fetchCampaigns]);
+  }, [accessToken, activeAccountIds, fetchCampaigns]);
 
   const fetchAdSets = useCallback(async (campaignIdFilter?: string) => {
-    if (!accessToken || !activeAccountId) return;
+    if (!accessToken || activeAccountIds.length === 0) return;
 
     setIsLoadingAdSets(true);
     try {
-      const { data, error } = await supabase.functions.invoke('meta-ads', {
-        body: { action: 'get-adsets', accessToken, adAccountId: activeAccountId }
-      });
+      const allAdSets: AdSet[] = [];
 
-      if (error || data?.error) throw new Error(data?.error || error?.message);
+      await Promise.all(activeAccountIds.map(async (accountId) => {
+        const { data, error } = await supabase.functions.invoke('meta-ads', {
+          body: { action: 'get-adsets', accessToken, adAccountId: accountId }
+        });
 
-      const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-        body: { action: 'get-adset-insights', accessToken, adAccountId: activeAccountId, dateRange: 'today' }
-      });
+        if (error || data?.error) {
+          console.error(`Error fetching adsets for ${accountId}:`, data?.error || error?.message);
+          return;
+        }
 
-      const insightsMap = new Map();
-      if (insightsData?.insights) {
-        insightsData.insights.forEach((i: { adset_id: string } & Omit<CampaignInsight, 'campaign_id'>) =>
-          insightsMap.set(i.adset_id, i)
-        );
-      }
+        const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
+          body: { action: 'get-adset-insights', accessToken, adAccountId: accountId, dateRange: 'today' }
+        });
 
-      let mapped: AdSet[] = (data.adsets || []).map((as: MetaAdSet) => {
-        const insight = insightsMap.get(as.id);
-        const metrics = parseMetrics(insight || null);
-        const dailyBudget = as.daily_budget ? parseFloat(as.daily_budget) / 100 : null;
-        const lifetimeBudget = as.lifetime_budget ? parseFloat(as.lifetime_budget) / 100 : null;
+        const insightsMap = new Map();
+        if (insightsData?.insights) {
+          insightsData.insights.forEach((i: { adset_id: string } & Omit<CampaignInsight, 'campaign_id'>) =>
+            insightsMap.set(i.adset_id, i)
+          );
+        }
 
-        return {
-          id: as.id,
-          name: as.name,
-          status: as.status === 'ACTIVE',
-          rawStatus: as.status,
-          budget: dailyBudget || lifetimeBudget,
-          budgetType: dailyBudget ? 'daily' : lifetimeBudget ? 'total' : null,
-          optimizationGoal: as.optimization_goal || null,
-          campaignId: as.campaign_id || null,
-          ...metrics
-        };
-      });
+        const mapped: AdSet[] = (data.adsets || []).map((as: MetaAdSet) => {
+          const insight = insightsMap.get(as.id);
+          const metrics = parseMetrics(insight || null);
+          const dailyBudget = as.daily_budget ? parseFloat(as.daily_budget) / 100 : null;
+          const lifetimeBudget = as.lifetime_budget ? parseFloat(as.lifetime_budget) / 100 : null;
 
-      // Filter by campaign if specified
+          return {
+            id: as.id,
+            name: as.name,
+            status: as.status === 'ACTIVE',
+            rawStatus: as.status,
+            budget: dailyBudget || lifetimeBudget,
+            budgetType: dailyBudget ? 'daily' : lifetimeBudget ? 'total' : null,
+            optimizationGoal: as.optimization_goal || null,
+            campaignId: as.campaign_id || null,
+            ...metrics
+          };
+        });
+
+        allAdSets.push(...mapped);
+      }));
+
+      let result = allAdSets;
       if (campaignIdFilter) {
-        mapped = mapped.filter(as => as.campaignId === campaignIdFilter);
+        result = result.filter(as => as.campaignId === campaignIdFilter);
       }
 
-      // Sort but show ALL ad sets (no filtering) to handle duplicated sets
-      const sorted = sortByStatusAndImpressions(mapped);
+      const sorted = sortByStatusAndImpressions(result);
       setAdSets(sorted);
     } catch (err) {
       console.error('Error fetching ad sets:', err);
@@ -451,51 +467,59 @@ export function useMetaCampaigns() {
     } finally {
       setIsLoadingAdSets(false);
     }
-  }, [accessToken, activeAccountId]);
+  }, [accessToken, activeAccountIds]);
 
   const fetchAds = useCallback(async (adsetIdFilter?: string) => {
-    if (!accessToken || !activeAccountId) return;
+    if (!accessToken || activeAccountIds.length === 0) return;
 
     setIsLoadingAds(true);
     try {
-      const { data, error } = await supabase.functions.invoke('meta-ads', {
-        body: { action: 'get-ads', accessToken, adAccountId: activeAccountId }
-      });
+      const allAds: Ad[] = [];
 
-      if (error || data?.error) throw new Error(data?.error || error?.message);
+      await Promise.all(activeAccountIds.map(async (accountId) => {
+        const { data, error } = await supabase.functions.invoke('meta-ads', {
+          body: { action: 'get-ads', accessToken, adAccountId: accountId }
+        });
 
-      const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-        body: { action: 'get-ad-insights', accessToken, adAccountId: activeAccountId, dateRange: 'today' }
-      });
+        if (error || data?.error) {
+          console.error(`Error fetching ads for ${accountId}:`, data?.error || error?.message);
+          return;
+        }
 
-      const insightsMap = new Map();
-      if (insightsData?.insights) {
-        insightsData.insights.forEach((i: { ad_id: string } & Omit<CampaignInsight, 'campaign_id'>) =>
-          insightsMap.set(i.ad_id, i)
-        );
-      }
+        const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
+          body: { action: 'get-ad-insights', accessToken, adAccountId: accountId, dateRange: 'today' }
+        });
 
-      let mapped: Ad[] = (data.ads || []).map((ad: MetaAd) => {
-        const insight = insightsMap.get(ad.id);
-        const metrics = parseMetrics(insight || null);
+        const insightsMap = new Map();
+        if (insightsData?.insights) {
+          insightsData.insights.forEach((i: { ad_id: string } & Omit<CampaignInsight, 'campaign_id'>) =>
+            insightsMap.set(i.ad_id, i)
+          );
+        }
 
-        return {
-          id: ad.id,
-          name: ad.name,
-          status: ad.status === 'ACTIVE',
-          rawStatus: ad.status,
-          adsetId: ad.adset_id || null,
-          ...metrics
-        };
-      });
+        const mapped: Ad[] = (data.ads || []).map((ad: MetaAd) => {
+          const insight = insightsMap.get(ad.id);
+          const metrics = parseMetrics(insight || null);
 
-      // Filter by adset if specified
+          return {
+            id: ad.id,
+            name: ad.name,
+            status: ad.status === 'ACTIVE',
+            rawStatus: ad.status,
+            adsetId: ad.adset_id || null,
+            ...metrics
+          };
+        });
+
+        allAds.push(...mapped);
+      }));
+
+      let result = allAds;
       if (adsetIdFilter) {
-        mapped = mapped.filter(ad => ad.adsetId === adsetIdFilter);
+        result = result.filter(ad => ad.adsetId === adsetIdFilter);
       }
 
-      // Sort but show ALL ads (no filtering) to handle many ads
-      const sorted = sortByStatusAndImpressions(mapped);
+      const sorted = sortByStatusAndImpressions(result);
       setAds(sorted);
     } catch (err) {
       console.error('Error fetching ads:', err);
@@ -503,11 +527,11 @@ export function useMetaCampaigns() {
     } finally {
       setIsLoadingAds(false);
     }
-  }, [accessToken, activeAccountId]);
+  }, [accessToken, activeAccountIds]);
 
   // Refresh all data simultaneously
   const refreshAll = useCallback(async () => {
-    if (!accessToken || !activeAccountId) return;
+    if (!accessToken || activeAccountIds.length === 0) return;
     
     setIsLoading(true);
     setIsLoadingAdSets(true);
@@ -521,7 +545,7 @@ export function useMetaCampaigns() {
     
     setLastUpdated(new Date());
     toast.success('Dados atualizados!', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
-  }, [accessToken, activeAccountId, fetchCampaigns, fetchAdSets, fetchAds]);
+  }, [accessToken, activeAccountIds, fetchCampaigns, fetchAdSets, fetchAds]);
 
   const toggleCampaignStatus = useCallback(async (campaignId: string, activate: boolean) => {
     if (!accessToken) {
@@ -837,6 +861,6 @@ export function useMetaCampaigns() {
     duplicateItem,
     deleteItem,
     getLastUpdatedText,
-    hasActiveAccount: !!activeAccountId && !!accessToken
+    hasActiveAccount: activeAccountIds.length > 0 && !!accessToken
   };
 }
