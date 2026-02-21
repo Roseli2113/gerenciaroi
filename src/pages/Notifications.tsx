@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play, Trash2, BellOff } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play, Trash2, BellOff, BellRing } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +29,7 @@ interface Notification {
 
 const Notifications = () => {
   const { user } = useAuth();
-  const { selectedSound, updateSound, previewSound } = useSaleNotification();
+  const { selectedSound, updateSound, previewSound, pushEnabled, requestPushPermission } = useSaleNotification();
   const [notificationsList, setNotificationsList] = useState<Notification[]>([]);
   const [settings, setSettings] = useState({
     notify_email: true,
@@ -213,6 +213,35 @@ const Notifications = () => {
                     />
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            {/* Push Notification for Sales */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BellRing className="h-5 w-5" />
+                  Push de Vendas
+                </CardTitle>
+                <CardDescription>
+                  Receba notificações push no celular com a logo do Gerencia ROI
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pushEnabled ? (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-success/10 border border-success/30">
+                    <CheckCircle2 className="h-5 w-5 text-success" />
+                    <p className="text-sm font-medium text-success">Notificações push ativadas</p>
+                  </div>
+                ) : (
+                  <Button onClick={requestPushPermission} className="w-full gap-2">
+                    <BellRing className="h-4 w-4" />
+                    Ativar Notificações Push
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground mt-3">
+                  As notificações push funcionam mesmo com o navegador minimizado no celular.
+                </p>
               </CardContent>
             </Card>
 
