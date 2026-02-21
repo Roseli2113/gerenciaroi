@@ -274,30 +274,9 @@ const Subscription = () => {
             <CardDescription>Suas últimas transações</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                { date: '05/01/2026', amount: 67, status: 'Pago', method: 'Cartão ****4532' },
-                { date: '05/12/2025', amount: 67, status: 'Pago', method: 'Cartão ****4532' },
-                { date: '05/11/2025', amount: 67, status: 'Pago', method: 'Cartão ****4532' },
-              ].map((payment, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-xl bg-muted/30"
-                >
-                  <div>
-                    <p className="font-medium text-foreground">{payment.date}</p>
-                    <p className="text-sm text-muted-foreground">{payment.method}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-foreground">
-                      R$ {payment.amount.toFixed(2)}
-                    </p>
-                    <Badge variant="secondary" className="bg-success/20 text-success border-0">
-                      {payment.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <p className="text-muted-foreground">Nenhum pagamento registrado ainda.</p>
+              <p className="text-sm text-muted-foreground mt-1">Seu histórico de pagamentos aparecerá aqui quando houver cobranças.</p>
             </div>
           </CardContent>
         </Card>
