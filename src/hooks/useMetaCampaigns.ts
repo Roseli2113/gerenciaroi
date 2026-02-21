@@ -298,8 +298,8 @@ export function useMetaCampaigns() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const [selectedAdSetId, setSelectedAdSetId] = useState<string | null>(null);
+  const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
+  const [selectedAdSetIds, setSelectedAdSetIds] = useState<string[]>([]);
 
   // Load active account and access token
   useEffect(() => {
@@ -515,13 +515,13 @@ export function useMetaCampaigns() {
     
     await Promise.all([
       fetchCampaigns(),
-      fetchAdSets(selectedCampaignId || undefined),
-      fetchAds(selectedAdSetId || undefined)
+      fetchAdSets(),
+      fetchAds()
     ]);
     
     setLastUpdated(new Date());
     toast.success('Dados atualizados!', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
-  }, [accessToken, activeAccountId, fetchCampaigns, fetchAdSets, fetchAds, selectedCampaignId, selectedAdSetId]);
+  }, [accessToken, activeAccountId, fetchCampaigns, fetchAdSets, fetchAds]);
 
   const toggleCampaignStatus = useCallback(async (campaignId: string, activate: boolean) => {
     if (!accessToken) {
@@ -756,8 +756,8 @@ export function useMetaCampaigns() {
 
       // Refresh data
       if (type === 'campaign') await fetchCampaigns();
-      else if (type === 'adset') await fetchAdSets(selectedCampaignId || undefined);
-      else await fetchAds(selectedAdSetId || undefined);
+      else if (type === 'adset') await fetchAdSets();
+      else await fetchAds();
 
       return true;
     } catch (err) {
@@ -765,7 +765,7 @@ export function useMetaCampaigns() {
       toast.error(err instanceof Error ? err.message : 'Erro ao duplicar');
       return false;
     }
-  }, [accessToken, fetchCampaigns, fetchAdSets, fetchAds, selectedCampaignId, selectedAdSetId]);
+  }, [accessToken, fetchCampaigns, fetchAdSets, fetchAds]);
 
   const deleteItem = useCallback(async (id: string, type: 'campaign' | 'adset' | 'ad') => {
     if (!accessToken) {
@@ -818,10 +818,10 @@ export function useMetaCampaigns() {
     isLoadingAds,
     lastUpdated,
     activeAccountId,
-    selectedCampaignId,
-    selectedAdSetId,
-    setSelectedCampaignId,
-    setSelectedAdSetId,
+    selectedCampaignIds,
+    selectedAdSetIds,
+    setSelectedCampaignIds,
+    setSelectedAdSetIds,
     fetchCampaigns,
     fetchAdSets,
     fetchAds,
