@@ -62,9 +62,8 @@ export function Sidebar() {
             <aside className="relative w-64 bg-sidebar border-r border-sidebar-border flex flex-col h-full animate-fade-in">
               {/* Close + Logo */}
               <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
-                <Link to="/" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
-                  <img src={logoImg} alt="Gerencia ROI" className="w-10 h-10 object-contain" />
-                  <h1 className="font-bold text-lg text-sidebar-foreground">Gerencia ROI</h1>
+                <Link to="/" className="flex items-center" onClick={() => setMobileOpen(false)}>
+                  <img src={logoImg} alt="Gerência ROI" className="h-10 object-contain" />
                 </Link>
                 <button onClick={() => setMobileOpen(false)}>
                   <X className="w-5 h-5 text-muted-foreground" />
@@ -127,15 +126,8 @@ export function Sidebar() {
       )}
     >
       <div className="py-2 px-4 border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center">
-            <img src={logoImg} alt="Gerencia ROI" className="w-14 h-14 object-contain" />
-          </div>
-          {!collapsed && (
-            <div className="animate-fade-in-left">
-              <h1 className="font-bold text-lg text-sidebar-foreground">Gerencia ROI</h1>
-            </div>
-          )}
+        <Link to="/" className="flex items-center">
+          <img src={logoImg} alt="Gerência ROI" className={cn("object-contain transition-all", collapsed ? "h-10" : "h-12")} />
         </Link>
       </div>
 
