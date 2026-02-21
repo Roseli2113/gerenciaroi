@@ -390,7 +390,37 @@ const Campaigns = () => {
       );
     }
 
-    // Calculate totals from campaigns for each account
+    // Helper to calculate metrics for a specific account
+    const getAccountMetrics = (accountId: string) => {
+      const acctCampaigns = campaigns.filter(c => c.accountId === accountId);
+      const spent = acctCampaigns.reduce((sum, c) => sum + c.spent, 0);
+      const sales = acctCampaigns.reduce((sum, c) => sum + c.sales, 0);
+      const revenue = acctCampaigns.reduce((sum, c) => sum + c.revenue, 0);
+      const profit = revenue - spent;
+      const impressions = acctCampaigns.reduce((sum, c) => sum + c.impressions, 0);
+      const clicks = acctCampaigns.reduce((sum, c) => sum + c.clicks, 0);
+      const pageViews = acctCampaigns.reduce((sum, c) => sum + c.pageViews, 0);
+      const ic = acctCampaigns.reduce((sum, c) => sum + c.initiatedCheckout, 0);
+      const cpa = sales > 0 ? spent / sales : null;
+      const roi = spent > 0 ? revenue / spent : null;
+      const cpm = impressions > 0 ? (spent / impressions) * 1000 : null;
+      const cpc = clicks > 0 ? spent / clicks : null;
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : null;
+      const freqCampaigns = acctCampaigns.filter(c => c.frequency !== null);
+      const frequency = freqCampaigns.length > 0 
+        ? freqCampaigns.reduce((sum, c) => sum + (c.frequency || 0), 0) / freqCampaigns.length 
+        : null;
+      const cpv = pageViews > 0 ? spent / pageViews : null;
+      const cpi = ic > 0 ? spent / ic : null;
+      const convCheck = ic > 0 ? (sales / ic) * 100 : null;
+      const conRate = clicks > 0 ? (pageViews / clicks) * 100 : null;
+      const icrRate = pageViews > 0 ? (ic / pageViews) * 100 : null;
+      const margin = revenue > 0 ? ((revenue - spent) / revenue) * 100 : null;
+      const roas = spent > 0 ? revenue / spent : null;
+      return { spent, sales, revenue, profit, impressions, clicks, pageViews, ic, cpa, roi, cpm, cpc, ctr, frequency, cpv, cpi, convCheck, conRate, icrRate, margin, roas };
+    };
+
+    // Calculate totals from ALL campaigns for summary row
     const totalSpent = campaigns.reduce((sum, c) => sum + c.spent, 0);
     const totalSales = campaigns.reduce((sum, c) => sum + c.sales, 0);
     const totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0);
@@ -437,7 +467,9 @@ const Campaigns = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activeAccounts.map((account) => (
+            {activeAccounts.map((account) => {
+              const m = getAccountMetrics(account.account_id);
+              return (
               <TableRow key={account.id} className="border-b border-border">
                 <TableCell className="w-[48px] sticky left-0 bg-card z-10 border-r border-b border-border">
                   <Checkbox />
@@ -449,27 +481,26 @@ const Campaigns = () => {
                   {account.name}
                 </TableCell>
                 {visibleColumns.map((col, index) => {
-                  // Create a mock item with aggregated data for the account
                   const mockItem = {
-                    spent: totalSpent,
-                    sales: totalSales,
-                    revenue: totalRevenue,
-                    profit: totalProfit,
-                    impressions: totalImpressions,
-                    clicks: totalClicks,
-                    pageViews: totalPageViews,
-                    initiatedCheckout: totalIC,
-                    cpa: avgCPA,
-                    roi: avgROI,
-                    cpm: avgCPM,
-                    cpc: avgCPC,
-                    ctr: avgCTR,
-                    frequency: avgFrequency,
-                    cpv: avgCPV,
-                    costPerInitiatedCheckout: avgCPI,
-                    checkoutConversion: convCheck,
-                    margin: margin,
-                    roas: roas,
+                    spent: m.spent,
+                    sales: m.sales,
+                    revenue: m.revenue,
+                    profit: m.profit,
+                    impressions: m.impressions,
+                    clicks: m.clicks,
+                    pageViews: m.pageViews,
+                    initiatedCheckout: m.ic,
+                    cpa: m.cpa,
+                    roi: m.roi,
+                    cpm: m.cpm,
+                    cpc: m.cpc,
+                    ctr: m.ctr,
+                    frequency: m.frequency,
+                    cpv: m.cpv,
+                    costPerInitiatedCheckout: m.cpi,
+                    checkoutConversion: m.convCheck,
+                    margin: m.margin,
+                    roas: m.roas,
                     hookPlayRate: null,
                     holdRate: null,
                     ctaClicks: 0,
@@ -492,7 +523,8 @@ const Campaigns = () => {
                   );
                 })}
               </TableRow>
-            ))}
+              );
+            })}
             {/* Summary row */}
             <TableRow className="border-border font-semibold">
               <TableCell className="w-[48px] sticky left-0 bg-secondary z-10 border-r border-border" />
