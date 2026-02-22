@@ -84,11 +84,11 @@ export function EditableDashboardGrid({ isEditMode, layoutHook, campaigns, sales
   );
 
   // Calculate metrics from campaigns and sales data
-  const totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0) + salesMetrics.totalRevenue;
+  const totalRevenue = salesMetrics.totalRevenue;
   const totalSpent = campaigns.reduce((sum, c) => sum + c.spent, 0);
-  const totalSales = campaigns.reduce((sum, c) => sum + c.sales, 0) + salesMetrics.approvedSales;
+  const totalSales = salesMetrics.approvedSales;
   const totalProfit = totalRevenue - totalSpent;
-  const avgROI = totalSpent > 0 ? (totalRevenue / totalSpent) * 100 : 0;
+  const avgROI = totalSpent > 0 ? (totalProfit / totalSpent) * 100 : 0;
   const avgCPA = totalSales > 0 ? totalSpent / totalSales : 0;
   const avgTicket = totalSales > 0 ? totalRevenue / totalSales : salesMetrics.avgTicket;
   const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
