@@ -290,7 +290,7 @@ function filterWithImpressions<T extends { impressions: number; spent: number }>
   return items.filter(item => item.impressions > 0 || item.spent > 0);
 }
 
-export function useMetaCampaigns(datePreset: string = 'today') {
+export function useMetaCampaigns(datePreset: string = 'today', customDateRange?: { since: string; until: string }) {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [adSets, setAdSets] = useState<AdSet[]>([]);
@@ -359,7 +359,7 @@ export function useMetaCampaigns(datePreset: string = 'today') {
         }
 
         const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: datePreset }
+          body: { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) }
         });
 
         const insightsMap = new Map<string, CampaignInsight>();
@@ -400,7 +400,7 @@ export function useMetaCampaigns(datePreset: string = 'today') {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, activeAccountIds, datePreset]);
+  }, [accessToken, activeAccountIds, datePreset, customDateRange]);
 
   useEffect(() => {
     if (accessToken && activeAccountIds.length > 0) {
@@ -426,7 +426,7 @@ export function useMetaCampaigns(datePreset: string = 'today') {
         }
 
         const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-adset-insights', accessToken, adAccountId: accountId, dateRange: datePreset }
+          body: { action: 'get-adset-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) }
         });
 
         const insightsMap = new Map();
@@ -472,7 +472,7 @@ export function useMetaCampaigns(datePreset: string = 'today') {
     } finally {
       setIsLoadingAdSets(false);
     }
-  }, [accessToken, activeAccountIds, datePreset]);
+  }, [accessToken, activeAccountIds, datePreset, customDateRange]);
 
   const fetchAds = useCallback(async (adsetIdFilter?: string) => {
     if (!accessToken || activeAccountIds.length === 0) return;
@@ -492,7 +492,7 @@ export function useMetaCampaigns(datePreset: string = 'today') {
         }
 
         const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-ad-insights', accessToken, adAccountId: accountId, dateRange: datePreset }
+          body: { action: 'get-ad-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) }
         });
 
         const insightsMap = new Map();
@@ -533,7 +533,7 @@ export function useMetaCampaigns(datePreset: string = 'today') {
     } finally {
       setIsLoadingAds(false);
     }
-  }, [accessToken, activeAccountIds, datePreset]);
+  }, [accessToken, activeAccountIds, datePreset, customDateRange]);
 
   // Refresh all data simultaneously
   const refreshAll = useCallback(async () => {
