@@ -327,7 +327,7 @@ const Campaigns = () => {
   const visibleColumns = columnConfig.filter(c => c.visible);
 
   // Column data mapping for dynamic rendering
-  const getColumnValue = (item: Campaign | AdSet | Ad, columnId: string) => {
+  const getColumnValue = (item: Campaign | AdSet | Ad, columnId: string, isSummary = false) => {
     switch (columnId) {
       case 'orcamento':
         if (activeTab === 'campanhas') {
@@ -448,10 +448,12 @@ const Campaigns = () => {
         const icrRate = item.pageViews > 0 ? (item.initiatedCheckout / item.pageViews) * 100 : null;
         return formatPercent(icrRate);
       case 'vendasPendentes': {
+        if (!isSummary) return '—';
         const pendingCount = sales.filter(s => s.status === 'pending').length;
         return <span className="text-warning">{pendingCount}</span>;
       }
       case 'cpp': {
+        if (!isSummary) return '—';
         const pendingCount2 = sales.filter(s => s.status === 'pending').length;
         return pendingCount2 > 0 ? formatCurrency(item.spent / pendingCount2) : 'N/A';
       }
@@ -665,7 +667,7 @@ const Campaigns = () => {
                         index === visibleColumns.length - 1 && "border-r-0"
                       )}
                     >
-                    {getColumnValue(mockItem, col.id)}
+                    {getColumnValue(mockItem, col.id, true)}
                   </TableCell>
                 );
               })}
@@ -952,7 +954,7 @@ const Campaigns = () => {
                         index === visibleColumns.length - 1 && "border-r-0"
                       )}
                     >
-                      {getColumnValue(summaryItem, col.id)}
+                      {getColumnValue(summaryItem, col.id, true)}
                     </TableCell>
                   ))}
                 </TableRow>
