@@ -160,9 +160,19 @@ export function ColumnCustomizationDialog({
   );
 
   const handleToggle = (id: string) => {
-    setLocalColumns(prev =>
-      prev.map(c => c.id === id ? { ...c, visible: !c.visible } : c)
-    );
+    setLocalColumns(prev => {
+      const col = prev.find(c => c.id === id);
+      if (!col) return prev;
+      
+      if (!col.visible) {
+        // Adding: remove from current position, append to end as visible
+        const without = prev.filter(c => c.id !== id);
+        return [...without, { ...col, visible: true }];
+      } else {
+        // Removing: just toggle visibility
+        return prev.map(c => c.id === id ? { ...c, visible: false } : c);
+      }
+    });
   };
 
   const handleRemove = (id: string) => {
@@ -191,7 +201,7 @@ export function ColumnCustomizationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col w-[95vw] md:w-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col w-[95vw] md:w-auto">
         <DialogHeader>
           <DialogTitle>Personalize as colunas</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -211,8 +221,8 @@ export function ColumnCustomizationDialog({
                 className="pl-9"
               />
             </div>
-            <ScrollArea className="flex-1">
-              <div className="space-y-1 pr-4">
+            <ScrollArea className="flex-1 overflow-y-auto">
+              <div className="space-y-1 pr-4 pb-2">
                 {filteredHidden.map((column) => (
                   <label
                     key={column.id}
@@ -235,14 +245,14 @@ export function ColumnCustomizationDialog({
           </div>
 
           {/* Right side - Selected columns with drag */}
-          <div className="w-full md:w-72 flex flex-col overflow-hidden border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-4 max-h-[30vh] md:max-h-none">
+          <div className="w-full md:w-72 flex flex-col overflow-hidden border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-4 min-h-[200px] max-h-[40vh] md:max-h-none">
             <div className="flex items-center gap-2 mb-3">
               <span className="font-medium text-sm">Campanha</span>
             </div>
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 overflow-y-auto">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={visibleColumns.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2 pr-2">
+                  <div className="space-y-2 pr-2 pb-2">
                     {visibleColumns.map((column) => (
                       <SortableItem key={column.id} column={column} onRemove={handleRemove} />
                     ))}
