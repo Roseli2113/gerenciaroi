@@ -1180,7 +1180,7 @@ const Campaigns = () => {
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("h-9 w-full justify-start text-left font-normal text-sm", !customDateFrom && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customDateFrom ? format(customDateFrom, 'dd/MM/yyyy') : 'Selecionar'}
+                        {customDateFrom ? format(customDateFrom, "dd 'de' MMM 'de' yyyy", { locale: ptBR }) : 'Selecionar'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -1194,7 +1194,7 @@ const Campaigns = () => {
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("h-9 w-full justify-start text-left font-normal text-sm", !customDateTo && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customDateTo ? format(customDateTo, 'dd/MM/yyyy') : 'Selecionar'}
+                        {customDateTo ? format(customDateTo, "dd 'de' MMM 'de' yyyy", { locale: ptBR }) : 'Selecionar'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
