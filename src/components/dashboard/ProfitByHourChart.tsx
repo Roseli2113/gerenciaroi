@@ -59,7 +59,7 @@ export function ProfitByHourChart({ sales }: ProfitByHourChartProps) {
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 h-[400px]">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 h-[400px] overflow-hidden">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Receita por Horário</h3>
