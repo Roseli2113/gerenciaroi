@@ -232,7 +232,7 @@ const Dashboard = () => {
                     return (
                       <div key={widgetId} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <DraggableWidgetCard id="conversion-funnel" isEditMode={isEditMode}>
-                          <ConversionFunnel />
+                          <ConversionFunnel campaigns={campaigns} />
                         </DraggableWidgetCard>
                         <DraggableWidgetCard id="campaigns-list" isEditMode={isEditMode} className="lg:col-span-2">
                           <CampaignsList />
@@ -252,7 +252,7 @@ const Dashboard = () => {
                   switch (widgetId) {
                     case 'profit-by-hour': return <ProfitByHourChart sales={sales} />;
                     case 'sales-by-hour': return <SalesByHourChart sales={sales} />;
-                    case 'conversion-funnel': return <ConversionFunnel />;
+                    case 'conversion-funnel': return <ConversionFunnel campaigns={campaigns} />;
                     case 'campaigns-list': return <CampaignsList />;
                     case 'live-visitors': return <LiveVisitorsCard />;
                   }
