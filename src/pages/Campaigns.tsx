@@ -1262,7 +1262,54 @@ const Campaigns = () => {
           </div>
         )}
 
-        <div className="rounded-lg border border-border bg-card overflow-x-auto -webkit-overflow-scrolling-touch">{renderTable()}</div>
+        <div className="rounded-lg border border-border bg-card overflow-x-auto -webkit-overflow-scrolling-touch pb-16 md:pb-0">{renderTable()}</div>
+
+        {/* Mobile bottom navigation bar */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around bg-card border-t border-border py-2 px-1 shadow-lg">
+          <button
+            onClick={() => setActiveTab('contas')}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', activeTab === 'contas' ? 'text-primary' : 'text-muted-foreground')}
+          >
+            <Building2 className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Contas</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('campanhas')}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', activeTab === 'campanhas' ? 'text-primary' : 'text-muted-foreground')}
+          >
+            <Layers className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Campanhas</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('conjuntos')}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', activeTab === 'conjuntos' ? 'text-primary' : 'text-muted-foreground')}
+          >
+            <LayoutGrid className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Conjuntos</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('anuncios')}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', activeTab === 'anuncios' ? 'text-primary' : 'text-muted-foreground')}
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Anúncios</span>
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading || isLoadingAdSets || isLoadingAds}
+            className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors text-muted-foreground disabled:opacity-50"
+          >
+            {(isLoading || isLoadingAdSets || isLoadingAds) ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+            <span className="text-[10px] font-medium">Atualizar</span>
+          </button>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', showFilters ? 'text-primary' : 'text-muted-foreground')}
+          >
+            <Filter className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Filtros</span>
+          </button>
+        </div>
       </div>
   );
 
