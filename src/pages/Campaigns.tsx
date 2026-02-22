@@ -1080,7 +1080,7 @@ const Campaigns = () => {
   const pageContent = (
       <div className="space-y-4">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-          <TabsList className="bg-card border border-border h-auto p-0 w-full grid grid-cols-4">
+          <TabsList className="bg-card border border-border h-auto p-0 w-full hidden md:grid grid-cols-4">
             <TabsTrigger value="contas" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-1 md:gap-2">
               <Building2 className="w-4 h-4" />
               <span className="hidden md:inline">Contas</span>
