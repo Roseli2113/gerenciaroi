@@ -5,24 +5,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function fetchAllPages(url: string): Promise<unknown[]> {
+async function fetchAllPages(url: string, retries = 2): Promise<unknown[]> {
   const allData: unknown[] = [];
   let nextUrl: string | null = url;
 
   while (nextUrl) {
-    const response: Response = await fetch(nextUrl);
-    const data: Record<string, unknown> = await response.json();
+    let response: Response = await fetch(nextUrl);
+    let data: Record<string, unknown> = await response.json();
+
+    // Retry on rate limiting
+    if (data.error && retries > 0) {
+      const errMsg = (data.error as any)?.message || '';
+      if (errMsg.includes('too many calls') || errMsg.includes('request limit') || errMsg.includes('rate limit')) {
+        console.log(`Rate limited, retrying in 3s... (${retries} retries left)`);
+        await new Promise(r => setTimeout(r, 3000));
+        response = await fetch(nextUrl);
+        data = await response.json();
+        retries--;
+      }
+    }
 
     if (data.error) {
-      throw new Error(data.error.message);
+      throw new Error((data.error as any).message || JSON.stringify(data.error));
     }
 
     if (data.data) {
-      allData.push(...data.data);
+      allData.push(...(data.data as unknown[]));
     }
 
     // Check for pagination
-    nextUrl = data.paging?.next || null;
+    nextUrl = (data.paging as any)?.next || null;
   }
 
   return allData;
