@@ -1,7 +1,8 @@
-import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
+interface ConversionFunnelProps {
+  campaigns?: Array<{ clicks?: number; pageViews?: number; initiatedCheckout?: number; sales?: number }>;
+}
 
-export function ConversionFunnel() {
-  const { campaigns } = useMetaCampaigns();
+export function ConversionFunnel({ campaigns = [] }: ConversionFunnelProps) {
 
   // Calculate real funnel data from campaigns
   const totalClicks = campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0);
