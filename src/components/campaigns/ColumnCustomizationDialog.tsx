@@ -201,7 +201,7 @@ export function ColumnCustomizationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col w-[95vw] md:w-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col w-[95vw] md:w-auto">
         <DialogHeader>
           <DialogTitle>Personalize as colunas</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -209,9 +209,9 @@ export function ColumnCustomizationDialog({
           </p>
         </DialogHeader>
 
-        <div className="flex flex-col md:flex-row flex-1 gap-4 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 gap-4 md:overflow-hidden">
           {/* Left side - All columns with checkboxes */}
-          <div className="flex-1 flex flex-col overflow-hidden min-h-[200px] max-h-[35vh] md:max-h-none">
+          <div className="flex-1 flex flex-col min-h-[250px] max-h-[40vh] md:max-h-none md:overflow-hidden">
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -245,7 +245,7 @@ export function ColumnCustomizationDialog({
           </div>
 
           {/* Right side - Selected columns with drag */}
-          <div className="w-full md:w-72 flex flex-col overflow-hidden border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-4 min-h-[200px] max-h-[40vh] md:max-h-none">
+          <div className="w-full md:w-72 flex flex-col min-h-[200px] max-h-[40vh] md:max-h-none md:overflow-hidden border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="font-medium text-sm">Campanha</span>
             </div>
