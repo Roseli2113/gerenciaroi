@@ -195,13 +195,30 @@ Deno.serve(async (req) => {
   }
 })
 
+function extractCampaignId(payload: LowifyPayload): string | null {
+  // Try to extract campaign ID from tracking/UTM data
+  const raw = payload as Record<string, unknown>
+  const tracking = (raw.tracking && typeof raw.tracking === 'object' ? raw.tracking : raw) as Record<string, unknown>
+  const utmCampaign = (tracking.utm_campaign as string) || null
+  if (!utmCampaign) return null
+  const parts = utmCampaign.split('|')
+  if (parts.length >= 2) {
+    const id = parts[parts.length - 1].trim()
+    return id || null
+  }
+  return null
+}
+
 function parseSaleData(platform: string, payload: LowifyPayload, userId: string, webhookId: string | null) {
+  const campaignId = extractCampaignId(payload)
+
   // Common structure for sale data
   const baseData = {
     user_id: userId,
     webhook_id: webhookId,
     platform: platform,
     raw_data: payload,
+    campaign_id: campaignId,
     // Let the database set created_at with now() to ensure correct UTC timestamp
   }
 

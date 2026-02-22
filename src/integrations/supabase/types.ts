@@ -491,6 +491,7 @@ export type Database = {
       sales: {
         Row: {
           amount: number
+          campaign_id: string | null
           commission: number | null
           created_at: string
           currency: string | null
@@ -511,6 +512,7 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          campaign_id?: string | null
           commission?: number | null
           created_at?: string
           currency?: string | null
@@ -531,6 +533,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          campaign_id?: string | null
           commission?: number | null
           created_at?: string
           currency?: string | null
