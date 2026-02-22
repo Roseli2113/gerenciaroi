@@ -86,11 +86,11 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-card border border-border">
-      <div className="flex items-center gap-2">
-        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+    <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-card border border-border">
+      <div className="flex items-center gap-2 min-w-0">
+        <CalendarIcon className="w-4 h-4 text-muted-foreground shrink-0" />
         <Select value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as PeriodKey)}>
-          <SelectTrigger className="w-40 border-0 bg-muted/50">
+          <SelectTrigger className="w-36 sm:w-40 border-0 bg-muted/50">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
           <SelectContent>
@@ -106,13 +106,13 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
       </div>
 
       {selectedPeriod === 'custom' && setCustomDateFrom && setCustomDateTo && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <span className="text-sm text-muted-foreground">De:</span>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("h-9 justify-start text-left font-normal text-sm", !customDateFrom && "text-muted-foreground")}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {customDateFrom ? format(customDateFrom, "dd 'de' MMM 'de' yyyy", { locale: ptBR }) : 'Selecionar'}
+              <Button variant="outline" className={cn("h-9 justify-start text-left font-normal text-xs sm:text-sm min-w-0", !customDateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1 sm:mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{customDateFrom ? format(customDateFrom, "dd 'de' MMM 'de' yyyy", { locale: ptBR }) : 'Selecionar'}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -123,9 +123,9 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
           <span className="text-sm text-muted-foreground">Até:</span>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("h-9 justify-start text-left font-normal text-sm", !customDateTo && "text-muted-foreground")}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {customDateTo ? format(customDateTo, "dd 'de' MMM 'de' yyyy", { locale: ptBR }) : 'Selecionar'}
+              <Button variant="outline" className={cn("h-9 justify-start text-left font-normal text-xs sm:text-sm min-w-0", !customDateTo && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1 sm:mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{customDateTo ? format(customDateTo, "dd 'de' MMM 'de' yyyy", { locale: ptBR }) : 'Selecionar'}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -136,7 +136,7 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
       )}
 
       <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-        <SelectTrigger className="w-48 border-0 bg-muted/50">
+        <SelectTrigger className="w-36 sm:w-48 border-0 bg-muted/50">
           <SelectValue placeholder="Conta de Anúncio" />
         </SelectTrigger>
         <SelectContent>
@@ -150,7 +150,7 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
       </Select>
 
       <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-        <SelectTrigger className="w-48 border-0 bg-muted/50">
+        <SelectTrigger className="w-36 sm:w-48 border-0 bg-muted/50">
           <SelectValue placeholder="Campanha" />
         </SelectTrigger>
         <SelectContent>
@@ -164,7 +164,7 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
       </Select>
 
       <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-        <SelectTrigger className="w-40 border-0 bg-muted/50">
+        <SelectTrigger className="w-32 sm:w-40 border-0 bg-muted/50">
           <SelectValue placeholder="Produto" />
         </SelectTrigger>
         <SelectContent>
@@ -177,15 +177,15 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
         </SelectContent>
       </Select>
 
-      <div className="ml-auto">
+      <div className="ml-auto shrink-0">
         <Button 
           variant="outline"
           onClick={handleRefresh}
           disabled={isRefreshing || !onRefresh}
           className="gap-2"
         >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Atualizar
+          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+          <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
     </div>

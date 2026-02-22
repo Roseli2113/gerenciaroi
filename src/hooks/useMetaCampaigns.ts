@@ -358,9 +358,18 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
           return;
         }
 
-        const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
+        const { data: insightsData, error: insightsError } = await supabase.functions.invoke('meta-ads', {
           body: { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) }
         });
+
+        if (insightsError || insightsData?.error) {
+          const errMsg = insightsData?.error || insightsError?.message || '';
+          if (errMsg.includes('too many calls') || errMsg.includes('rate limit') || errMsg.includes('request limit')) {
+            toast.error('Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente.');
+          } else {
+            console.error(`Error fetching insights for ${accountId}:`, errMsg);
+          }
+        }
 
         const insightsMap = new Map<string, CampaignInsight>();
         if (insightsData?.insights) {
