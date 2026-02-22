@@ -5,36 +5,45 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function fetchAllPages(url: string, retries = 2): Promise<unknown[]> {
+async function fetchAllPages(url: string, maxRetries = 4): Promise<unknown[]> {
   const allData: unknown[] = [];
   let nextUrl: string | null = url;
 
   while (nextUrl) {
-    let response: Response = await fetch(nextUrl);
-    let data: Record<string, unknown> = await response.json();
+    let data: Record<string, unknown> | null = null;
+    let lastError = '';
 
-    // Retry on rate limiting
-    if (data.error && retries > 0) {
-      const errMsg = (data.error as any)?.message || '';
-      if (errMsg.includes('too many calls') || errMsg.includes('request limit') || errMsg.includes('rate limit')) {
-        console.log(`Rate limited, retrying in 3s... (${retries} retries left)`);
-        await new Promise(r => setTimeout(r, 3000));
-        response = await fetch(nextUrl);
-        data = await response.json();
-        retries--;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const response = await fetch(nextUrl);
+      data = await response.json() as Record<string, unknown>;
+
+      if (!data.error) break;
+
+      const errMsg = (data.error as any)?.message || JSON.stringify(data.error);
+      const isRateLimit = errMsg.includes('too many calls') || errMsg.includes('request limit') || errMsg.includes('rate limit');
+
+      if (!isRateLimit || attempt === maxRetries) {
+        lastError = errMsg;
+        break;
       }
+
+      // Exponential backoff: 5s, 10s, 20s, 40s
+      const delay = 5000 * Math.pow(2, attempt);
+      console.log(`Rate limited, retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(r => setTimeout(r, delay));
+      data = null; // reset for next attempt
     }
 
-    if (data.error) {
+    if (data?.error) {
       throw new Error((data.error as any).message || JSON.stringify(data.error));
     }
 
-    if (data.data) {
+    if (data?.data) {
       allData.push(...(data.data as unknown[]));
     }
 
     // Check for pagination
-    nextUrl = (data.paging as any)?.next || null;
+    nextUrl = (data?.paging as any)?.next || null;
   }
 
   return allData;
