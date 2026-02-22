@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
-export type PeriodKey = 'today' | 'yesterday' | '7days' | '30days' | 'thisMonth' | 'lastMonth';
+export type PeriodKey = 'today' | 'yesterday' | '7days' | '30days' | 'thisMonth' | 'lastMonth' | 'custom';
 
 export interface DateRange {
   startDate: Date;
@@ -38,8 +38,19 @@ export function useDashboardFilters() {
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<string>('all');
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
 
-  const dateRange = useMemo(() => getDateRange(selectedPeriod), [selectedPeriod]);
+  const dateRange = useMemo(() => {
+    if (selectedPeriod === 'custom' && customDateFrom && customDateTo) {
+      return { startDate: startOfDay(customDateFrom), endDate: endOfDay(customDateTo) };
+    }
+    if (selectedPeriod === 'custom') {
+      // fallback to today if custom dates not yet selected
+      return { startDate: startOfDay(new Date()), endDate: endOfDay(new Date()) };
+    }
+    return getDateRange(selectedPeriod);
+  }, [selectedPeriod, customDateFrom, customDateTo]);
 
   return {
     selectedPeriod,
@@ -51,5 +62,9 @@ export function useDashboardFilters() {
     selectedProduct,
     setSelectedProduct,
     dateRange,
+    customDateFrom,
+    setCustomDateFrom,
+    customDateTo,
+    setCustomDateTo,
   };
 }
