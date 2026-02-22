@@ -62,7 +62,7 @@ function getTracking(raw: RawData): TrackingData {
   return raw;
 }
 
-export function useSalesAttribution() {
+export function useSalesAttribution(startDate?: Date) {
   const { user } = useAuth();
   const [attribution, setAttribution] = useState<SalesAttribution>({
     byCampaignId: new Map(),
@@ -76,15 +76,16 @@ export function useSalesAttribution() {
 
     setLoading(true);
     try {
-      // Fetch today's sales
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
+      const fromDate = startDate || new Date();
+      if (!startDate) {
+        fromDate.setHours(0, 0, 0, 0);
+      }
 
       const { data: sales, error } = await supabase
         .from('sales')
         .select('amount, status, raw_data')
         .eq('user_id', user.id)
-        .gte('created_at', todayStart.toISOString());
+        .gte('created_at', fromDate.toISOString());
 
       if (error) throw error;
 
@@ -131,7 +132,7 @@ export function useSalesAttribution() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, startDate]);
 
   useEffect(() => {
     fetchAttribution();

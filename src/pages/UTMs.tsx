@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Link2, Copy, Check, Eye, ShoppingCart, Webhook, Radio } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -26,16 +26,35 @@ import { useSales } from '@/hooks/useSales';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 import { useSalesAttribution } from '@/hooks/useSalesAttribution';
 
+type PeriodFilter = 'today' | '7d' | '30d';
+
+const periodOptions: { value: PeriodFilter; label: string }[] = [
+  { value: 'today', label: 'Hoje' },
+  { value: '7d', label: '7 dias' },
+  { value: '30d', label: '30 dias' },
+];
+
+function getStartDate(period: PeriodFilter): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  if (period === '7d') d.setDate(d.getDate() - 7);
+  if (period === '30d') d.setDate(d.getDate() - 30);
+  return d;
+}
+
 const UTMs = () => {
   const [copied, setCopied] = useState(false);
   const [utmSource, setUtmSource] = useState('facebook');
   const [utmMedium, setUtmMedium] = useState('cpc');
   const [utmCampaign, setUtmCampaign] = useState('');
   const [baseUrl, setBaseUrl] = useState('https://seusite.com/produto');
+  const [period, setPeriod] = useState<PeriodFilter>('today');
+  
+  const startDate = useMemo(() => getStartDate(period), [period]);
   
   const { sales } = useSales();
   const { campaigns } = useMetaCampaigns();
-  const { attribution } = useSalesAttribution();
+  const { attribution } = useSalesAttribution(startDate);
 
   const generatedUrl = `${baseUrl}?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`;
 
@@ -160,10 +179,30 @@ const UTMs = () => {
         {/* UTM Performance */}
         <Card>
           <CardHeader>
-            <CardTitle>Performance por UTM</CardTitle>
-            <CardDescription>
-              Acompanhe o desempenho das suas campanhas rastreadas
-            </CardDescription>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <CardTitle>Performance por UTM</CardTitle>
+                <CardDescription>
+                  Acompanhe o desempenho das suas campanhas rastreadas
+                </CardDescription>
+              </div>
+              <div className="flex gap-1 rounded-lg bg-muted p-1">
+                {periodOptions.map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={period === opt.value ? 'default' : 'ghost'}
+                    size="sm"
+                    className={cn(
+                      'text-xs h-7 px-3',
+                      period === opt.value && 'shadow-sm'
+                    )}
+                    onClick={() => setPeriod(opt.value)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {utmPerformance.length === 0 ? (
