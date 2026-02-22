@@ -44,7 +44,28 @@ const Dashboard = () => {
   const filters = useDashboardFilters();
   const { isConnected, connection } = useMetaAuth();
   const { webhooks } = useWebhooks();
-  const { campaigns, refreshAll, isLoading: campaignsLoading } = useMetaCampaigns();
+  // Map dashboard period to Meta API date preset
+  const metaDatePreset = (() => {
+    switch (filters.selectedPeriod) {
+      case 'today': return 'today';
+      case 'yesterday': return 'yesterday';
+      case '7days': return 'last_7d';
+      case '30days': return 'last_30d';
+      case 'thisMonth': return 'this_month';
+      case 'lastMonth': return 'last_month';
+      case 'custom': return 'custom';
+      default: return 'today';
+    }
+  })();
+
+  const customDateRange = filters.selectedPeriod === 'custom' && filters.customDateFrom && filters.customDateTo
+    ? {
+        since: filters.customDateFrom.toISOString().split('T')[0],
+        until: filters.customDateTo.toISOString().split('T')[0],
+      }
+    : undefined;
+
+  const { campaigns, refreshAll, isLoading: campaignsLoading } = useMetaCampaigns(metaDatePreset, customDateRange);
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
   const { sales, metrics: salesMetrics, refreshSales, loading: salesLoading } = useSales(salesFilters);
 
