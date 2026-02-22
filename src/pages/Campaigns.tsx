@@ -19,7 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { getDateRange, PeriodKey } from '@/hooks/useDashboardFilters';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useMetaCampaigns, Campaign, AdSet, Ad } from '@/hooks/useMetaCampaigns';
@@ -131,14 +132,25 @@ const Campaigns = () => {
     loadActiveAccounts();
   }, [user]);
 
-  // Untracked sales: approved/paid sales with no UTM source in raw_data
-  const untrackedCount = sales.filter(s => {
-    if (s.status !== 'approved' && s.status !== 'paid') return false;
-    const raw = s.raw_data as Record<string, unknown> | null;
-    if (!raw) return true;
-    const src = raw.utm_source || raw.source || raw.utm || raw.fbclid;
-    return !src;
-  }).length;
+  // Untracked sales: approved/paid sales with no UTM source in raw_data, filtered by selected period
+  const untrackedCount = useMemo(() => {
+    const periodRange = (() => {
+      if (filterPeriod === 'custom' && customDateFrom && customDateTo) {
+        return { startDate: startOfDay(customDateFrom), endDate: endOfDay(customDateTo) };
+      }
+      return getDateRange(filterPeriod as PeriodKey);
+    })();
+
+    return sales.filter(s => {
+      if (s.status !== 'approved' && s.status !== 'paid') return false;
+      const saleDate = new Date(s.created_at);
+      if (saleDate < periodRange.startDate || saleDate > periodRange.endDate) return false;
+      const raw = s.raw_data as Record<string, unknown> | null;
+      if (!raw) return true;
+      const src = raw.utm_source || raw.source || raw.utm || raw.fbclid;
+      return !src;
+    }).length;
+  }, [sales, filterPeriod, customDateFrom, customDateTo]);
 
   // Clear selected items when switching tabs
   useEffect(() => {
