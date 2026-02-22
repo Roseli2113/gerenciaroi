@@ -72,11 +72,16 @@ const Dashboard = () => {
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
   const { sales, metrics: salesMetrics, refreshSales, loading: salesLoading } = useSales(salesFilters);
 
-  const handleRefresh = async () => {
-    await Promise.all([refreshAll(), refreshSales()]);
-  };
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
-  const isRefreshing = campaignsLoading || salesLoading;
+  const handleRefresh = async () => {
+    setIsManualRefreshing(true);
+    try {
+      await Promise.all([refreshAll(), refreshSales()]);
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  };
 
 
   // Setup incomplete banner
@@ -161,7 +166,7 @@ const Dashboard = () => {
       }
     >
       <div className="space-y-6">
-        <DashboardFilters filters={filters} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+        <DashboardFilters filters={filters} onRefresh={handleRefresh} isRefreshing={isManualRefreshing} />
 
         {/* Incomplete setup banner */}
         {!bannerDismissed && !isSetupComplete && (
