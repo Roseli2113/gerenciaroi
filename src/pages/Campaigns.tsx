@@ -62,6 +62,8 @@ const Campaigns = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterName, setFilterName] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('any');
+  const [filterAccount, setFilterAccount] = useState<string>('any');
   const [showColumnDialog, setShowColumnDialog] = useState(false);
   const [activeAccounts, setActiveAccounts] = useState<ActiveAccount[]>([]);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
@@ -265,8 +267,21 @@ const Campaigns = () => {
     activeTab
   );
 
+  // Apply filters
+  const filteredData = rawDisplayData.filter(item => {
+    // Name filter
+    if (filterName && !item.name.toLowerCase().includes(filterName.toLowerCase())) return false;
+    // Status filter
+    if (filterStatus === 'active' && !item.status) return false;
+    if (filterStatus === 'paused' && item.status) return false;
+    // Account filter (campaigns only)
+    if (filterAccount !== 'any' && activeTab === 'campanhas' && 'accountId' in item && (item as Campaign).accountId !== filterAccount) return false;
+    if (filterAccount !== 'any' && activeTab === 'conjuntos' && 'accountId' in item && (item as AdSet).accountId !== filterAccount) return false;
+    return true;
+  });
+
   // Apply pinning: pinned items first
-  const sortedWithPins = [...rawDisplayData].sort((a, b) => {
+  const sortedWithPins = [...filteredData].sort((a, b) => {
     const aPinned = pinnedIds.has(a.id);
     const bPinned = pinnedIds.has(b.id);
     if (aPinned && !bPinned) return -1;
@@ -1112,7 +1127,7 @@ const Campaigns = () => {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Status</label>
-              <Select defaultValue="any">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Qualquer</SelectItem>
@@ -1135,7 +1150,7 @@ const Campaigns = () => {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Conta de Anúncio</label>
-              <Select defaultValue="any">
+              <Select value={filterAccount} onValueChange={setFilterAccount}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Qualquer</SelectItem>
