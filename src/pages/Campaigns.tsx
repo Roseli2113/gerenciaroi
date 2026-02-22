@@ -547,7 +547,7 @@ const Campaigns = () => {
     const roas = totalSpent > 0 ? totalRevenue / totalSpent : null;
 
     return (
-      <div className="w-full overflow-x-auto whitespace-nowrap">
+      <div className="w-full overflow-x-auto whitespace-nowrap" style={{ WebkitOverflowScrolling: 'touch' }}>
         <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
@@ -707,12 +707,12 @@ const Campaigns = () => {
     }
 
     return (
-      <div className="w-full overflow-x-auto whitespace-nowrap">
+      <div className="w-full overflow-x-auto whitespace-nowrap" style={{ WebkitOverflowScrolling: 'touch' }}>
         <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
               <TableHead className="w-[48px] sticky left-0 bg-[#384157] z-20 border-r border-border">
-                <Checkbox 
+                <Checkbox
                   checked={displayData.length > 0 && (
                     activeTab === 'campanhas' ? selectedCampaignIds.length === displayData.length :
                     activeTab === 'conjuntos' ? selectedAdSetIds.length === displayData.length :
@@ -1081,41 +1081,42 @@ const Campaigns = () => {
       <div className="space-y-4">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
           <TabsList className="bg-card border border-border h-auto p-0 w-full grid grid-cols-4">
-            <TabsTrigger value="contas" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+            <TabsTrigger value="contas" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-1 md:gap-2">
               <Building2 className="w-4 h-4" />
-              Contas
+              <span className="hidden md:inline">Contas</span>
             </TabsTrigger>
-            <TabsTrigger value="campanhas" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+            <TabsTrigger value="campanhas" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-1 md:gap-2">
               <Layers className="w-4 h-4" />
-              Campanhas
+              <span className="hidden md:inline">Campanhas</span>
             </TabsTrigger>
-            <TabsTrigger value="conjuntos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+            <TabsTrigger value="conjuntos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-1 md:gap-2">
               <LayoutGrid className="w-4 h-4" />
-              Conjuntos
-              {selectedCampaignIds.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">Filtrado ({selectedCampaignIds.length})</Badge>}
+              <span className="hidden md:inline">Conjuntos</span>
+              {selectedCampaignIds.length > 0 && <Badge variant="secondary" className="ml-1 text-xs hidden md:inline-flex">Filtrado ({selectedCampaignIds.length})</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="anuncios" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-2">
+            <TabsTrigger value="anuncios" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-3 gap-1 md:gap-2">
               <FileText className="w-4 h-4" />
-              Anúncios
-              {selectedAdSetIds.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">Filtrado ({selectedAdSetIds.length})</Badge>}
+              <span className="hidden md:inline">Anúncios</span>
+              {selectedAdSetIds.length > 0 && <Badge variant="secondary" className="ml-1 text-xs hidden md:inline-flex">Filtrado ({selectedAdSetIds.length})</Badge>}
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1 md:gap-2 flex-wrap">
             <Button 
               variant="outline" 
               size="icon"
-              className="h-9 w-9"
+              className="h-8 w-8 md:h-9 md:w-9"
               onClick={() => setShowColumnDialog(true)}
+              title="Configurar colunas"
             >
               <Settings className="w-4 h-4" />
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-9 w-9"
+              className="h-8 w-8 md:h-9 md:w-9"
               onClick={() => setIsFullscreen(!isFullscreen)}
               title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
             >
@@ -1124,36 +1125,39 @@ const Campaigns = () => {
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-9 w-9"
+              className="h-8 w-8 md:h-9 md:w-9"
               onClick={() => setShowFilters(!showFilters)}
               title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
             >
-              {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              <Filter className="w-4 h-4" />
             </Button>
             {untrackedCount > 0 ? (
-              <Badge className="bg-warning text-warning-foreground border-0 animate-pulse">
-                ⚠ {untrackedCount} {untrackedCount === 1 ? 'Venda não trackeada' : 'Vendas não trackeadas'}
+              <Badge className="bg-warning text-warning-foreground border-0 animate-pulse text-xs">
+                ⚠ {untrackedCount} <span className="hidden md:inline">{untrackedCount === 1 ? 'Venda não trackeada' : 'Vendas não trackeadas'}</span>
               </Badge>
             ) : (
-              <Badge className="bg-success text-success-foreground border-0">✓ Todas as vendas trackeadas</Badge>
+              <Badge className="bg-success text-success-foreground border-0 text-xs">
+                ✓ <span className="hidden md:inline">Todas as vendas trackeadas</span>
+              </Badge>
             )}
             {selectedCampaignIds.length > 0 && activeTab === 'conjuntos' && (
-              <Badge variant="outline" className="gap-1">
-                {selectedCampaignIds.length} campanha{selectedCampaignIds.length > 1 ? 's' : ''} selecionada{selectedCampaignIds.length > 1 ? 's' : ''}
+              <Badge variant="outline" className="gap-1 text-xs">
+                {selectedCampaignIds.length} <span className="hidden md:inline">campanha{selectedCampaignIds.length > 1 ? 's' : ''} selecionada{selectedCampaignIds.length > 1 ? 's' : ''}</span>
                 <button onClick={() => setSelectedCampaignIds([])} className="ml-1 hover:text-destructive">×</button>
               </Badge>
             )}
             {selectedAdSetIds.length > 0 && activeTab === 'anuncios' && (
-              <Badge variant="outline" className="gap-1">
-                {selectedAdSetIds.length} conjunto{selectedAdSetIds.length > 1 ? 's' : ''} selecionado{selectedAdSetIds.length > 1 ? 's' : ''}
+              <Badge variant="outline" className="gap-1 text-xs">
+                {selectedAdSetIds.length} <span className="hidden md:inline">conjunto{selectedAdSetIds.length > 1 ? 's' : ''} selecionado{selectedAdSetIds.length > 1 ? 's' : ''}</span>
                 <button onClick={() => setSelectedAdSetIds([])} className="ml-1 hover:text-destructive">×</button>
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">Atualizado há {getLastUpdatedText()}</span>
-            <Button variant="default" onClick={handleRefresh} disabled={isLoading || isLoadingAdSets || isLoadingAds}>
-              {(isLoading || isLoadingAdSets || isLoadingAds) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}Atualizar
+          <div className="flex items-center gap-2 md:gap-4">
+            <span className="text-xs md:text-sm text-muted-foreground hidden md:inline">Atualizado há {getLastUpdatedText()}</span>
+            <Button variant="default" size="sm" onClick={handleRefresh} disabled={isLoading || isLoadingAdSets || isLoadingAds} className="h-8 md:h-9">
+              {(isLoading || isLoadingAdSets || isLoadingAds) ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              <span className="hidden md:inline ml-2">Atualizar</span>
             </Button>
           </div>
         </div>
@@ -1258,7 +1262,7 @@ const Campaigns = () => {
           </div>
         )}
 
-        <div className="rounded-lg border border-border bg-card overflow-hidden">{renderTable()}</div>
+        <div className="rounded-lg border border-border bg-card overflow-x-auto -webkit-overflow-scrolling-touch">{renderTable()}</div>
       </div>
   );
 
