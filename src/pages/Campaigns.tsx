@@ -448,13 +448,17 @@ const Campaigns = () => {
         const icrRate = item.pageViews > 0 ? (item.initiatedCheckout / item.pageViews) * 100 : null;
         return formatPercent(icrRate);
       case 'vendasPendentes': {
-        if (!isSummary) return '—';
-        const pendingCount = sales.filter(s => s.status === 'pending').length;
+        const itemId = (item as Campaign).id || '';
+        const pendingForItem = sales.filter(s => s.status === 'pending' && (s as any).campaign_id === itemId);
+        const pendingCount = isSummary ? sales.filter(s => s.status === 'pending').length : pendingForItem.length;
         return <span className="text-warning">{pendingCount}</span>;
       }
       case 'cpp': {
-        if (!isSummary) return '—';
-        const pendingCount2 = sales.filter(s => s.status === 'pending').length;
+        const itemId2 = (item as Campaign).id || '';
+        const pendingForItem2 = isSummary
+          ? sales.filter(s => s.status === 'pending')
+          : sales.filter(s => s.status === 'pending' && (s as any).campaign_id === itemId2);
+        const pendingCount2 = pendingForItem2.length;
         return pendingCount2 > 0 ? formatCurrency(item.spent / pendingCount2) : 'N/A';
       }
       case 'vendasTotais':
