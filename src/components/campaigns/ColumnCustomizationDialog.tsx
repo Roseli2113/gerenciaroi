@@ -191,7 +191,7 @@ export function ColumnCustomizationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col w-[95vw] md:w-auto">
         <DialogHeader>
           <DialogTitle>Personalize as colunas</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -199,7 +199,7 @@ export function ColumnCustomizationDialog({
           </p>
         </DialogHeader>
 
-        <div className="flex flex-1 gap-4 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 gap-4 overflow-hidden">
           {/* Left side - All columns with checkboxes */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="relative mb-3">
@@ -235,7 +235,7 @@ export function ColumnCustomizationDialog({
           </div>
 
           {/* Right side - Selected columns with drag */}
-          <div className="w-72 flex flex-col overflow-hidden border-l border-border pl-4">
+          <div className="w-full md:w-72 flex flex-col overflow-hidden border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-4 max-h-[30vh] md:max-h-none">
             <div className="flex items-center gap-2 mb-3">
               <span className="font-medium text-sm">Campanha</span>
             </div>
