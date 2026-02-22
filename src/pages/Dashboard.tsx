@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -58,12 +58,15 @@ const Dashboard = () => {
     }
   })();
 
-  const customDateRange = filters.selectedPeriod === 'custom' && filters.customDateFrom && filters.customDateTo
-    ? {
+  const customDateRange = useMemo(() => {
+    if (filters.selectedPeriod === 'custom' && filters.customDateFrom && filters.customDateTo) {
+      return {
         since: filters.customDateFrom.toISOString().split('T')[0],
         until: filters.customDateTo.toISOString().split('T')[0],
-      }
-    : undefined;
+      };
+    }
+    return undefined;
+  }, [filters.selectedPeriod, filters.customDateFrom, filters.customDateTo]);
 
   const { campaigns, refreshAll, isLoading: campaignsLoading } = useMetaCampaigns(metaDatePreset, customDateRange);
   const salesFilters = { startDate: filters.dateRange.startDate, endDate: filters.dateRange.endDate };
