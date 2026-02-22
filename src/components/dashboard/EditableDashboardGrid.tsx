@@ -96,7 +96,7 @@ export function EditableDashboardGrid({ isEditMode, layoutHook, campaigns, sales
   const formatCurrency = (value: number) =>
     `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+  const formatPercent = (value: number) => `${value.toFixed(2)}%`;
 
   const getMetricData = (metricId: string): { 
     title: string; value: string; icon: LucideIcon; 
@@ -111,8 +111,11 @@ export function EditableDashboardGrid({ isEditMode, layoutHook, campaigns, sales
         return { title: 'Faturamento', value: formatCurrency(totalRevenue), icon: Icon, variant: 'success', change: 0 };
       case 'spent':
         return { title: 'Gastos com Anúncios', value: formatCurrency(totalSpent), icon: Icon, variant: 'danger', change: 0 };
-      case 'roi':
-        return { title: 'ROI', value: formatPercent(avgROI), icon: Icon, variant: avgROI > 100 ? 'success' : 'primary', change: 0 };
+      case 'roi': {
+        const roiValue = totalProfit >= 0 ? avgROI : -avgROI;
+        const roiVariant = totalProfit >= 0 && avgROI > 100 ? 'success' : totalProfit < 0 ? 'danger' : 'primary';
+        return { title: 'ROI', value: formatPercent(roiValue), icon: Icon, variant: roiVariant, change: 0 };
+      }
       case 'profit':
         return { title: 'Lucro', value: formatCurrency(totalProfit), icon: Icon, variant: totalProfit >= 0 ? 'success' : 'danger', change: 0 };
       case 'cpa':
