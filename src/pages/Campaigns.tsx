@@ -448,16 +448,20 @@ const Campaigns = () => {
         const icrRate = item.pageViews > 0 ? (item.initiatedCheckout / item.pageViews) * 100 : null;
         return formatPercent(icrRate);
       case 'vendasPendentes': {
+        const todayStart = startOfDay(new Date()).toISOString();
         const itemId = (item as Campaign).id || '';
-        const pendingForItem = sales.filter(s => s.status === 'pending' && (s as any).campaign_id === itemId);
-        const pendingCount = isSummary ? sales.filter(s => s.status === 'pending').length : pendingForItem.length;
+        const todayPending = sales.filter(s => s.status === 'pending' && s.created_at >= todayStart);
+        const pendingForItem = todayPending.filter(s => (s as any).campaign_id === itemId);
+        const pendingCount = isSummary ? todayPending.length : pendingForItem.length;
         return <span className="text-warning">{pendingCount}</span>;
       }
       case 'cpp': {
+        const todayStart2 = startOfDay(new Date()).toISOString();
         const itemId2 = (item as Campaign).id || '';
+        const todayPending2 = sales.filter(s => s.status === 'pending' && s.created_at >= todayStart2);
         const pendingForItem2 = isSummary
-          ? sales.filter(s => s.status === 'pending')
-          : sales.filter(s => s.status === 'pending' && (s as any).campaign_id === itemId2);
+          ? todayPending2
+          : todayPending2.filter(s => (s as any).campaign_id === itemId2);
         const pendingCount2 = pendingForItem2.length;
         return pendingCount2 > 0 ? formatCurrency(item.spent / pendingCount2) : 'N/A';
       }
