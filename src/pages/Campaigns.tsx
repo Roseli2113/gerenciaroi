@@ -52,6 +52,7 @@ const Campaigns = () => {
   const { attribution } = useSalesAttribution();
   const [activeTab, setActiveTab] = useState<TabType>('campanhas');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [filterPeriod, setFilterPeriod] = useState<string>('today');
   const [bulkEditingBudget, setBulkEditingBudget] = useState<{ ids: string[]; type: 'campaign' | 'adset' } | null>(null);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
@@ -93,7 +94,7 @@ const Campaigns = () => {
     duplicateItem, deleteItem,
     getLastUpdatedText, hasActiveAccount,
     selectedCampaignIds, selectedAdSetIds, setSelectedCampaignIds, setSelectedAdSetIds
-  } = useMetaCampaigns();
+  } = useMetaCampaigns(filterPeriod);
 
   // Load active accounts
   useEffect(() => {
@@ -1138,13 +1139,13 @@ const Campaigns = () => {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Período de Visualização</label>
-              <Select defaultValue="today">
+              <Select value={filterPeriod} onValueChange={setFilterPeriod}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="yesterday">Ontem</SelectItem>
-                  <SelectItem value="7days">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30days">Últimos 30 dias</SelectItem>
+                  <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
+                  <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
                 </SelectContent>
               </Select>
             </div>

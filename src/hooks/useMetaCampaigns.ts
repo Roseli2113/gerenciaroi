@@ -290,7 +290,7 @@ function filterWithImpressions<T extends { impressions: number; spent: number }>
   return items.filter(item => item.impressions > 0 || item.spent > 0);
 }
 
-export function useMetaCampaigns() {
+export function useMetaCampaigns(datePreset: string = 'today') {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [adSets, setAdSets] = useState<AdSet[]>([]);
@@ -359,7 +359,7 @@ export function useMetaCampaigns() {
         }
 
         const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: 'today' }
+          body: { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: datePreset }
         });
 
         const insightsMap = new Map<string, CampaignInsight>();
@@ -400,7 +400,7 @@ export function useMetaCampaigns() {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, activeAccountIds]);
+  }, [accessToken, activeAccountIds, datePreset]);
 
   useEffect(() => {
     if (accessToken && activeAccountIds.length > 0) {
@@ -426,7 +426,7 @@ export function useMetaCampaigns() {
         }
 
         const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-adset-insights', accessToken, adAccountId: accountId, dateRange: 'today' }
+          body: { action: 'get-adset-insights', accessToken, adAccountId: accountId, dateRange: datePreset }
         });
 
         const insightsMap = new Map();
@@ -472,7 +472,7 @@ export function useMetaCampaigns() {
     } finally {
       setIsLoadingAdSets(false);
     }
-  }, [accessToken, activeAccountIds]);
+  }, [accessToken, activeAccountIds, datePreset]);
 
   const fetchAds = useCallback(async (adsetIdFilter?: string) => {
     if (!accessToken || activeAccountIds.length === 0) return;
@@ -492,7 +492,7 @@ export function useMetaCampaigns() {
         }
 
         const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-ad-insights', accessToken, adAccountId: accountId, dateRange: 'today' }
+          body: { action: 'get-ad-insights', accessToken, adAccountId: accountId, dateRange: datePreset }
         });
 
         const insightsMap = new Map();
@@ -533,7 +533,7 @@ export function useMetaCampaigns() {
     } finally {
       setIsLoadingAds(false);
     }
-  }, [accessToken, activeAccountIds]);
+  }, [accessToken, activeAccountIds, datePreset]);
 
   // Refresh all data simultaneously
   const refreshAll = useCallback(async () => {
