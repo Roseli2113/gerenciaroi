@@ -32,6 +32,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useSales } from '@/hooks/useSales';
+import { useSalesAttribution } from '@/hooks/useSalesAttribution';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
@@ -48,6 +49,7 @@ const Campaigns = () => {
   const { user } = useAuth();
   const { isTrialExpired, daysRemaining } = useTrialGuard();
   const { sales } = useSales();
+  const { attribution } = useSalesAttribution();
   const [activeTab, setActiveTab] = useState<TabType>('campanhas');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [bulkEditingBudget, setBulkEditingBudget] = useState<{ ids: string[]; type: 'campaign' | 'adset' } | null>(null);
@@ -222,9 +224,46 @@ const Campaigns = () => {
     return filtered.filter(ad => ad.spent > 0);
   };
 
-  const rawDisplayData = activeTab === 'campanhas' ? campaigns : 
-                      activeTab === 'conjuntos' ? getFilteredAdSets() : 
-                      getFilteredAds();
+  // Merge webhook sales attribution with Meta Ads data
+  const mergeAttribution = (items: (Campaign | AdSet | Ad)[], tab: TabType) => {
+    const map = tab === 'campanhas' ? attribution.byCampaignId 
+              : tab === 'conjuntos' ? attribution.byAdSetId 
+              : attribution.byAdId;
+    
+    return items.map(item => {
+      const attr = map.get(item.id);
+      if (!attr) return item;
+      
+      const sales = attr.sales;
+      const revenue = attr.revenue;
+      const spent = item.spent;
+      const profit = revenue - spent;
+      const cpa = sales > 0 ? spent / sales : null;
+      const roi = spent > 0 ? revenue / spent : null;
+      const roas = spent > 0 ? revenue / spent : null;
+      const margin = revenue > 0 ? ((revenue - spent) / revenue) * 100 : null;
+      
+      return {
+        ...item,
+        sales,
+        revenue,
+        profit,
+        cpa,
+        roi,
+        roas,
+        margin,
+        refundedSales: attr.refundedSales,
+        declinedSales: attr.declinedSales,
+      };
+    });
+  };
+
+  const rawDisplayData = mergeAttribution(
+    activeTab === 'campanhas' ? campaigns : 
+    activeTab === 'conjuntos' ? getFilteredAdSets() : 
+    getFilteredAds(),
+    activeTab
+  );
 
   // Apply pinning: pinned items first
   const sortedWithPins = [...rawDisplayData].sort((a, b) => {
