@@ -551,9 +551,9 @@ const Campaigns = () => {
         <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="w-[48px] sticky left-0 bg-[#384157] z-20 border-r border-border"><Checkbox /></TableHead>
-              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-[#384157] z-20 border-r border-border">STATUS</TableHead>
-              <TableHead className="font-semibold sticky left-[108px] bg-[#384157] z-20 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">CONTA</TableHead>
+              <TableHead className="w-[48px] md:sticky md:left-0 bg-[#384157] md:z-20 border-r border-border"><Checkbox /></TableHead>
+              <TableHead className="w-[60px] text-center font-semibold md:sticky md:left-[48px] bg-[#384157] md:z-20 border-r border-border">STATUS</TableHead>
+              <TableHead className="font-semibold md:sticky md:left-[108px] bg-[#384157] md:z-20 min-w-[200px] border-r border-border md:shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">CONTA</TableHead>
               {visibleColumns.map((col, index) => (
                 <TableHead 
                   key={col.id} 
@@ -572,13 +572,13 @@ const Campaigns = () => {
               const m = getAccountMetrics(account.account_id);
               return (
               <TableRow key={account.id} className="border-b border-border">
-                <TableCell className="w-[48px] sticky left-0 bg-card z-10 border-r border-b border-border">
+                <TableCell className="w-[48px] md:sticky md:left-0 bg-card md:z-10 border-r border-b border-border">
                   <Checkbox />
                 </TableCell>
-                <TableCell className="w-[60px] text-center sticky left-[48px] bg-card z-10 border-r border-b border-border">
+                <TableCell className="w-[60px] text-center md:sticky md:left-[48px] bg-card md:z-10 border-r border-b border-border">
                   <Switch checked={account.is_active} disabled />
                 </TableCell>
-                <TableCell className="font-medium sticky left-[108px] bg-card z-10 min-w-[200px] border-r border-b border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
+                <TableCell className="font-medium md:sticky md:left-[108px] bg-card md:z-10 min-w-[200px] border-r border-b border-border md:shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
                   {account.name}
                 </TableCell>
                 {visibleColumns.map((col, index) => {
@@ -628,9 +628,9 @@ const Campaigns = () => {
             })}
             {/* Summary row */}
             <TableRow className="border-border font-semibold">
-              <TableCell className="w-[48px] sticky left-0 bg-secondary z-10 border-r border-border" />
-              <TableCell className="w-[60px] sticky left-[48px] bg-secondary z-10 border-r border-border" />
-              <TableCell className="sticky left-[108px] bg-secondary z-10 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
+              <TableCell className="w-[48px] md:sticky md:left-0 bg-secondary md:z-10 border-r border-border" />
+              <TableCell className="w-[60px] md:sticky md:left-[48px] bg-secondary md:z-10 border-r border-border" />
+              <TableCell className="md:sticky md:left-[108px] bg-secondary md:z-10 min-w-[200px] border-r border-border md:shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
                 {activeAccounts.length} Conta{activeAccounts.length > 1 ? 's' : ''}
               </TableCell>
               {visibleColumns.map((col, index) => {
@@ -711,7 +711,7 @@ const Campaigns = () => {
         <Table className="border-separate border-spacing-0">
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="w-[48px] sticky left-0 bg-[#384157] z-20 border-r border-border">
+              <TableHead className="w-[48px] md:sticky md:left-0 bg-[#384157] md:z-20 border-r border-border">
                 <Checkbox
                   checked={displayData.length > 0 && (
                     activeTab === 'campanhas' ? selectedCampaignIds.length === displayData.length :
@@ -730,8 +730,8 @@ const Campaigns = () => {
                   }}
                 />
               </TableHead>
-              <TableHead className="w-[60px] text-center font-semibold sticky left-[48px] bg-[#384157] z-20 border-r-2 border-white/20">STATUS</TableHead>
-              <TableHead className="font-semibold sticky left-[108px] bg-[#384157] z-20 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
+              <TableHead className="w-[60px] text-center font-semibold md:sticky md:left-[48px] bg-[#384157] md:z-20 border-r-2 border-white/20">STATUS</TableHead>
+              <TableHead className="font-semibold md:sticky md:left-[108px] bg-[#384157] md:z-20 min-w-[200px] border-r border-border md:shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]">
                 {activeTab === 'campanhas' ? 'CAMPANHA' : activeTab === 'conjuntos' ? 'CONJUNTO' : 'ANÚNCIO'}
               </TableHead>
               <TableHead className="w-[48px] text-center font-semibold border-r border-border"></TableHead>
@@ -768,7 +768,7 @@ const Campaigns = () => {
                     else if (activeTab === 'conjuntos') handleSelectAdSet(item.id);
                   }}
                 >
-                  <TableCell className={cn("w-[48px] sticky left-0 z-10 border-r border-b border-border", isSelected ? "bg-row-selected" : "bg-card")}>
+                  <TableCell className={cn("w-[48px] md:sticky md:left-0 md:z-10 border-r border-b border-border", isSelected ? "bg-row-selected" : "bg-card")}>
                     <Checkbox 
                       checked={isSelected} 
                       onCheckedChange={() => {
@@ -787,12 +787,12 @@ const Campaigns = () => {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </TableCell>
-                  <TableCell className={cn("w-[60px] text-center sticky left-[48px] z-10 border-r-2 border-white/20 border-b border-border", isSelected ? "bg-row-selected" : "bg-card")} onClick={(e) => e.stopPropagation()}>
+                  <TableCell className={cn("w-[60px] text-center md:sticky md:left-[48px] md:z-10 border-r-2 border-white/20 border-b border-border", isSelected ? "bg-row-selected" : "bg-card")} onClick={(e) => e.stopPropagation()}>
                     {togglingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (
                       <Switch checked={item.status} onCheckedChange={() => handleToggleStatus(item.id, item.status, activeTab === 'campanhas' ? 'campaign' : activeTab === 'conjuntos' ? 'adset' : 'ad')} />
                     )}
                   </TableCell>
-                  <TableCell className={cn("font-medium sticky left-[108px] z-10 min-w-[200px] border-r border-b border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]", isSelected ? "bg-row-selected" : "bg-card")}>
+                  <TableCell className={cn("font-medium md:sticky md:left-[108px] md:z-10 min-w-[200px] border-r border-b border-border md:shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)]", isSelected ? "bg-row-selected" : "bg-card")}>
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[180px]">{item.name}</span>
                       {(activeTab === 'campanhas' || activeTab === 'conjuntos' || activeTab === 'anuncios') && (
@@ -944,9 +944,9 @@ const Campaigns = () => {
 
               return (
                 <TableRow className="border-b border-border font-semibold">
-                  <TableCell className="w-[48px] sticky left-0 bg-secondary z-10 border-r border-border" />
-                  <TableCell className="w-[60px] text-center sticky left-[48px] bg-secondary z-10 border-r-2 border-white/20" />
-                  <TableCell className="font-semibold sticky left-[108px] bg-secondary z-10 min-w-[200px] border-r border-border shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)] text-xs">
+                  <TableCell className="w-[48px] md:sticky md:left-0 bg-secondary md:z-10 border-r border-border" />
+                  <TableCell className="w-[60px] text-center md:sticky md:left-[48px] bg-secondary md:z-10 border-r-2 border-white/20" />
+                  <TableCell className="font-semibold md:sticky md:left-[108px] bg-secondary md:z-10 min-w-[200px] border-r border-border md:shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)] text-xs">
                     {itemLabel}
                   </TableCell>
                   <TableCell className="w-[48px] bg-secondary border-r border-border" />
