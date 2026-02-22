@@ -155,7 +155,7 @@ export function ColumnCustomizationDialog({
   const visibleColumns = localColumns.filter(c => c.visible);
   const hiddenColumns = localColumns.filter(c => !c.visible);
 
-  const filteredHidden = hiddenColumns.filter(c =>
+  const filteredAll = localColumns.filter(c =>
     c.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -223,7 +223,7 @@ export function ColumnCustomizationDialog({
             </div>
             <ScrollArea className="flex-1 overflow-y-auto">
               <div className="space-y-1 pr-4 pb-2">
-                {filteredHidden.map((column) => (
+                {filteredAll.map((column) => (
                   <label
                     key={column.id}
                     className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
@@ -235,9 +235,9 @@ export function ColumnCustomizationDialog({
                     <span className="text-sm">{column.label}</span>
                   </label>
                 ))}
-                {filteredHidden.length === 0 && (
+                {filteredAll.length === 0 && (
                   <p className="text-sm text-muted-foreground p-2">
-                    {searchQuery ? 'Nenhuma coluna encontrada' : 'Todas as colunas estão visíveis'}
+                    Nenhuma coluna encontrada
                   </p>
                 )}
               </div>
