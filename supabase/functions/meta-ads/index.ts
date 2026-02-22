@@ -34,7 +34,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, accessToken, adAccountId, campaignId, adsetId, adId, dateRange, updates, sourceId, copies, type, statusOption, scheduledDate } = await req.json();
+    const { action, accessToken, adAccountId, campaignId, adsetId, adId, dateRange, dateSince, dateUntil, updates, sourceId, copies, type, statusOption, scheduledDate } = await req.json();
 
     if (!accessToken) {
       return new Response(
@@ -87,11 +87,16 @@ serve(async (req) => {
         "video_p100_watched_actions"
       ].join(",");
 
-      const datePreset = dateRange || "today";
+      let dateParams = '';
+      if (dateSince && dateUntil) {
+        dateParams = `&time_range={"since":"${dateSince}","until":"${dateUntil}"}`;
+      } else {
+        dateParams = `&date_preset=${dateRange || "today"}`;
+      }
       const url = `${baseUrl}/${adAccountId}/insights?` +
         `fields=${fields}` +
         `&level=campaign` +
-        `&date_preset=${datePreset}` +
+        dateParams +
         `&limit=500` +
         `&access_token=${accessToken}`;
 
@@ -145,8 +150,13 @@ serve(async (req) => {
         "video_p100_watched_actions"
       ].join(",");
       
-      const datePreset = dateRange || "today";
-      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=adset&date_preset=${datePreset}&limit=500&access_token=${accessToken}`;
+      let dateParams = '';
+      if (dateSince && dateUntil) {
+        dateParams = `&time_range={"since":"${dateSince}","until":"${dateUntil}"}`;
+      } else {
+        dateParams = `&date_preset=${dateRange || "today"}`;
+      }
+      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=adset${dateParams}&limit=500&access_token=${accessToken}`;
       const insights = await fetchAllPages(url);
 
       return new Response(
@@ -176,8 +186,13 @@ serve(async (req) => {
         "video_p100_watched_actions"
       ].join(",");
       
-      const datePreset = dateRange || "today";
-      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=ad&date_preset=${datePreset}&limit=500&access_token=${accessToken}`;
+      let dateParams = '';
+      if (dateSince && dateUntil) {
+        dateParams = `&time_range={"since":"${dateSince}","until":"${dateUntil}"}`;
+      } else {
+        dateParams = `&date_preset=${dateRange || "today"}`;
+      }
+      const url = `${baseUrl}/${adAccountId}/insights?fields=${fields}&level=ad${dateParams}&limit=500&access_token=${accessToken}`;
       const insights = await fetchAllPages(url);
 
       return new Response(

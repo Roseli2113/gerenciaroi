@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,10 +13,13 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
-  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Maximize2, Minimize2, ShieldAlert, MoreVertical, BarChart3, Copy, Pin, Filter, Trash2, Power, PowerOff
+  RefreshCw, Building2, LayoutGrid, Layers, FileText, AlertCircle, Loader2, Pencil, Edit3, Settings, ArrowUp, ArrowDown, ChevronDown, ChevronUp, Maximize2, Minimize2, ShieldAlert, MoreVertical, BarChart3, Copy, Pin, Filter, Trash2, Power, PowerOff, CalendarIcon
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useMetaCampaigns, Campaign, AdSet, Ad } from '@/hooks/useMetaCampaigns';
 import { Link } from 'react-router-dom';
@@ -53,6 +56,18 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState<TabType>('campanhas');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [filterPeriod, setFilterPeriod] = useState<string>('today');
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
+
+  const customDateRange = useMemo(() => {
+    if (filterPeriod === 'custom' && customDateFrom && customDateTo) {
+      return {
+        since: format(customDateFrom, 'yyyy-MM-dd'),
+        until: format(customDateTo, 'yyyy-MM-dd'),
+      };
+    }
+    return undefined;
+  }, [filterPeriod, customDateFrom, customDateTo]);
   const [bulkEditingBudget, setBulkEditingBudget] = useState<{ ids: string[]; type: 'campaign' | 'adset' } | null>(null);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
@@ -94,7 +109,7 @@ const Campaigns = () => {
     duplicateItem, deleteItem,
     getLastUpdatedText, hasActiveAccount,
     selectedCampaignIds, selectedAdSetIds, setSelectedCampaignIds, setSelectedAdSetIds
-  } = useMetaCampaigns(filterPeriod);
+  } = useMetaCampaigns(filterPeriod === 'custom' ? 'today' : filterPeriod, customDateRange);
 
   // Load active accounts
   useEffect(() => {
@@ -1139,16 +1154,55 @@ const Campaigns = () => {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Período de Visualização</label>
-              <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+              <Select value={filterPeriod} onValueChange={(val) => {
+                setFilterPeriod(val);
+                if (val !== 'custom') {
+                  setCustomDateFrom(undefined);
+                  setCustomDateTo(undefined);
+                }
+              }}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="yesterday">Ontem</SelectItem>
                   <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
                   <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {filterPeriod === 'custom' && (
+              <>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">De</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("h-9 w-full justify-start text-left font-normal text-sm", !customDateFrom && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {customDateFrom ? format(customDateFrom, 'dd/MM/yyyy') : 'Selecionar'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={customDateFrom} onSelect={setCustomDateFrom} disabled={(date) => date > new Date()} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Até</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("h-9 w-full justify-start text-left font-normal text-sm", !customDateTo && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {customDateTo ? format(customDateTo, 'dd/MM/yyyy') : 'Selecionar'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={customDateTo} onSelect={setCustomDateTo} disabled={(date) => date > new Date() || (customDateFrom ? date < customDateFrom : false)} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </>
+            )}
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Conta de Anúncio</label>
               <Select value={filterAccount} onValueChange={setFilterAccount}>
