@@ -358,16 +358,33 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
           return;
         }
 
-        const { data: insightsData, error: insightsError } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) }
-        });
+        // Fetch insights with retry (up to 3 attempts)
+        let insightsData: any = null;
+        let insightsFailed = false;
+        const insightsBody = { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) };
 
-        if (insightsError || insightsData?.error) {
-          const errMsg = insightsData?.error || insightsError?.message || '';
-          if (errMsg.includes('too many calls') || errMsg.includes('rate limit') || errMsg.includes('request limit')) {
-            toast.error('Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente.');
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data, error } = await supabase.functions.invoke('meta-ads', { body: insightsBody });
+
+          if (!error && !data?.error && data?.insights) {
+            insightsData = data;
+            break;
+          }
+
+          const errMsg = data?.error || error?.message || '';
+          console.warn(`Insights attempt ${attempt + 1}/3 for ${accountId} failed:`, errMsg);
+
+          if (attempt < 2) {
+            // Wait before retry: 3s, 6s
+            await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
           } else {
-            console.error(`Error fetching insights for ${accountId}:`, errMsg);
+            insightsFailed = true;
+            const isRateLimit = errMsg.includes('too many calls') || errMsg.includes('rate limit') || errMsg.includes('request limit');
+            if (isRateLimit) {
+              toast.error('Limite de requisições da Meta atingido. Aguarde alguns minutos e tente novamente.');
+            } else {
+              toast.warning('Não foi possível carregar os gastos de algumas campanhas. Tente atualizar novamente.');
+            }
           }
         }
 
@@ -434,9 +451,14 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
           return;
         }
 
-        const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-adset-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) }
-        });
+        // Fetch insights with retry (up to 3 attempts)
+        let insightsData: any = null;
+        const insightsBody = { action: 'get-adset-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) };
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data: iData, error: iError } = await supabase.functions.invoke('meta-ads', { body: insightsBody });
+          if (!iError && !iData?.error && iData?.insights) { insightsData = iData; break; }
+          if (attempt < 2) await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+        }
 
         const insightsMap = new Map();
         if (insightsData?.insights) {
@@ -500,9 +522,14 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
           return;
         }
 
-        const { data: insightsData } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-ad-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) }
-        });
+        // Fetch insights with retry (up to 3 attempts)
+        let insightsData: any = null;
+        const insightsBody = { action: 'get-ad-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) };
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data: iData, error: iError } = await supabase.functions.invoke('meta-ads', { body: insightsBody });
+          if (!iError && !iData?.error && iData?.insights) { insightsData = iData; break; }
+          if (attempt < 2) await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+        }
 
         const insightsMap = new Map();
         if (insightsData?.insights) {
