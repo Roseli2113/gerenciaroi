@@ -447,8 +447,20 @@ const Campaigns = () => {
         // Taxa de ICs = ICs / vis. de pág. (%)
         const icrRate = item.pageViews > 0 ? (item.initiatedCheckout / item.pageViews) * 100 : null;
         return formatPercent(icrRate);
+      case 'vendasPendentes': {
+        const pendingCount = sales.filter(s => s.status === 'pending').length;
+        return <span className="text-warning">{pendingCount}</span>;
+      }
+      case 'cpp': {
+        const pendingCount2 = sales.filter(s => s.status === 'pending').length;
+        return pendingCount2 > 0 ? formatCurrency(item.spent / pendingCount2) : 'N/A';
+      }
       case 'vendasTotais':
         return item.sales + item.declinedSales + item.refundedSales;
+      case 'cpt': {
+        const totalCount = item.sales + item.declinedSales + item.refundedSales;
+        return totalCount > 0 ? formatCurrency(item.spent / totalCount) : 'N/A';
+      }
       default:
         return 'N/A';
     }
