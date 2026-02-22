@@ -1102,6 +1102,62 @@ const Campaigns = () => {
           </TabsList>
         </Tabs>
 
+        {/* Mobile-only date/period filter bar */}
+        <div className="flex md:hidden items-center gap-2 p-2 rounded-lg border border-border bg-card">
+          <CalendarIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+          <Select value={filterPeriod} onValueChange={(val) => {
+            setFilterPeriod(val);
+            if (val !== 'custom') {
+              setCustomDateFrom(undefined);
+              setCustomDateTo(undefined);
+            }
+          }}>
+            <SelectTrigger className="h-8 flex-1 border-0 bg-muted/50 text-xs">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="yesterday">Ontem</SelectItem>
+              <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          {filterPeriod === 'custom' && (
+            <>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("h-8 text-[10px] px-2 min-w-0", !customDateFrom && "text-muted-foreground")}>
+                    {customDateFrom ? format(customDateFrom, "dd/MM/yy", { locale: ptBR }) : 'De'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={customDateFrom} onSelect={setCustomDateFrom} disabled={(date) => date > new Date()} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("h-8 text-[10px] px-2 min-w-0", !customDateTo && "text-muted-foreground")}>
+                    {customDateTo ? format(customDateTo, "dd/MM/yy", { locale: ptBR }) : 'Até'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar mode="single" selected={customDateTo} onSelect={setCustomDateTo} disabled={(date) => date > new Date() || (customDateFrom ? date < customDateFrom : false)} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={handleRefresh}
+            disabled={isLoading || isLoadingAdSets || isLoadingAds}
+          >
+            {(isLoading || isLoadingAdSets || isLoadingAds) ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          </Button>
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1 md:gap-2 flex-wrap">
             <Button 
@@ -1264,60 +1320,36 @@ const Campaigns = () => {
 
         <div className="rounded-lg border border-border bg-card overflow-x-auto -webkit-overflow-scrolling-touch pb-16 md:pb-0">{renderTable()}</div>
 
-        {/* Mobile bottom navigation bar - date/period filter */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center gap-2 bg-card border-t border-border py-2 px-3 shadow-lg">
-          <CalendarIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-          <Select value={filterPeriod} onValueChange={(val) => {
-            setFilterPeriod(val);
-            if (val !== 'custom') {
-              setCustomDateFrom(undefined);
-              setCustomDateTo(undefined);
-            }
-          }}>
-            <SelectTrigger className="h-8 flex-1 border-0 bg-muted/50 text-xs">
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Hoje</SelectItem>
-              <SelectItem value="yesterday">Ontem</SelectItem>
-              <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
-              <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
-              <SelectItem value="custom">Personalizado</SelectItem>
-            </SelectContent>
-          </Select>
-          {filterPeriod === 'custom' && (
-            <>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn("h-8 text-[10px] px-2 min-w-0", !customDateFrom && "text-muted-foreground")}>
-                    {customDateFrom ? format(customDateFrom, "dd/MM/yy", { locale: ptBR }) : 'De'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start" side="top">
-                  <Calendar mode="single" selected={customDateFrom} onSelect={setCustomDateFrom} disabled={(date) => date > new Date()} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
-                </PopoverContent>
-              </Popover>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn("h-8 text-[10px] px-2 min-w-0", !customDateTo && "text-muted-foreground")}>
-                    {customDateTo ? format(customDateTo, "dd/MM/yy", { locale: ptBR }) : 'Até'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end" side="top">
-                  <Calendar mode="single" selected={customDateTo} onSelect={setCustomDateTo} disabled={(date) => date > new Date() || (customDateFrom ? date < customDateFrom : false)} initialFocus className="p-3 pointer-events-auto" locale={ptBR} />
-                </PopoverContent>
-              </Popover>
-            </>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-            onClick={handleRefresh}
-            disabled={isLoading || isLoadingAdSets || isLoadingAds}
+        {/* Mobile bottom navigation bar - tab icons */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around bg-card border-t border-border py-2 px-1 shadow-lg">
+          <button
+            onClick={() => setActiveTab('contas')}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', activeTab === 'contas' ? 'text-primary' : 'text-muted-foreground')}
           >
-            {(isLoading || isLoadingAdSets || isLoadingAds) ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          </Button>
+            <Building2 className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Contas</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('campanhas')}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', activeTab === 'campanhas' ? 'text-primary' : 'text-muted-foreground')}
+          >
+            <Layers className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Campanhas</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('conjuntos')}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', activeTab === 'conjuntos' ? 'text-primary' : 'text-muted-foreground')}
+          >
+            <LayoutGrid className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Conjuntos</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('anuncios')}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors', activeTab === 'anuncios' ? 'text-primary' : 'text-muted-foreground')}
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Anúncios</span>
+          </button>
         </div>
       </div>
   );
