@@ -17,11 +17,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Link2, Copy, Check, Eye, ShoppingCart } from 'lucide-react';
+import { Link2, Copy, Check, Eye, ShoppingCart, Webhook, Radio } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSales } from '@/hooks/useSales';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
+import { useSalesAttribution } from '@/hooks/useSalesAttribution';
 
 const UTMs = () => {
   const [copied, setCopied] = useState(false);
@@ -32,6 +35,7 @@ const UTMs = () => {
   
   const { sales } = useSales();
   const { campaigns } = useMetaCampaigns();
+  const { attribution } = useSalesAttribution();
 
   const generatedUrl = `${baseUrl}?utm_source=${utmSource}&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`;
 
@@ -43,6 +47,10 @@ const UTMs = () => {
 
   // Calculate UTM performance from real data (sales raw_data contains UTM info)
   const utmPerformance = campaigns.map(campaign => {
+    // Check if we have webhook attribution data for this campaign
+    const webhookData = attribution.byCampaignId.get(campaign.id);
+    const hasWebhookData = !!webhookData && webhookData.sales > 0;
+
     // Get sales related to this campaign (by matching campaign name or UTM)
     const campaignSales = sales.filter(sale => {
       const rawData = sale.raw_data as Record<string, unknown> | null;
@@ -50,8 +58,8 @@ const UTMs = () => {
       return utmCampaign?.toLowerCase().includes(campaign.name.toLowerCase().slice(0, 10));
     });
 
-    const revenue = campaignSales.reduce((sum, s) => sum + Number(s.amount), 0);
-    const conversions = campaignSales.length;
+    const revenue = hasWebhookData ? webhookData.revenue : campaignSales.reduce((sum, s) => sum + Number(s.amount), 0);
+    const conversions = hasWebhookData ? webhookData.sales : campaignSales.length;
 
     return {
       source: 'facebook',
@@ -61,6 +69,7 @@ const UTMs = () => {
       conversions,
       revenue,
       cpa: conversions > 0 ? campaign.spent / conversions : 0,
+      dataSource: hasWebhookData ? 'webhook' as const : 'pixel' as const,
     };
   }).filter(utm => utm.visits > 0 || utm.conversions > 0);
 
@@ -186,6 +195,7 @@ const UTMs = () => {
                     </TableHead>
                     <TableHead className="text-right">Receita</TableHead>
                     <TableHead className="text-right">CPA</TableHead>
+                    <TableHead className="text-center">Fonte</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -212,6 +222,34 @@ const UTMs = () => {
                         )}>
                           R$ {utm.cpa.toFixed(2)}
                         </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge
+                                variant={utm.dataSource === 'webhook' ? 'default' : 'secondary'}
+                                className={cn(
+                                  'gap-1 text-[10px] px-2',
+                                  utm.dataSource === 'webhook'
+                                    ? 'bg-success/20 text-success border-0'
+                                    : 'bg-muted text-muted-foreground'
+                                )}
+                              >
+                                {utm.dataSource === 'webhook' ? (
+                                  <><Webhook className="w-3 h-3" /> Webhook</>
+                                ) : (
+                                  <><Radio className="w-3 h-3" /> Pixel</>
+                                )}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {utm.dataSource === 'webhook'
+                                ? 'Dados reais de faturamento via webhook'
+                                : 'Dados estimados via Meta Pixel'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}
