@@ -374,6 +374,14 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
           const errMsg = data?.error || error?.message || '';
           console.warn(`Insights attempt ${attempt + 1}/3 for ${accountId} failed:`, errMsg);
 
+          // Don't retry permission errors
+          const isPermissionError = errMsg.includes('permission') || errMsg.includes('#200');
+          if (isPermissionError) {
+            insightsFailed = true;
+            toast.error('Permissões da Meta expiradas. Reconecte sua conta Meta nas configurações para restaurar os dados.');
+            break;
+          }
+
           if (attempt < 2) {
             // Wait before retry: 3s, 6s
             await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
