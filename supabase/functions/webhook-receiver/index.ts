@@ -40,6 +40,7 @@ interface LowifyPayload {
   value?: number;
   price?: number;
   amount?: number;
+  currency?: string;
   payment_type?: string;
   commission?: number;
   [key: string]: unknown;
@@ -133,6 +134,7 @@ Deno.serve(async (req) => {
           status: saleData.status,
           raw_data: saleData.raw_data,
           amount: saleData.amount,
+          currency: saleData.currency,
           payment_method: saleData.payment_method,
           transaction_id: saleData.transaction_id,
         })
@@ -293,8 +295,18 @@ function extractCampaignId(payload: LowifyPayload): string | null {
   return null
 }
 
+function detectCurrency(payload: LowifyPayload): string {
+  // Check explicit currency fields
+  if (payload.payment?.currency) return payload.payment.currency.toUpperCase()
+  const raw = payload as Record<string, unknown>
+  if (typeof raw.currency === 'string' && raw.currency) return (raw.currency as string).toUpperCase()
+  // Default to BRL
+  return 'BRL'
+}
+
 function parseSaleData(platform: string, payload: LowifyPayload, userId: string, webhookId: string | null) {
   const campaignId = extractCampaignId(payload)
+  const currency = detectCurrency(payload)
 
   const baseData = {
     user_id: userId,
@@ -316,7 +328,7 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
         product_name: payload.product?.name || payload.offer?.name || null,
         product_id: payload.product?.id?.toString() || payload.offer?.id?.toString() || null,
         amount: payload.sale_amount || payload.product?.price || payload.payment?.amount || payload.value || payload.price || 0,
-        currency: payload.payment?.currency || 'BRL',
+        currency,
         payment_method: payload.payment?.method || payload.payment_type || null,
         commission: payload.commission || 0,
       }
@@ -332,7 +344,7 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
         product_name: payload.product?.name || null,
         product_id: payload.product?.id?.toString() || null,
         amount: payload.payment?.amount || payload.amount || payload.value || 0,
-        currency: payload.payment?.currency || 'BRL',
+        currency,
         payment_method: payload.payment?.method || null,
         commission: payload.commission || 0,
       }
