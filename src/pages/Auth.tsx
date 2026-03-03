@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, TrendingUp } from 'lucide-react';
+import { Loader2, TrendingUp, Eye, EyeOff } from 'lucide-react';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -47,6 +48,29 @@ export default function Auth() {
     
     setIsLoading(false);
   };
+
+  const PasswordInput = ({ id, placeholder }: { id: string; placeholder: string }) => (
+    <div className="relative">
+      <Input
+        id={id}
+        type={showPassword ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        minLength={id.includes('register') ? 6 : undefined}
+        required
+        className="pr-10"
+      />
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+        tabIndex={-1}
+      >
+        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -92,14 +116,7 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="login-password">Senha</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                    <PasswordInput id="login-password" placeholder="••••••••" />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
@@ -129,15 +146,7 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="register-password">Senha</Label>
-                    <Input
-                      id="register-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      minLength={6}
-                      required
-                    />
+                    <PasswordInput id="register-password" placeholder="••••••••" />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (

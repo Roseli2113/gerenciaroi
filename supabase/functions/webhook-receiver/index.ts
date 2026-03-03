@@ -46,7 +46,6 @@ interface LowifyPayload {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -57,17 +56,14 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get the webhook token from query params or headers
     const url = new URL(req.url)
     const webhookToken = url.searchParams.get('token') || req.headers.get('x-webhook-token')
     let platform = url.searchParams.get('platform') || 'unknown'
 
-    // Parse the incoming payload
     const payload: LowifyPayload = await req.json()
 
     console.log('Received webhook:', { platform, payload })
 
-    // Find the webhook configuration by token if provided
     let webhookConfig = null
     let userId = null
 
@@ -84,36 +80,27 @@ Deno.serve(async (req) => {
       } else {
         webhookConfig = webhook
         userId = webhook.user_id
-        // Use the platform from the webhook config if not explicitly provided in URL
         if (!url.searchParams.get('platform')) {
           platform = webhook.platform
         }
       }
     }
 
-    // If no webhook found by token, reject the request
-    // We no longer fall back to platform-only matching as it could route events to the wrong user
-
     if (!userId) {
       console.error('No valid webhook configuration found')
       return new Response(
         JSON.stringify({ success: false, error: 'Webhook configuration not found' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Parse the sale data based on platform
     const saleData = parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
 
-    // Try to find existing sale to UPDATE instead of creating duplicate
+    // Dedup logic
     let sale = null
     let saleError = null
     let existingId: string | null = null
 
-    // 1. Try matching by transaction_id
     if (saleData.transaction_id) {
       const { data: existing } = await supabase
         .from('sales')
@@ -124,7 +111,6 @@ Deno.serve(async (req) => {
       if (existing) existingId = existing.id
     }
 
-    // 2. Fallback: match by customer_email + product_id within last 30 min (handles test events with different IDs)
     if (!existingId && saleData.customer_email && saleData.product_id) {
       const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
       const { data: existing } = await supabase
@@ -141,7 +127,6 @@ Deno.serve(async (req) => {
     }
 
     if (existingId) {
-      // Update existing record (status change)
       const { data, error } = await supabase
         .from('sales')
         .update({
@@ -166,37 +151,136 @@ Deno.serve(async (req) => {
       console.error('Error inserting sale:', saleError)
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to save sale data' }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     console.log('Sale recorded:', sale)
 
+    // Fire Meta CAPI Purchase event if sale is approved
+    if (saleData.status === 'approved') {
+      await sendCapiEvent(supabase, userId, 'Purchase', {
+        value: saleData.amount,
+        currency: saleData.currency || 'BRL',
+        email: saleData.customer_email,
+        phone: saleData.customer_phone,
+        transactionId: saleData.transaction_id,
+      })
+    }
+
+    // Fire Meta CAPI InitiateCheckout for pending payments (checkout started)
+    if (saleData.status === 'pending') {
+      await sendCapiEvent(supabase, userId, 'InitiateCheckout', {
+        value: saleData.amount,
+        currency: saleData.currency || 'BRL',
+        email: saleData.customer_email,
+        phone: saleData.customer_phone,
+        transactionId: saleData.transaction_id,
+      })
+    }
+
     return new Response(
       JSON.stringify({ success: true, sale_id: sale.id }),
-      { 
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('Webhook error:', error)
     return new Response(
       JSON.stringify({ success: false, error: 'Internal server error' }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
 
+// ---- Meta Conversions API (CAPI) ----
+
+async function sendCapiEvent(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  eventName: string,
+  data: { value: number; currency: string; email?: string | null; phone?: string | null; transactionId?: string | null }
+) {
+  try {
+    // Get user's pixel configurations with tokens
+    const { data: pixels, error: pixelError } = await supabase
+      .from('pixels')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+
+    if (pixelError || !pixels?.length) {
+      console.log('No active pixels found for CAPI, skipping')
+      return
+    }
+
+    for (const pixel of pixels) {
+      const { data: metaPixels, error: metaError } = await supabase
+        .from('pixel_meta_ids')
+        .select('meta_pixel_id, token')
+        .eq('pixel_id', pixel.id)
+
+      if (metaError || !metaPixels?.length) continue
+
+      for (const mp of metaPixels) {
+        if (!mp.token || !mp.meta_pixel_id) continue
+
+        const eventData: Record<string, unknown> = {
+          event_name: eventName,
+          event_time: Math.floor(Date.now() / 1000),
+          action_source: 'website',
+          event_id: data.transactionId || `${eventName}_${Date.now()}`,
+          user_data: {},
+          custom_data: {
+            value: data.value,
+            currency: data.currency,
+          },
+        }
+
+        // Hash user data for CAPI (SHA-256)
+        const userData: Record<string, string> = {}
+        if (data.email) {
+          userData.em = await hashSha256(data.email.toLowerCase().trim())
+        }
+        if (data.phone) {
+          const cleanPhone = data.phone.replace(/\D/g, '')
+          if (cleanPhone) userData.ph = await hashSha256(cleanPhone)
+        }
+        eventData.user_data = userData
+
+        try {
+          const response = await fetch(
+            `https://graph.facebook.com/v21.0/${mp.meta_pixel_id}/events?access_token=${mp.token}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ data: [eventData] }),
+            }
+          )
+          const result = await response.json()
+          console.log(`CAPI ${eventName} sent to pixel ${mp.meta_pixel_id}:`, result)
+        } catch (fetchErr) {
+          console.error(`CAPI ${eventName} failed for pixel ${mp.meta_pixel_id}:`, fetchErr)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('sendCapiEvent error:', err)
+  }
+}
+
+async function hashSha256(value: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(value)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+// ---- Sale Parsing ----
+
 function extractCampaignId(payload: LowifyPayload): string | null {
-  // Try to extract campaign ID from tracking/UTM data
   const raw = payload as Record<string, unknown>
   const tracking = (raw.tracking && typeof raw.tracking === 'object' ? raw.tracking : raw) as Record<string, unknown>
   const utmCampaign = (tracking.utm_campaign as string) || null
@@ -212,17 +296,14 @@ function extractCampaignId(payload: LowifyPayload): string | null {
 function parseSaleData(platform: string, payload: LowifyPayload, userId: string, webhookId: string | null) {
   const campaignId = extractCampaignId(payload)
 
-  // Common structure for sale data
   const baseData = {
     user_id: userId,
     webhook_id: webhookId,
     platform: platform,
     raw_data: payload,
     campaign_id: campaignId,
-    // Let the database set created_at with now() to ensure correct UTC timestamp
   }
 
-  // Parse based on platform
   switch (platform) {
     case 'lowify':
       return {
@@ -241,7 +322,6 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
       }
 
     default:
-      // Generic parsing for unknown platforms
       return {
         ...baseData,
         transaction_id: payload.sale_id?.toString() || payload.transaction_id || payload.id?.toString() || null,
@@ -262,8 +342,6 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
 function mapStatus(status: string): string {
   const statusLower = status.toLowerCase()
   
-  // IMPORTANT: Check negative/intermediate statuses FIRST to avoid false positives
-  // e.g. "waiting_payment" contains no approved keywords but must map to pending
   if (['pending', 'waiting', 'awaiting', 'waiting_payment', 'pix_pending'].some(s => statusLower.includes(s))) {
     return 'pending'
   }
@@ -273,11 +351,9 @@ function mapStatus(status: string): string {
   if (['cancelled', 'canceled', 'expired', 'abandoned'].some(s => statusLower.includes(s))) {
     return 'cancelled'
   }
-  // Only map to approved if none of the above matched
   if (['approved', 'paid', 'confirmed', 'completed'].some(s => statusLower.includes(s))) {
     return 'approved'
   }
-  // Generic event names like "purchase" or "sale" default to approved
   if (['purchase', 'sale'].some(s => statusLower.includes(s))) {
     return 'approved'
   }
