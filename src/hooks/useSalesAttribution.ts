@@ -8,6 +8,7 @@ interface TrackingData {
   utm_medium?: string;
   utm_content?: string;
   utm_term?: string;
+  campaign_id?: string | number;
   [key: string]: unknown;
 }
 
@@ -83,7 +84,7 @@ export function useSalesAttribution(startDate?: Date) {
 
       const { data: sales, error } = await supabase
         .from('sales')
-        .select('amount, status, raw_data')
+        .select('amount, status, raw_data, campaign_id')
         .eq('user_id', user.id)
         .gte('created_at', fromDate.toISOString());
 
@@ -98,9 +99,20 @@ export function useSalesAttribution(startDate?: Date) {
         if (!raw) continue;
 
         const tracking = getTracking(raw);
-        const campaignId = extractIdFromUtm(tracking.utm_campaign);
+        let campaignId = extractIdFromUtm(tracking.utm_campaign);
         const adSetId = extractIdFromUtm(tracking.utm_medium);
         const adId = extractIdFromUtm(tracking.utm_content);
+
+        // Fallback: try tracking.campaign_id if it looks like a Meta ID (10+ digits)
+        if (!campaignId && tracking.campaign_id) {
+          const cid = String(tracking.campaign_id);
+          if (cid.length > 8) campaignId = cid;
+        }
+
+        // Also try the campaign_id column directly from the sale record
+        if (!campaignId && (sale as Record<string, unknown>).campaign_id) {
+          campaignId = String((sale as Record<string, unknown>).campaign_id);
+        }
 
         const amount = Number(sale.amount) || 0;
         const isApproved = sale.status === 'approved' || sale.status === 'paid';

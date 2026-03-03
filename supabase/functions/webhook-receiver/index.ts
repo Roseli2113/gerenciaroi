@@ -282,16 +282,38 @@ async function hashSha256(value: string): Promise<string> {
 
 // ---- Sale Parsing ----
 
-function extractCampaignId(payload: LowifyPayload): string | null {
-  const raw = payload as Record<string, unknown>
-  const tracking = (raw.tracking && typeof raw.tracking === 'object' ? raw.tracking : raw) as Record<string, unknown>
-  const utmCampaign = (tracking.utm_campaign as string) || null
-  if (!utmCampaign) return null
-  const parts = utmCampaign.split('|')
+function extractIdFromUtm(utmValue: string | null | undefined): string | null {
+  if (!utmValue) return null
+  const parts = utmValue.split('|')
   if (parts.length >= 2) {
     const id = parts[parts.length - 1].trim()
     return id || null
   }
+  return null
+}
+
+function extractCampaignId(payload: LowifyPayload): string | null {
+  const raw = payload as Record<string, unknown>
+  const tracking = (raw.tracking && typeof raw.tracking === 'object' ? raw.tracking : raw) as Record<string, unknown>
+  
+  // Try utm_campaign in "Name|ID" format first
+  const fromUtm = extractIdFromUtm(tracking.utm_campaign as string)
+  if (fromUtm) return fromUtm
+  
+  // Try utm_medium and utm_content as fallback
+  const fromMedium = extractIdFromUtm(tracking.utm_medium as string)
+  if (fromMedium) return fromMedium
+  
+  const fromContent = extractIdFromUtm(tracking.utm_content as string)
+  if (fromContent) return fromContent
+
+  // Try tracking.campaign_id directly (some platforms pass numeric Meta campaign IDs here)
+  const trackingCampaignId = tracking.campaign_id
+  if (trackingCampaignId && String(trackingCampaignId).length > 8) {
+    // Meta campaign IDs are typically 10+ digits; skip short Lowify-internal IDs
+    return String(trackingCampaignId)
+  }
+
   return null
 }
 
