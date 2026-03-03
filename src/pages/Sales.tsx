@@ -166,7 +166,11 @@ const Sales = () => {
     endDate,
   });
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, currency?: string | null) => {
+    const cur = (currency || 'BRL').toUpperCase();
+    if (cur === 'USD') {
+      return `$ ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
     return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
@@ -438,7 +442,7 @@ const Sales = () => {
                               </TableCell>
                               <TableCell>{getStatusBadge(sale.status)}</TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatCurrency(getSaleAmount(sale))}
+                                {formatCurrency(getSaleAmount(sale), sale.currency)}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
