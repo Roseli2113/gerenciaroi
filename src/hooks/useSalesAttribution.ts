@@ -150,7 +150,7 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
     } finally {
       setLoading(false);
     }
-  }, [user, startDate]);
+  }, [user, startDate, endDate]);
 
   useEffect(() => {
     fetchAttribution();
