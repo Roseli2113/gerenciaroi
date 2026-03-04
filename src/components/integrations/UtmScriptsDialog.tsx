@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Download, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UtmScriptsDialogProps {
   open: boolean;
@@ -17,6 +18,19 @@ interface UtmScriptsDialogProps {
 }
 
 const projectUrl = 'https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/utms/latest.js';
+const trackCheckoutUrl = 'https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/track-checkout';
+
+function buildAdsroiScript(token: string) {
+  return `<script
+  src="${projectUrl}"
+  data-gerenciaroi-prevent-xcod-sck
+  data-gerenciaroi-prevent-subids
+  data-gerenciaroi-token="${token}"
+  data-gerenciaroi-endpoint="${trackCheckoutUrl}"
+  async
+  defer
+></script>`;
+}
 
 const platformScripts: Record<string, string> = {
   hotmart: `<script
@@ -71,6 +85,7 @@ const platformScripts: Record<string, string> = {
 };
 
 const platforms = [
+  { id: 'adsroi', label: 'AdsRoi (com tracking de checkout)' },
   { id: 'hotmart', label: 'Hotmart' },
   { id: 'cartpanda', label: 'Cartpanda' },
   { id: 'buygoods', label: 'BuyGoods' },
