@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play, Trash2, BellOff, BellRing } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play, Trash2, BellOff, BellRing, Send, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +29,7 @@ interface Notification {
 
 const Notifications = () => {
   const { user } = useAuth();
-  const { selectedSound, updateSound, previewSound, pushEnabled, requestPushPermission } = useSaleNotification();
+  const { selectedSound, updateSound, previewSound, pushEnabled, pushLoading, requestPushPermission, sendTestPush } = useSaleNotification();
   const [notificationsList, setNotificationsList] = useState<Notification[]>([]);
   const [settings, setSettings] = useState({
     notify_email: true,
@@ -237,27 +237,27 @@ const Notifications = () => {
                     <Button
                       variant="outline"
                       className="w-full gap-2"
-                      onClick={() => {
+                      disabled={pushLoading}
+                      onClick={async () => {
                         try {
-                          new Notification('🔔 Teste - Gerencia ROI', {
-                            body: '💰 Nova venda de R$ 99,90 recebida! Este é um teste.',
-                            icon: '/pwa-192.png',
-                            badge: '/pwa-192.png',
-                            silent: false,
-                          });
-                          toast.success('Notificação de teste enviada!');
+                          const result = await sendTestPush();
+                          if (result?.sent > 0) {
+                            toast.success(`Notificação de teste enviada! (${result.sent} dispositivo${result.sent > 1 ? 's' : ''})`);
+                          } else {
+                            toast.info('Nenhuma inscrição push encontrada. Tente reativar as notificações.');
+                          }
                         } catch {
                           toast.error('Erro ao enviar notificação de teste');
                         }
                       }}
                     >
-                      <Bell className="h-4 w-4" />
+                      {pushLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       Enviar Notificação de Teste
                     </Button>
                   </div>
                 ) : (
-                  <Button onClick={requestPushPermission} className="w-full gap-2">
-                    <BellRing className="h-4 w-4" />
+                  <Button onClick={requestPushPermission} className="w-full gap-2" disabled={pushLoading}>
+                    {pushLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />}
                     Ativar Notificações Push
                   </Button>
                 )}

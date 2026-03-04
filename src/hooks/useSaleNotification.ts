@@ -14,14 +14,34 @@ export type SoundId = typeof SOUND_OPTIONS[number]['id'];
 
 export { SOUND_OPTIONS };
 
+// Convert a base64 URL string to Uint8Array (for applicationServerKey)
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export function useSaleNotification() {
   const { user } = useAuth();
   const [selectedSound, setSelectedSound] = useState<SoundId>('cash-money');
   const [enabled, setEnabled] = useState(true);
-  const [pushEnabled, setPushEnabled] = useState(() => Notification.permission === 'granted');
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const knownSalesRef = useRef<Set<string>>(new Set());
   const initialLoadDone = useRef(false);
+
+  // Check push status on mount
+  useEffect(() => {
+    if ('Notification' in window) {
+      setPushEnabled(Notification.permission === 'granted');
+    }
+  }, []);
 
   // Load preference from profile
   useEffect(() => {
@@ -58,15 +78,129 @@ export function useSaleNotification() {
       .eq('user_id', user.id);
   };
 
+  // Register push subscription via PushManager (real Web Push)
+  const registerPushSubscription = useCallback(async () => {
+    if (!user || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+    
+    try {
+      // Register the custom push service worker
+      const registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' });
+      await navigator.serviceWorker.ready;
+
+      // Get VAPID public key from env
+      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        console.error('VAPID_PUBLIC_KEY not configured');
+        return false;
+      }
+
+      // Subscribe
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
+
+      const subJson = subscription.toJSON();
+      if (!subJson.endpoint || !subJson.keys?.p256dh || !subJson.keys?.auth) {
+        console.error('Invalid subscription');
+        return false;
+      }
+
+      // Save to database (upsert by endpoint)
+      const { data: existing } = await supabase
+        .from('push_subscriptions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('endpoint', subJson.endpoint)
+        .maybeSingle();
+
+      if (existing) {
+        // Already saved
+        return true;
+      }
+
+      const { error } = await supabase.from('push_subscriptions').insert({
+        user_id: user.id,
+        endpoint: subJson.endpoint,
+        p256dh: subJson.keys.p256dh,
+        auth: subJson.keys.auth,
+      });
+
+      if (error) {
+        console.error('Error saving push subscription:', error);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Push subscription error:', err);
+      return false;
+    }
+  }, [user]);
+
   const requestPushPermission = useCallback(async () => {
     if (!('Notification' in window)) return false;
-    if (Notification.permission === 'granted') { setPushEnabled(true); return true; }
-    if (Notification.permission === 'denied') return false;
-    const result = await Notification.requestPermission();
-    const granted = result === 'granted';
-    setPushEnabled(granted);
-    return granted;
-  }, []);
+    setPushLoading(true);
+    
+    try {
+      if (Notification.permission === 'granted') {
+        setPushEnabled(true);
+        await registerPushSubscription();
+        return true;
+      }
+      if (Notification.permission === 'denied') {
+        setPushLoading(false);
+        return false;
+      }
+      
+      const result = await Notification.requestPermission();
+      const granted = result === 'granted';
+      setPushEnabled(granted);
+      
+      if (granted) {
+        await registerPushSubscription();
+      }
+      
+      return granted;
+    } finally {
+      setPushLoading(false);
+    }
+  }, [registerPushSubscription]);
+
+  // Auto-register subscription when push is already granted
+  useEffect(() => {
+    if (pushEnabled && user) {
+      registerPushSubscription();
+    }
+  }, [pushEnabled, user, registerPushSubscription]);
+
+  const sendTestPush = useCallback(async () => {
+    if (!user) return;
+    
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    
+    const response = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/send-push`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          title: '🔔 Teste - Gerencia ROI',
+          body: '💰 Nova venda de R$ 99,90 recebida! Este é um teste.',
+          url: '/dashboard',
+          tag: 'test-notification',
+        }),
+      }
+    );
+
+    const result = await response.json();
+    return result;
+  }, [user]);
 
   const showBrowserNotification = useCallback((title: string, body: string) => {
     if (Notification.permission !== 'granted') return;
@@ -92,7 +226,6 @@ export function useSaleNotification() {
   useEffect(() => {
     if (!user) return;
 
-    // Load existing sale IDs first to avoid playing on page load
     const loadExisting = async () => {
       const { data } = await supabase
         .from('sales')
@@ -123,7 +256,6 @@ export function useSaleNotification() {
           if (knownSalesRef.current.has(newSale.id)) return;
           knownSalesRef.current.add(newSale.id);
 
-          // Play sound and show toast + browser notification
           playSound();
           const amount = Number(newSale.amount || 0);
           const title = `💰 Nova venda: R$ ${amount.toFixed(2)}`;
@@ -146,7 +278,9 @@ export function useSaleNotification() {
     setEnabled,
     previewSound,
     pushEnabled,
+    pushLoading,
     requestPushPermission,
+    sendTestPush,
     SOUND_OPTIONS,
   };
 }
