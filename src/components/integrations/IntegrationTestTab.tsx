@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { UtmTestCard } from './UtmTestCard';
 
 interface TestResult {
   id: string;
@@ -121,7 +122,11 @@ export function IntegrationTestTab() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      {/* UTM Test Card */}
+      <UtmTestCard />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Test Form */}
       <Card>
         <CardHeader>
@@ -265,6 +270,7 @@ export function IntegrationTestTab() {
           )}
         </CardContent>
       </Card>
+    </div>
     </div>
   );
 }
