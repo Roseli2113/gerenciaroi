@@ -29,7 +29,7 @@ interface Notification {
 
 const Notifications = () => {
   const { user } = useAuth();
-  const { selectedSound, updateSound, previewSound, pushEnabled, pushLoading, requestPushPermission, sendTestPush } = useSaleNotification();
+  const { selectedSound, updateSound, previewSound, pushEnabled, pushLoading, requestPushPermission, disablePush, sendTestPush } = useSaleNotification();
   const [notificationsList, setNotificationsList] = useState<Notification[]>([]);
   const [settings, setSettings] = useState({
     notify_email: true,
