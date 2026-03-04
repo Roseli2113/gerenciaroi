@@ -22,6 +22,7 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'sale-notification',
     renotify: true,
     requireInteraction: true,
+    silent: true, // Suppress default system sound so only our MP3 plays
     data: {
       url: data.url || '/',
     },
