@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,16 +41,54 @@ import { cn } from '@/lib/utils';
 
 const Reports = () => {
   const { campaigns, isLoading: campaignsLoading } = useMetaCampaigns();
-  const { metrics: salesMetrics } = useSales();
+  const { sales, metrics: salesMetrics } = useSales();
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [localCampaigns, setLocalCampaigns] = useState<typeof campaigns | null>(null);
 
   // Use local campaigns if available (after deletions), otherwise use fetched campaigns
-  const displayCampaigns = localCampaigns ?? campaigns;
+  const baseCampaigns = localCampaigns ?? campaigns;
+
+  // Build revenue map from real sales grouped by campaign_id
+  const revenueByCampaign = useMemo(() => {
+    const map = new Map<string, { revenue: number; count: number }>();
+    const approvedSales = sales.filter(s => s.status === 'approved' || s.status === 'paid');
+    for (const sale of approvedSales) {
+      if (sale.campaign_id) {
+        const existing = map.get(sale.campaign_id) || { revenue: 0, count: 0 };
+        existing.revenue += Number(sale.amount);
+        existing.count += 1;
+        map.set(sale.campaign_id, existing);
+      }
+    }
+    return map;
+  }, [sales]);
+
+  // Merge real sales revenue into campaign data
+  const displayCampaigns = useMemo(() => {
+    return baseCampaigns.map(c => {
+      const salesData = revenueByCampaign.get(c.id);
+      const realRevenue = salesData?.revenue ?? 0;
+      const realSalesCount = salesData?.count ?? 0;
+      // Use real sales revenue if available, otherwise fall back to Meta reported revenue
+      const revenue = realRevenue > 0 ? realRevenue : c.revenue;
+      const salesCount = realSalesCount > 0 ? realSalesCount : c.sales;
+      const profit = revenue - c.spent;
+      const roi = c.spent > 0 ? revenue / c.spent : null;
+      const cpa = salesCount > 0 ? c.spent / salesCount : null;
+      return { ...c, revenue, sales: salesCount, profit, roi, cpa };
+    });
+  }, [baseCampaigns, revenueByCampaign]);
+
+  // Unattributed revenue (sales without campaign_id)
+  const unattributedRevenue = useMemo(() => {
+    return sales
+      .filter(s => (s.status === 'approved' || s.status === 'paid') && !s.campaign_id)
+      .reduce((sum, s) => sum + Number(s.amount), 0);
+  }, [sales]);
 
   // Calculate totals from real data
   const totalSpent = displayCampaigns.reduce((sum, c) => sum + c.spent, 0);
-  const totalRevenue = displayCampaigns.reduce((sum, c) => sum + c.revenue, 0) + salesMetrics.totalRevenue;
+  const totalRevenue = displayCampaigns.reduce((sum, c) => sum + c.revenue, 0) + unattributedRevenue;
   const avgROI = totalSpent > 0 ? (totalRevenue / totalSpent) * 100 : 0;
   const totalSales = displayCampaigns.reduce((sum, c) => sum + c.sales, 0) + salesMetrics.approvedSales;
   const avgCPA = totalSales > 0 ? totalSpent / totalSales : 0;
