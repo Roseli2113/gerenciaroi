@@ -356,6 +356,7 @@ export function useSaleNotification() {
     pushEnabled,
     pushLoading,
     requestPushPermission,
+    disablePush,
     sendTestPush,
     SOUND_OPTIONS,
   };
