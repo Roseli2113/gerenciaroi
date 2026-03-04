@@ -414,7 +414,14 @@ const Campaigns = () => {
       case 'cpa':
         return item.cpa !== null ? formatCurrency(item.cpa) : 'N/A';
       case 'roas':
-        return item.roas !== null ? item.roas.toFixed(2) : 'N/A';
+        return (
+          <span className={cn(
+            "font-medium",
+            item.roas !== null && item.roas > 1 ? "text-success" : item.roas !== null && item.roas < 1 ? "text-[hsl(0,100%,60%)]" : ""
+          )}>
+            {item.roas !== null ? item.roas.toFixed(2) : 'N/A'}
+          </span>
+        );
       case 'lucro':
         return (
           <span className={cn(
