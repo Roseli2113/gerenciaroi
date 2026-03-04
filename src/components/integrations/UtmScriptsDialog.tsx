@@ -183,8 +183,17 @@ export function UtmScriptsDialog({ open, onOpenChange }: UtmScriptsDialogProps) 
         </RadioGroup>
 
         {selectedPlatform === 'adsroi' && (
-          <div className="mt-2 p-3 rounded-lg bg-primary/10 text-sm text-foreground">
-            <strong>📡 Tracking de Checkout:</strong> Este script captura o email do cliente no checkout e envia as UTMs para o nosso backend. Assim, quando a AdsRoi enviar a venda via webhook, o sistema automaticamente vincula à campanha correta.
+          <div className="mt-2 p-3 rounded-lg bg-primary/10 text-sm text-foreground space-y-2">
+            <p><strong>📡 Atribuição Automática de Vendas</strong></p>
+            <p>Instale este script na sua <strong>página de vendas do produto</strong> (a página que você controla, onde o visitante chega pelo anúncio).</p>
+            <p><strong>Como funciona:</strong></p>
+            <ul className="list-disc list-inside space-y-1 text-xs">
+              <li>Captura as UTMs do link do anúncio automaticamente</li>
+              <li>Propaga as UTMs para todos os links de checkout na página</li>
+              <li>Se houver um campo de email na página (captura de lead), vincula o email às UTMs</li>
+              <li>Quando a AdsRoi enviar a venda via webhook, o sistema cruza o email do comprador para atribuir à campanha correta</li>
+            </ul>
+            <p className="text-xs text-muted-foreground mt-1">💡 <strong>Dica:</strong> Se sua página de vendas tiver um formulário de captura de email (lead) antes do checkout, a atribuição será automática e precisa.</p>
           </div>
         )}
 
