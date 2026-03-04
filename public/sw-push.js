@@ -1,7 +1,9 @@
-// Custom Service Worker for Web Push notifications
-// This runs in the background even when the browser is closed
+// Combined Service Worker: Push Notifications + Offline Caching
+// This handles Web Push events in the background
 
+// Push notification received
 self.addEventListener('push', (event) => {
+  console.log('[SW] Push event received');
   if (!event.data) return;
 
   let data;
@@ -19,6 +21,7 @@ self.addEventListener('push', (event) => {
     vibrate: [200, 100, 200],
     tag: data.tag || 'sale-notification',
     renotify: true,
+    requireInteraction: true,
     data: {
       url: data.url || '/',
     },
@@ -27,7 +30,9 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// Notification click handler
 self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked');
   event.notification.close();
 
   const url = event.notification.data?.url || '/';
@@ -42,4 +47,9 @@ self.addEventListener('notificationclick', (event) => {
       return clients.openWindow(url);
     })
   );
+});
+
+// Activate immediately
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
 });
