@@ -27,7 +27,16 @@ self.addEventListener('push', (event) => {
     },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.registration.showNotification(title, options).then(() => {
+      // Tell all open clients to play the sale sound
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+        windowClients.forEach((client) => {
+          client.postMessage({ type: 'PLAY_SALE_SOUND', sale: data });
+        });
+      });
+    })
+  );
 });
 
 // Notification click handler

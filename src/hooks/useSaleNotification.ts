@@ -231,7 +231,7 @@ export function useSaleNotification() {
   const showBrowserNotification = useCallback((title: string, body: string) => {
     if (Notification.permission !== 'granted') return;
     try {
-      new Notification(title, { body, icon: logoImg, badge: logoImg, silent: true });
+      new Notification(title, { body, icon: logoImg, badge: logoImg });
     } catch { /* mobile Safari may not support */ }
   }, []);
 
@@ -247,6 +247,23 @@ export function useSaleNotification() {
     const audio = new Audio(sound.file);
     audio.play().catch(() => {});
   };
+
+  // Listen for SW messages to play sound when push notification arrives
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'PLAY_SALE_SOUND') {
+        playSound();
+        const sale = event.data.sale;
+        if (sale?.body) {
+          toast.success(sale.title || '💰 Nova venda!', { description: sale.body, duration: 6000 });
+        }
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handler);
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handler);
+    };
+  }, [enabled, selectedSound]);
 
   // Listen for new sales via realtime
   useEffect(() => {
