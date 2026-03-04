@@ -198,14 +198,14 @@ const Reports = () => {
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">ROI Médio</p>
-              <p className="text-2xl font-bold text-primary">{avgROI.toFixed(0)}%</p>
+              <p className="text-2xl font-bold text-primary">{avgROI.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">CPA Médio</p>
               <p className="text-2xl font-bold text-foreground">
-                R$ {avgCPA.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {avgCPA.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </CardContent>
           </Card>
