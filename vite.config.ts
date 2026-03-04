@@ -18,13 +18,14 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      strategies: "injectManifest",
-      srcDir: "public",
-      filename: "sw-push.js",
-      injectManifest: {
+      workbox: {
+        navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       },
       manifest: false, // use public/manifest.json
+      devOptions: {
+        suppressWarnings: true,
+      },
     }),
   ].filter(Boolean),
   resolve: {
