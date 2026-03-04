@@ -83,9 +83,19 @@ export function useSaleNotification() {
     if (!user || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
     
     try {
-      // Register the custom push service worker
-      const registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' });
-      await navigator.serviceWorker.ready;
+      // Register the push service worker separately (won't conflict with PWA SW)
+      const registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/push-handler' });
+      
+      // Wait for it to be active
+      const sw = registration.installing || registration.waiting || registration.active;
+      if (sw && sw.state !== 'activated') {
+        await new Promise<void>((resolve) => {
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'activated') resolve();
+          });
+          if (sw.state === 'activated') resolve();
+        });
+      }
 
       // Get VAPID public key from env
       const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
@@ -94,7 +104,7 @@ export function useSaleNotification() {
         return false;
       }
 
-      // Subscribe
+      // Subscribe using THIS registration's pushManager
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
