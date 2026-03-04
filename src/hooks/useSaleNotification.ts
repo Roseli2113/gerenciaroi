@@ -231,7 +231,7 @@ export function useSaleNotification() {
   const showBrowserNotification = useCallback((title: string, body: string) => {
     if (Notification.permission !== 'granted') return;
     try {
-      new Notification(title, { body, icon: logoImg, badge: logoImg, silent: true });
+      new Notification(title, { body, icon: logoImg, badge: logoImg });
     } catch { /* mobile Safari may not support */ }
   }, []);
 
