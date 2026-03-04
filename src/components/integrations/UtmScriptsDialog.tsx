@@ -85,7 +85,7 @@ const platformScripts: Record<string, string> = {
 };
 
 const platforms = [
-  { id: 'adsroi', label: 'AdsRoi (com tracking de checkout)' },
+  { id: 'adsroi', label: 'AdsRoi (com atribuição automática)' },
   { id: 'hotmart', label: 'Hotmart' },
   { id: 'cartpanda', label: 'Cartpanda' },
   { id: 'buygoods', label: 'BuyGoods' },
