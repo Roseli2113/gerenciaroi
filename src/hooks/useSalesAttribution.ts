@@ -63,7 +63,7 @@ function getTracking(raw: RawData): TrackingData {
   return raw;
 }
 
-export function useSalesAttribution(startDate?: Date) {
+export function useSalesAttribution(startDate?: Date, endDate?: Date) {
   const { user } = useAuth();
   const [attribution, setAttribution] = useState<SalesAttribution>({
     byCampaignId: new Map(),
@@ -82,11 +82,17 @@ export function useSalesAttribution(startDate?: Date) {
         fromDate.setHours(0, 0, 0, 0);
       }
 
-      const { data: sales, error } = await supabase
+      let query = supabase
         .from('sales')
         .select('amount, status, raw_data, campaign_id')
         .eq('user_id', user.id)
         .gte('created_at', fromDate.toISOString());
+
+      if (endDate) {
+        query = query.lte('created_at', endDate.toISOString());
+      }
+
+      const { data: sales, error } = await query;
 
       if (error) throw error;
 
