@@ -1,9 +1,9 @@
-// Combined Service Worker: Push Notifications + Offline Caching
-// This handles Web Push events in the background
+// Service Worker: Push Notifications
+// Handles Web Push events in the background
 
 // Push notification received
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push event received');
+  console.log('[SW-Push] Push event received');
   if (!event.data) return;
 
   let data;
@@ -13,42 +13,71 @@ self.addEventListener('push', (event) => {
     data = { title: 'Gerencia ROI', body: event.data.text() };
   }
 
-  const title = data.title || '💰 Nova Venda!';
-  const options = {
-    body: data.body || 'Você recebeu uma nova venda!',
-    icon: '/pwa-192.png',
-    badge: '/pwa-192.png',
-    vibrate: [200, 100, 200],
-    tag: data.tag || 'sale-notification',
-    renotify: true,
-    requireInteraction: true,
-    silent: true, // Suppress default system sound so only our MP3 plays
-    data: {
-      url: data.url || '/',
-    },
-  };
-
   event.waitUntil(
-    self.registration.showNotification(title, options).then(() => {
-      // Use BroadcastChannel to reach ALL tabs regardless of SW scope
+    (async () => {
+      // Check if any app window is currently focused/visible
+      const allClients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+      
+      const hasVisibleClient = allClients.some(
+        (client) => client.visibilityState === 'visible'
+      );
+
+      // Always broadcast to play the custom MP3 sound in open tabs
       const bc = new BroadcastChannel('sale-sound-channel');
       bc.postMessage({ type: 'PLAY_SALE_SOUND', sale: data });
       bc.close();
-    })
+
+      if (hasVisibleClient) {
+        // App is open and visible — DON'T show system notification
+        // The BroadcastChannel message above will trigger the MP3 + toast
+        console.log('[SW-Push] App is visible, skipping system notification');
+        return;
+      }
+
+      // App is in background — show a silent system notification
+      const title = data.title || '💰 Nova Venda!';
+      const options = {
+        body: data.body || 'Você recebeu uma nova venda!',
+        icon: '/pwa-192.png',
+        badge: '/pwa-192.png',
+        vibrate: [200, 100, 200],
+        tag: data.tag || 'sale-notification',
+        renotify: true,
+        silent: true,
+        data: {
+          url: data.url || '/',
+        },
+      };
+
+      await self.registration.showNotification(title, options);
+    })()
   );
 });
 
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked');
+  console.log('[SW-Push] Notification clicked');
   event.notification.close();
 
   const urlPath = event.notification.data?.url || '/';
-  // Open the app at the specified path
-  event.waitUntil(clients.openWindow(urlPath));
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Focus existing tab if available
+      for (const client of clients) {
+        if (client.url.includes(urlPath) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open new window
+      return self.clients.openWindow(urlPath);
+    })
+  );
 });
 
 // Activate immediately
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(self.clients.claim());
 });
