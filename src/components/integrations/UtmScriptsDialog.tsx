@@ -98,6 +98,32 @@ const platforms = [
 export function UtmScriptsDialog({ open, onOpenChange }: UtmScriptsDialogProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [adsroiToken, setAdsroiToken] = useState<string>('');
+
+  // Fetch AdsRoi webhook token
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('webhooks')
+        .select('token')
+        .eq('user_id', user.id)
+        .eq('platform', 'adsroi')
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+      if (data?.token) setAdsroiToken(data.token);
+    })();
+  }, [open]);
+
+  const getScript = () => {
+    if (selectedPlatform === 'adsroi') {
+      return buildAdsroiScript(adsroiToken || 'SEU_TOKEN_AQUI');
+    }
+    return platformScripts[selectedPlatform] || '';
+  };
 
   const handleDownload = () => {
     if (!selectedPlatform) {
@@ -105,7 +131,7 @@ export function UtmScriptsDialog({ open, onOpenChange }: UtmScriptsDialogProps) 
       return;
     }
 
-    const script = platformScripts[selectedPlatform];
+    const script = getScript();
     const blob = new Blob([script], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -124,7 +150,7 @@ export function UtmScriptsDialog({ open, onOpenChange }: UtmScriptsDialogProps) 
       return;
     }
 
-    navigator.clipboard.writeText(platformScripts[selectedPlatform]);
+    navigator.clipboard.writeText(getScript());
     setCopied(true);
     toast.success('Script copiado!');
     setTimeout(() => setCopied(false), 2000);
@@ -155,6 +181,12 @@ export function UtmScriptsDialog({ open, onOpenChange }: UtmScriptsDialogProps) 
             </div>
           ))}
         </RadioGroup>
+
+        {selectedPlatform === 'adsroi' && (
+          <div className="mt-2 p-3 rounded-lg bg-primary/10 text-sm text-foreground">
+            <strong>📡 Tracking de Checkout:</strong> Este script captura o email do cliente no checkout e envia as UTMs para o nosso backend. Assim, quando a AdsRoi enviar a venda via webhook, o sistema automaticamente vincula à campanha correta.
+          </div>
+        )}
 
         <div className="flex gap-2 mt-4">
           <Button
