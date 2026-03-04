@@ -248,22 +248,27 @@ export function useSaleNotification() {
     audio.play().catch(() => {});
   };
 
-  // Listen for SW messages to play sound when push notification arrives
+  // Listen for SW messages via BroadcastChannel to play sound when push arrives
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
+    const bc = new BroadcastChannel('sale-sound-channel');
+    bc.onmessage = (event) => {
       if (event.data?.type === 'PLAY_SALE_SOUND') {
-        playSound();
+        // Play sound immediately
+        const sound = SOUND_OPTIONS.find(s => s.id === selectedSound);
+        if (sound) {
+          const audio = new Audio(sound.file);
+          audio.play().catch((e) => console.warn('Audio play failed:', e));
+        }
         const sale = event.data.sale;
         if (sale?.body) {
           toast.success(sale.title || '💰 Nova venda!', { description: sale.body, duration: 6000 });
         }
       }
     };
-    navigator.serviceWorker?.addEventListener('message', handler);
     return () => {
-      navigator.serviceWorker?.removeEventListener('message', handler);
+      bc.close();
     };
-  }, [enabled, selectedSound]);
+  }, [selectedSound]);
 
   // Listen for new sales via realtime
   useEffect(() => {
