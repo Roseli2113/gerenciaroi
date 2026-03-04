@@ -36,11 +36,27 @@ export function useSaleNotification() {
   const knownSalesRef = useRef<Set<string>>(new Set());
   const initialLoadDone = useRef(false);
 
-  // Check push status on mount
+  // Check push status on mount - verify actual subscription exists
   useEffect(() => {
-    if ('Notification' in window) {
-      setPushEnabled(Notification.permission === 'granted');
-    }
+    const checkPush = async () => {
+      if (!('Notification' in window) || Notification.permission !== 'granted') {
+        setPushEnabled(false);
+        return;
+      }
+      // Check if we have an active push subscription on our SW
+      try {
+        const reg = await navigator.serviceWorker.getRegistration('/push-handler');
+        if (reg) {
+          const sub = await reg.pushManager.getSubscription();
+          setPushEnabled(!!sub);
+        } else {
+          setPushEnabled(false);
+        }
+      } catch {
+        setPushEnabled(false);
+      }
+    };
+    checkPush();
   }, []);
 
   // Load preference from profile
