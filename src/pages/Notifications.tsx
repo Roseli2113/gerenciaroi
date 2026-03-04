@@ -229,9 +229,31 @@ const Notifications = () => {
               </CardHeader>
               <CardContent>
                 {pushEnabled ? (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-success/10 border border-success/30">
-                    <CheckCircle2 className="h-5 w-5 text-success" />
-                    <p className="text-sm font-medium text-success">Notificações push ativadas</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-success/10 border border-success/30">
+                      <CheckCircle2 className="h-5 w-5 text-success" />
+                      <p className="text-sm font-medium text-success">Notificações push ativadas</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => {
+                        try {
+                          new Notification('🔔 Teste - Gerencia ROI', {
+                            body: '💰 Nova venda de R$ 99,90 recebida! Este é um teste.',
+                            icon: '/pwa-192.png',
+                            badge: '/pwa-192.png',
+                            silent: false,
+                          });
+                          toast.success('Notificação de teste enviada!');
+                        } catch {
+                          toast.error('Erro ao enviar notificação de teste');
+                        }
+                      }}
+                    >
+                      <Bell className="h-4 w-4" />
+                      Enviar Notificação de Teste
+                    </Button>
                   </div>
                 ) : (
                   <Button onClick={requestPushPermission} className="w-full gap-2">
