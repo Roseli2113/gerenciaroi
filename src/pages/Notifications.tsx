@@ -252,6 +252,8 @@ const Notifications = () => {
                       disabled={pushLoading}
                       onClick={async () => {
                         try {
+                          // Play sound immediately on user interaction (bypasses autoplay policy)
+                          previewSound(selectedSound);
                           const result = await sendTestPush();
                           if (result?.sent > 0) {
                             toast.success(`Notificação de teste enviada! (${result.sent} dispositivo${result.sent > 1 ? 's' : ''})`);
