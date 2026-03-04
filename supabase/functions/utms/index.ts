@@ -176,10 +176,90 @@ const utmCaptureScript = `
     }
   }
 
+  // ---- Checkout Tracking Beacon ----
+  // When installed on checkout pages, monitor email fields and send UTMs to our backend
+  var webhookToken = scriptEl && scriptEl.getAttribute('data-gerenciaroi-token');
+  var trackingEndpoint = scriptEl && scriptEl.getAttribute('data-gerenciaroi-endpoint');
+  var beaconSent = false;
+
+  function getStoredUtms() {
+    var stored = {};
+    for (var i = 0; i < ALL_PARAMS.length; i++) {
+      var val = getCookie(PREFIX + ALL_PARAMS[i]) || getCookie(ALL_PARAMS[i]) || urlParams[ALL_PARAMS[i]];
+      if (val) stored[ALL_PARAMS[i]] = val;
+    }
+    return stored;
+  }
+
+  function sendCheckoutBeacon(email) {
+    if (beaconSent || !webhookToken || !trackingEndpoint || !email) return;
+    var utms = getStoredUtms();
+    if (Object.keys(utms).length === 0) return;
+
+    beaconSent = true;
+    var payload = JSON.stringify({
+      token: webhookToken,
+      email: email,
+      utm_data: utms,
+      page_url: window.location.href
+    });
+
+    // Use sendBeacon for reliability, fallback to fetch
+    if (navigator.sendBeacon) {
+      var blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon(trackingEndpoint, blob);
+    } else {
+      try {
+        fetch(trackingEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true
+        });
+      } catch(e) {}
+    }
+  }
+
+  function monitorEmailFields() {
+    if (!webhookToken || !trackingEndpoint) return;
+
+    // Watch all email-type inputs and common email field names
+    function attachListeners() {
+      var inputs = document.querySelectorAll('input[type="email"], input[name*="email"], input[name*="Email"], input[id*="email"], input[id*="Email"], input[placeholder*="email"], input[placeholder*="Email"], input[placeholder*="e-mail"]');
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i]._groiTracked) continue;
+        inputs[i]._groiTracked = true;
+        inputs[i].addEventListener('blur', function() {
+          var val = this.value.trim();
+          if (val && val.indexOf('@') > 0) {
+            sendCheckoutBeacon(val);
+          }
+        });
+        inputs[i].addEventListener('change', function() {
+          var val = this.value.trim();
+          if (val && val.indexOf('@') > 0) {
+            sendCheckoutBeacon(val);
+          }
+        });
+      }
+    }
+
+    attachListeners();
+
+    // Re-attach on DOM changes (SPAs, dynamic forms)
+    if (typeof MutationObserver !== 'undefined') {
+      var emailObserver = new MutationObserver(function() {
+        attachListeners();
+      });
+      emailObserver.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
   // Run on DOM ready
   function onReady() {
     appendUtmsToLinks();
     injectIntoForms();
+    monitorEmailFields();
 
     // Watch for dynamically added links/forms
     if (typeof MutationObserver !== 'undefined') {

@@ -97,6 +97,37 @@ Deno.serve(async (req) => {
 
     const saleData = await parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
 
+    // If no campaign_id was extracted, try to look it up from checkout_tracking
+    if (!saleData.campaign_id && saleData.customer_email && webhookConfig?.token) {
+      try {
+        const thirtyMinAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString() // 1 hour window
+        const { data: tracking } = await supabase
+          .from('checkout_tracking')
+          .select('utm_data')
+          .eq('webhook_token', webhookConfig.token)
+          .eq('customer_email', (saleData.customer_email as string).toLowerCase().trim())
+          .gte('created_at', thirtyMinAgo)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (tracking?.utm_data) {
+          const utmData = tracking.utm_data as Record<string, string>
+          const recoveredCampaignId = extractIdFromUtm(utmData.utm_campaign)
+          if (recoveredCampaignId) {
+            saleData.campaign_id = recoveredCampaignId
+            console.log('Recovered campaign_id from checkout_tracking:', recoveredCampaignId)
+          }
+          // Also inject UTMs into raw_data for attribution
+          if (saleData.raw_data && typeof saleData.raw_data === 'object') {
+            (saleData.raw_data as Record<string, unknown>).tracking = utmData
+          }
+        }
+      } catch (lookupErr) {
+        console.error('Checkout tracking lookup error:', lookupErr)
+      }
+    }
+
     // Dedup logic
     let sale = null
     let saleError = null

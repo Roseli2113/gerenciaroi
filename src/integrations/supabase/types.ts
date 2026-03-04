@@ -92,6 +92,33 @@ export type Database = {
         }
         Relationships: []
       }
+      checkout_tracking: {
+        Row: {
+          created_at: string
+          customer_email: string
+          id: string
+          page_url: string | null
+          utm_data: Json
+          webhook_token: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          id?: string
+          page_url?: string | null
+          utm_data?: Json
+          webhook_token: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          id?: string
+          page_url?: string | null
+          utm_data?: Json
+          webhook_token?: string
+        }
+        Relationships: []
+      }
       dashboard_layouts: {
         Row: {
           created_at: string
