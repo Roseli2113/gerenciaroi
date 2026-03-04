@@ -348,9 +348,22 @@ function extractIdFromUtm(utmValue: string | null | undefined): string | null {
   return null
 }
 
-function extractCampaignId(payload: LowifyPayload): string | null {
+function getTrackingObject(payload: LowifyPayload): Record<string, unknown> {
   const raw = payload as Record<string, unknown>
-  const tracking = (raw.tracking && typeof raw.tracking === 'object' ? raw.tracking : raw) as Record<string, unknown>
+  // Check nested objects where platforms may place UTM data
+  for (const key of ['tracking', 'utm_params', 'utms', 'metadata']) {
+    if (raw[key] && typeof raw[key] === 'object') {
+      const obj = raw[key] as Record<string, unknown>
+      if (obj.utm_campaign || obj.utm_source || obj.utm_medium) {
+        return obj
+      }
+    }
+  }
+  return raw
+}
+
+function extractCampaignId(payload: LowifyPayload): string | null {
+  const tracking = getTrackingObject(payload)
   
   // Try utm_campaign in "Name|ID" format first
   const fromUtm = extractIdFromUtm(tracking.utm_campaign as string)
@@ -366,7 +379,6 @@ function extractCampaignId(payload: LowifyPayload): string | null {
   // Try tracking.campaign_id directly (some platforms pass numeric Meta campaign IDs here)
   const trackingCampaignId = tracking.campaign_id
   if (trackingCampaignId && String(trackingCampaignId).length > 8) {
-    // Meta campaign IDs are typically 10+ digits; skip short Lowify-internal IDs
     return String(trackingCampaignId)
   }
 
