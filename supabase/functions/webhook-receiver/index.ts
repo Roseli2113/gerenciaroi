@@ -351,9 +351,33 @@ function detectCurrency(payload: LowifyPayload): string {
   return 'BRL'
 }
 
-function parseSaleData(platform: string, payload: LowifyPayload, userId: string, webhookId: string | null) {
+async function getUsdToBrlRate(): Promise<number> {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD')
+    const data = await res.json()
+    if (data?.rates?.BRL) return data.rates.BRL
+  } catch (err) {
+    console.error('Exchange rate fetch error:', err)
+  }
+  // Fallback rate if API fails
+  return 5.25
+}
+
+async function convertToBrl(amount: number, currency: string): Promise<{ amount: number; currency: string }> {
+  if (currency === 'BRL' || !currency) return { amount, currency: 'BRL' }
+  if (currency === 'USD') {
+    const rate = await getUsdToBrlRate()
+    const converted = Math.round(amount * rate * 100) / 100
+    console.log(`Converting USD ${amount} to BRL ${converted} (rate: ${rate})`)
+    return { amount: converted, currency: 'BRL' }
+  }
+  // For other currencies, keep original
+  return { amount, currency }
+}
+
+async function parseSaleData(platform: string, payload: LowifyPayload, userId: string, webhookId: string | null) {
   const campaignId = extractCampaignId(payload)
-  const currency = detectCurrency(payload)
+  const originalCurrency = detectCurrency(payload)
 
   const baseData = {
     user_id: userId,
@@ -363,9 +387,13 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
     campaign_id: campaignId,
   }
 
+  let rawAmount: number
+  let saleData: Record<string, unknown>
+
   switch (platform) {
     case 'lowify':
-      return {
+      rawAmount = payload.sale_amount || payload.product?.price || payload.payment?.amount || payload.value || payload.price || 0
+      saleData = {
         ...baseData,
         transaction_id: payload.sale_id?.toString() || payload.transaction_id || payload.order_id || payload.id?.toString() || null,
         status: mapStatus(payload.status || payload.event || 'unknown'),
@@ -374,14 +402,16 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
         customer_phone: payload.customer?.phone || payload.buyer?.phone || null,
         product_name: payload.product?.name || payload.offer?.name || null,
         product_id: payload.product?.id?.toString() || payload.offer?.id?.toString() || null,
-        amount: payload.sale_amount || payload.product?.price || payload.payment?.amount || payload.value || payload.price || 0,
-        currency,
+        amount: rawAmount,
+        currency: originalCurrency,
         payment_method: payload.payment?.method || payload.payment_type || null,
         commission: payload.commission || 0,
       }
+      break
 
     default:
-      return {
+      rawAmount = payload.payment?.amount || payload.amount || payload.value || 0
+      saleData = {
         ...baseData,
         transaction_id: payload.sale_id?.toString() || payload.transaction_id || payload.id?.toString() || null,
         status: mapStatus(payload.status || payload.event || 'unknown'),
@@ -390,12 +420,20 @@ function parseSaleData(platform: string, payload: LowifyPayload, userId: string,
         customer_phone: payload.customer?.phone || null,
         product_name: payload.product?.name || null,
         product_id: payload.product?.id?.toString() || null,
-        amount: payload.payment?.amount || payload.amount || payload.value || 0,
-        currency,
+        amount: rawAmount,
+        currency: originalCurrency,
         payment_method: payload.payment?.method || null,
         commission: payload.commission || 0,
       }
+      break
   }
+
+  // Convert foreign currencies to BRL
+  const converted = await convertToBrl(rawAmount, originalCurrency)
+  saleData.amount = converted.amount
+  saleData.currency = converted.currency
+
+  return saleData
 }
 
 function mapStatus(status: string): string {
