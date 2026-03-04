@@ -29,7 +29,7 @@ interface Notification {
 
 const Notifications = () => {
   const { user } = useAuth();
-  const { selectedSound, updateSound, previewSound, pushEnabled, pushLoading, requestPushPermission, sendTestPush } = useSaleNotification();
+  const { selectedSound, updateSound, previewSound, pushEnabled, pushLoading, requestPushPermission, disablePush, sendTestPush } = useSaleNotification();
   const [notificationsList, setNotificationsList] = useState<Notification[]>([]);
   const [settings, setSettings] = useState({
     notify_email: true,
@@ -230,9 +230,21 @@ const Notifications = () => {
               <CardContent>
                 {pushEnabled ? (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-success/10 border border-success/30">
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                      <p className="text-sm font-medium text-success">Notificações push ativadas</p>
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-success/10 border border-success/30">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                        <p className="text-sm font-medium text-success">Notificações push ativadas</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        disabled={pushLoading}
+                        onClick={disablePush}
+                      >
+                        {pushLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellOff className="h-4 w-4" />}
+                        Desativar
+                      </Button>
                     </div>
                     <Button
                       variant="outline"

@@ -200,6 +200,34 @@ export function useSaleNotification() {
     }
   }, [pushEnabled, user, registerPushSubscription]);
 
+  // Disable push notifications
+  const disablePush = useCallback(async () => {
+    setPushLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/push-handler');
+      if (reg) {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          const endpoint = sub.endpoint;
+          await sub.unsubscribe();
+          // Remove from database
+          if (user) {
+            await supabase
+              .from('push_subscriptions')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('endpoint', endpoint);
+          }
+        }
+      }
+      setPushEnabled(false);
+    } catch (err) {
+      console.error('Error disabling push:', err);
+    } finally {
+      setPushLoading(false);
+    }
+  }, [user]);
+
   const sendTestPush = useCallback(async () => {
     if (!user) return;
     
@@ -248,22 +276,27 @@ export function useSaleNotification() {
     audio.play().catch(() => {});
   };
 
-  // Listen for SW messages to play sound when push notification arrives
+  // Listen for SW messages via BroadcastChannel to play sound when push arrives
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
+    const bc = new BroadcastChannel('sale-sound-channel');
+    bc.onmessage = (event) => {
       if (event.data?.type === 'PLAY_SALE_SOUND') {
-        playSound();
+        // Play sound immediately
+        const sound = SOUND_OPTIONS.find(s => s.id === selectedSound);
+        if (sound) {
+          const audio = new Audio(sound.file);
+          audio.play().catch((e) => console.warn('Audio play failed:', e));
+        }
         const sale = event.data.sale;
         if (sale?.body) {
           toast.success(sale.title || '💰 Nova venda!', { description: sale.body, duration: 6000 });
         }
       }
     };
-    navigator.serviceWorker?.addEventListener('message', handler);
     return () => {
-      navigator.serviceWorker?.removeEventListener('message', handler);
+      bc.close();
     };
-  }, [enabled, selectedSound]);
+  }, [selectedSound]);
 
   // Listen for new sales via realtime
   useEffect(() => {
@@ -323,6 +356,7 @@ export function useSaleNotification() {
     pushEnabled,
     pushLoading,
     requestPushPermission,
+    disablePush,
     sendTestPush,
     SOUND_OPTIONS,
   };
