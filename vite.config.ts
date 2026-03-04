@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       },
       manifest: false, // use public/manifest.json
+      devOptions: {
+        suppressWarnings: true,
+      },
     }),
   ].filter(Boolean),
   resolve: {
