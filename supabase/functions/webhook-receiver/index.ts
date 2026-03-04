@@ -159,6 +159,31 @@ Deno.serve(async (req) => {
 
     console.log('Sale recorded:', sale)
 
+    // Send push notification for new approved sales
+    if (!existingId && saleData.status === 'approved') {
+      try {
+        const amount = Number(saleData.amount || 0)
+        const pushPayload = {
+          user_id: userId,
+          title: `💰 Nova venda: R$ ${amount.toFixed(2)}`,
+          body: saleData.customer_name || saleData.platform || 'Venda recebida!',
+          url: '/dashboard',
+          tag: `sale-${sale.id}`,
+        }
+        await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify(pushPayload),
+        })
+        console.log('Push notification sent for sale:', sale.id)
+      } catch (pushErr) {
+        console.error('Push notification error:', pushErr)
+      }
+    }
+
     // Fire Meta CAPI Purchase event if sale is approved
     if (saleData.status === 'approved') {
       await sendCapiEvent(supabase, userId, 'Purchase', {
