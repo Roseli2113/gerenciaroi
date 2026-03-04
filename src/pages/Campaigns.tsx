@@ -145,9 +145,16 @@ const Campaigns = () => {
       if (s.status !== 'approved' && s.status !== 'paid') return false;
       const saleDate = new Date(s.created_at);
       if (saleDate < periodRange.startDate || saleDate > periodRange.endDate) return false;
+      // If sale already has a campaign_id, it's tracked
+      if (s.campaign_id) return false;
       const raw = s.raw_data as Record<string, unknown> | null;
       if (!raw) return true;
-      const src = raw.utm_source || raw.source || raw.utm || raw.fbclid;
+      // Check top-level and nested tracking object for UTM data
+      const tracking = (raw.tracking && typeof raw.tracking === 'object' ? raw.tracking : {}) as Record<string, unknown>;
+      const src = raw.utm_source || raw.source || raw.fbclid || tracking.utm_source || tracking.fbclid;
+      // If utm_campaign exists and is not 'organic', consider it tracked
+      const camp = raw.utm_campaign || tracking.utm_campaign;
+      if (camp && camp !== 'organic') return false;
       return !src;
     }).length;
   }, [sales, filterPeriod, customDateFrom, customDateTo]);
