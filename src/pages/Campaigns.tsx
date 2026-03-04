@@ -428,7 +428,7 @@ const Campaigns = () => {
         return (
           <span className={cn(
             "font-medium", 
-            item.roi !== null && item.roi > 1 ? "text-primary" : item.roi !== null && item.roi < 1 ? "text-[hsl(0,100%,60%)]" : ""
+            item.roi !== null && item.roi > 1 ? "text-success" : item.roi !== null && item.roi < 1 ? "text-[hsl(0,100%,60%)]" : ""
           )}>
             {item.roi !== null ? item.roi.toFixed(2) : 'N/A'}
           </span>
