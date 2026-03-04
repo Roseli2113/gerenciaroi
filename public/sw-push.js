@@ -35,18 +35,9 @@ self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification clicked');
   event.notification.close();
 
-  const url = event.notification.data?.url || '/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      return clients.openWindow(url);
-    })
-  );
+  const urlPath = event.notification.data?.url || '/';
+  // Open the app at the specified path
+  event.waitUntil(clients.openWindow(urlPath));
 });
 
 // Activate immediately
