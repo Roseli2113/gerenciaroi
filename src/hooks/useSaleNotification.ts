@@ -200,6 +200,34 @@ export function useSaleNotification() {
     }
   }, [pushEnabled, user, registerPushSubscription]);
 
+  // Disable push notifications
+  const disablePush = useCallback(async () => {
+    setPushLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/push-handler');
+      if (reg) {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          const endpoint = sub.endpoint;
+          await sub.unsubscribe();
+          // Remove from database
+          if (user) {
+            await supabase
+              .from('push_subscriptions')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('endpoint', endpoint);
+          }
+        }
+      }
+      setPushEnabled(false);
+    } catch (err) {
+      console.error('Error disabling push:', err);
+    } finally {
+      setPushLoading(false);
+    }
+  }, [user]);
+
   const sendTestPush = useCallback(async () => {
     if (!user) return;
     
