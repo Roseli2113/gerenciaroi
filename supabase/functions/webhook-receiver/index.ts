@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const saleData = parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
+    const saleData = await parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
 
     // Dedup logic
     let sale = null
