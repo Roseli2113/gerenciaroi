@@ -53,13 +53,24 @@ interface ActiveAccount {
 const Campaigns = () => {
   const { user } = useAuth();
   const { isTrialExpired, daysRemaining } = useTrialGuard();
-  const { sales } = useSales();
-  const { attribution } = useSalesAttribution();
   const [activeTab, setActiveTab] = useState<TabType>('campanhas');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [filterPeriod, setFilterPeriod] = useState<string>('today');
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
+
+  const periodRange = useMemo(() => {
+    if (filterPeriod === 'custom' && customDateFrom && customDateTo) {
+      return { startDate: startOfDay(customDateFrom), endDate: endOfDay(customDateTo) };
+    }
+    return getDateRange(filterPeriod as PeriodKey);
+  }, [filterPeriod, customDateFrom, customDateTo]);
+
+  const { sales } = useSales({
+    startDate: periodRange.startDate,
+    endDate: periodRange.endDate,
+  });
+  const { attribution } = useSalesAttribution(periodRange.startDate, periodRange.endDate);
 
   const customDateRange = useMemo(() => {
     if (filterPeriod === 'custom' && customDateFrom && customDateTo) {
