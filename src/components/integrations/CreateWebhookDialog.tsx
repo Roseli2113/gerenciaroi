@@ -134,9 +134,11 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
   });
 
-  // Generate webhook URL for platforms that need it (include platform and token params)
+  const eventOptions = selectedPlatform ? (PLATFORMS_WITH_EVENTS[selectedPlatform] || []) : [];
+
+  // Generate webhook URL for platforms that need it (include platform, token, and event params)
   const webhookUrl = selectedPlatform 
-    ? `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver?platform=${selectedPlatform.toLowerCase()}&token=${preGeneratedToken}`
+    ? `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver?platform=${selectedPlatform.toLowerCase()}&token=${preGeneratedToken}${formData.event ? `&event=${encodeURIComponent(formData.event)}` : ''}`
     : `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver`;
 
   const filteredPlatforms = PLATFORMS.filter(platform =>
