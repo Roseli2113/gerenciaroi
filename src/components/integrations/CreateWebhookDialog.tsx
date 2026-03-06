@@ -340,6 +340,27 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
               </div>
             ))}
 
+            {eventOptions.length > 0 && (
+              <div className="space-y-2">
+                <Label>Evento</Label>
+                <Select
+                  value={formData.event || ''}
+                  onValueChange={(value) => handleInputChange('event', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o evento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventOptions.map((event) => (
+                      <SelectItem key={event} value={event}>
+                        {event}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {isUrlPlatform && (
               <p className="text-sm text-muted-foreground">
                 Copie a URL acima e cole no campo "URL do Webhook" na plataforma {selectedPlatform}.
