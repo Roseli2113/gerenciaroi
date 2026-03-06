@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Eye, EyeOff, ArrowLeft, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -49,6 +50,13 @@ const PLATFORMS = [
 
 // Platforms that need a webhook URL to be provided to them (URL de conexão)
 const PLATFORMS_WITH_WEBHOOK_URL = ['Lowify', 'AdsRoi', 'Logzz', 'BuyGoods'];
+
+// Platforms that support event type selection
+const PLATFORMS_WITH_EVENTS: Record<string, string[]> = {
+  'BuyGoods': ['Compra', 'Lead', 'Reembolso', 'Assinatura'],
+  'Clickbank': ['Compra', 'Reembolso', 'Assinatura', 'Cancelamento'],
+  'Maxweb': ['Compra', 'Lead'],
+};
 
 // Define platform-specific fields
 const getPlatformFields = (platform: string): { id: string; label: string; type: 'text' | 'password' | 'readonly' }[] => {
@@ -127,9 +135,11 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
   });
 
-  // Generate webhook URL for platforms that need it (include platform and token params)
+  const eventOptions = selectedPlatform ? (PLATFORMS_WITH_EVENTS[selectedPlatform] || []) : [];
+
+  // Generate webhook URL for platforms that need it (include platform, token, and event params)
   const webhookUrl = selectedPlatform 
-    ? `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver?platform=${selectedPlatform.toLowerCase()}&token=${preGeneratedToken}`
+    ? `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver?platform=${selectedPlatform.toLowerCase()}&token=${preGeneratedToken}${formData.event ? `&event=${encodeURIComponent(formData.event)}` : ''}`
     : `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver`;
 
   const filteredPlatforms = PLATFORMS.filter(platform =>
@@ -329,6 +339,27 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
                 </div>
               </div>
             ))}
+
+            {eventOptions.length > 0 && (
+              <div className="space-y-2">
+                <Label>Evento</Label>
+                <Select
+                  value={formData.event || ''}
+                  onValueChange={(value) => handleInputChange('event', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o evento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventOptions.map((event) => (
+                      <SelectItem key={event} value={event}>
+                        {event}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {isUrlPlatform && (
               <p className="text-sm text-muted-foreground">
