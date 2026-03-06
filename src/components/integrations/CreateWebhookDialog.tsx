@@ -50,6 +50,13 @@ const PLATFORMS = [
 // Platforms that need a webhook URL to be provided to them (URL de conexão)
 const PLATFORMS_WITH_WEBHOOK_URL = ['Lowify', 'AdsRoi', 'Logzz', 'BuyGoods'];
 
+// Platforms that support event type selection
+const PLATFORMS_WITH_EVENTS: Record<string, string[]> = {
+  'BuyGoods': ['Compra', 'Lead', 'Reembolso', 'Assinatura'],
+  'Clickbank': ['Compra', 'Reembolso', 'Assinatura', 'Cancelamento'],
+  'Maxweb': ['Compra', 'Lead'],
+};
+
 // Define platform-specific fields
 const getPlatformFields = (platform: string): { id: string; label: string; type: 'text' | 'password' | 'readonly' }[] => {
   const commonFields = [
