@@ -267,9 +267,19 @@ const Campaigns = () => {
   };
 
   const getFilteredAds = () => {
-    let filtered = selectedAdSetIds.length > 0 
-      ? ads.filter(ad => ad.adsetId && selectedAdSetIds.includes(ad.adsetId)) 
-      : ads;
+    let filtered = ads;
+    
+    if (selectedAdSetIds.length > 0) {
+      // Filter by selected ad sets
+      filtered = filtered.filter(ad => ad.adsetId && selectedAdSetIds.includes(ad.adsetId));
+    } else if (selectedCampaignIds.length > 0) {
+      // Filter by selected campaigns via their ad sets
+      const adSetIdsFromCampaigns = adSets
+        .filter(as => as.campaignId && selectedCampaignIds.includes(as.campaignId))
+        .map(as => as.id);
+      filtered = filtered.filter(ad => ad.adsetId && adSetIdsFromCampaigns.includes(ad.adsetId));
+    }
+    
     return filtered.filter(ad => ad.spent > 0);
   };
 
