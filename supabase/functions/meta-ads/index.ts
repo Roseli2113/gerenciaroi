@@ -70,6 +70,7 @@ async function fetchAllPages(url: string, maxRetries = 4): Promise<unknown[]> {
       const errorMessage = getMetaErrorMessage(data);
       if (!errorMessage) break;
 
+      logMetaError("Meta API fetch error", data);
       if (!isRateLimitMessage(errorMessage) || attempt === maxRetries) {
         throw new Error(errorMessage);
       }
