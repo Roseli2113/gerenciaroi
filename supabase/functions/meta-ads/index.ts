@@ -386,6 +386,10 @@ serve(async (req) => {
       const copyBody: any = {
         status_option: statusOption || "INHERITED_FROM_SOURCE",
       };
+      // Deep copy: include child objects (ad sets + ads for campaigns, ads for ad sets)
+      if (entityType === 'campaign' || entityType === 'adset') {
+        copyBody.deep_copy = true;
+      }
       if (scheduledDate) {
         copyBody.start_time = scheduledDate;
       }
