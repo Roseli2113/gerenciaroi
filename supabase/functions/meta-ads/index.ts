@@ -148,6 +148,31 @@ function extractCopiedAdSetId(payload: MetaPayload): string | null {
   return adSetObject?.copied_id || null;
 }
 
+async function fetchSourceAdAdSetId(baseUrl: string, adId: string, accessToken: string): Promise<string | null> {
+  const adDetailsUrl = `${baseUrl}/${adId}?fields=adset_id&access_token=${accessToken}`;
+  const response = await fetch(adDetailsUrl);
+  const payload = await response.json() as MetaPayload;
+
+  const errorMessage = getMetaErrorMessage(payload) || (!response.ok ? `Meta API HTTP ${response.status}` : null);
+  if (errorMessage) {
+    logMetaError("Meta API ad lookup error", payload);
+    throw new Error(errorMessage);
+  }
+
+  if (typeof payload.adset_id === "string") {
+    return payload.adset_id;
+  }
+
+  if (payload.adset_id && typeof payload.adset_id === "object") {
+    const nestedId = (payload.adset_id as { id?: unknown }).id;
+    if (typeof nestedId === "string") {
+      return nestedId;
+    }
+  }
+
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
