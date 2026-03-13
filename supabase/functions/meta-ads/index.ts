@@ -394,7 +394,7 @@ serve(async (req) => {
       const results = [];
       for (let i = 0; i < numCopies; i++) {
         const params = buildFormParams();
-        console.log(`Duplicating ${entityType} ${sourceEntityId}, deep_copy=true, attempt ${i + 1}/${numCopies}`);
+        console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
         const response = await fetch(copyEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
