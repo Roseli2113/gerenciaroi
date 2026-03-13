@@ -5,48 +5,98 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type MetaPayload = Record<string, unknown>;
+
+function getMetaErrorMessage(payload: MetaPayload | null): string | null {
+  if (!payload?.error) return null;
+  const err = payload.error as { message?: string };
+  return err?.message || JSON.stringify(payload.error);
+}
+
+function isRateLimitMessage(message: string): boolean {
+  const msg = message.toLowerCase();
+  return msg.includes("too many calls") || msg.includes("request limit") || msg.includes("rate limit");
+}
+
 async function fetchAllPages(url: string, maxRetries = 4): Promise<unknown[]> {
   const allData: unknown[] = [];
   let nextUrl: string | null = url;
 
   while (nextUrl) {
-    let data: Record<string, unknown> | null = null;
-    let lastError = '';
+    let data: MetaPayload | null = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const response = await fetch(nextUrl);
-      data = await response.json() as Record<string, unknown>;
+      data = await response.json() as MetaPayload;
 
-      if (!data.error) break;
+      const errorMessage = getMetaErrorMessage(data);
+      if (!errorMessage) break;
 
-      const errMsg = (data.error as any)?.message || JSON.stringify(data.error);
-      const isRateLimit = errMsg.includes('too many calls') || errMsg.includes('request limit') || errMsg.includes('rate limit');
-
-      if (!isRateLimit || attempt === maxRetries) {
-        lastError = errMsg;
-        break;
+      if (!isRateLimitMessage(errorMessage) || attempt === maxRetries) {
+        throw new Error(errorMessage);
       }
 
-      // Exponential backoff: 5s, 10s, 20s, 40s
       const delay = 5000 * Math.pow(2, attempt);
       console.log(`Rate limited, retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
-      await new Promise(r => setTimeout(r, delay));
-      data = null; // reset for next attempt
+      await new Promise((r) => setTimeout(r, delay));
+      data = null;
     }
 
-    if (data?.error) {
-      throw new Error((data.error as any).message || JSON.stringify(data.error));
+    if (!data) {
+      throw new Error("Resposta inválida da Meta API");
     }
 
-    if (data?.data) {
+    if (data.data) {
       allData.push(...(data.data as unknown[]));
     }
 
-    // Check for pagination
-    nextUrl = (data?.paging as any)?.next || null;
+    nextUrl = (data.paging as { next?: string } | undefined)?.next || null;
   }
 
   return allData;
+}
+
+async function postFormWithRetry(url: string, params: URLSearchParams, maxRetries = 4): Promise<MetaPayload> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+
+    const data = await response.json() as MetaPayload;
+    const errorMessage = getMetaErrorMessage(data) || (!response.ok ? `Meta API HTTP ${response.status}` : null);
+
+    if (!errorMessage) {
+      return data;
+    }
+
+    if (!isRateLimitMessage(errorMessage) || attempt === maxRetries) {
+      throw new Error(errorMessage);
+    }
+
+    const delay = 5000 * Math.pow(2, attempt);
+    console.log(`Rate limited on POST, retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+    await new Promise((r) => setTimeout(r, delay));
+  }
+
+  throw new Error("Falha ao processar requisição na Meta API");
+}
+
+function extractCopiedAdSetId(payload: MetaPayload): string | null {
+  if (typeof payload.copied_adset_id === "string") {
+    return payload.copied_adset_id;
+  }
+
+  const adObjectIds = payload.ad_object_ids;
+  if (!Array.isArray(adObjectIds)) return null;
+
+  const adSetObject = adObjectIds.find((item) => {
+    const typedItem = item as { ad_object_type?: string; copied_id?: string };
+    return typedItem.ad_object_type === "ad_set" && typeof typedItem.copied_id === "string";
+  }) as { copied_id?: string } | undefined;
+
+  return adSetObject?.copied_id || null;
 }
 
 serve(async (req) => {
@@ -368,44 +418,61 @@ serve(async (req) => {
     }
 
     if (action === "duplicate-campaign") {
-      const entityType = type || 'campaign';
-      const numCopies = copies || 1;
-      const sourceEntityId = sourceId || campaignId;
+      const entityType = (type || "campaign") as "campaign" | "adset" | "ad";
+      const numCopies = Math.max(1, Number(copies) || 1);
+      const sourceEntityId = sourceId || campaignId || adsetId || adId;
 
       if (!sourceEntityId) {
         return new Response(JSON.stringify({ error: "Source ID is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const copyEndpoint = `${baseUrl}/${sourceEntityId}/copies`;
-
-      // Build form params - Meta API expects form-encoded data for copies endpoint
-      const buildFormParams = () => {
-        const params = new URLSearchParams();
-        params.set('access_token', accessToken);
-        params.set('status_option', statusOption || 'INHERITED_FROM_SOURCE');
-        // Note: do NOT use deep_copy — Meta API copies child objects by default
-        // and deep_copy causes "copy request too large" errors for campaigns/adsets with many children
-        if (scheduledDate) {
-          params.set('start_time', scheduledDate);
-        }
-        return params;
-      };
-
-      const results = [];
+      const results: MetaPayload[] = [];
       for (let i = 0; i < numCopies; i++) {
-        const params = buildFormParams();
-        console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
-        const response = await fetch(copyEndpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: params.toString()
-        });
-        const data = await response.json();
-        console.log(`Copy response:`, JSON.stringify(data));
-        if (data.error) {
-          return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const params = new URLSearchParams();
+        params.set("access_token", accessToken);
+        params.set("status_option", statusOption || "INHERITED_FROM_SOURCE");
+        if (scheduledDate) {
+          params.set("start_time", scheduledDate);
         }
-        results.push(data);
+
+        console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
+        const copyEndpoint = `${baseUrl}/${sourceEntityId}/copies`;
+        const copiedEntity = await postFormWithRetry(copyEndpoint, params);
+        console.log(`Copy response:`, JSON.stringify(copiedEntity));
+
+        if (entityType === "adset") {
+          const copiedAdsetId = extractCopiedAdSetId(copiedEntity);
+          if (!copiedAdsetId) {
+            throw new Error("Meta não retornou o ID do conjunto duplicado");
+          }
+
+          const sourceAds = await fetchAllPages(`${baseUrl}/${sourceEntityId}/ads?fields=id&limit=500&access_token=${accessToken}`);
+          const sourceAdIds = sourceAds
+            .map((ad) => {
+              const item = ad as { id?: string };
+              return typeof item.id === "string" ? item.id : null;
+            })
+            .filter((id): id is string => Boolean(id));
+
+          const duplicatedAds: MetaPayload[] = [];
+          for (const sourceAdId of sourceAdIds) {
+            const adParams = new URLSearchParams();
+            adParams.set("access_token", accessToken);
+            adParams.set("adset_id", copiedAdsetId);
+            adParams.set("status_option", statusOption || "INHERITED_FROM_SOURCE");
+
+            const copiedAd = await postFormWithRetry(`${baseUrl}/${sourceAdId}/copies`, adParams);
+            duplicatedAds.push(copiedAd);
+          }
+
+          results.push({
+            ...copiedEntity,
+            duplicated_ads_count: duplicatedAds.length,
+          });
+          continue;
+        }
+
+        results.push(copiedEntity);
       }
 
       return new Response(JSON.stringify({ success: true, results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
