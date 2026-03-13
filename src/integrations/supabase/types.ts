@@ -143,6 +143,48 @@ export type Database = {
         }
         Relationships: []
       }
+      duplication_logs: {
+        Row: {
+          created_at: string
+          entity_type: string
+          id: string
+          meta_error_code: number | null
+          meta_error_message: string | null
+          meta_error_subcode: number | null
+          new_entity_id: string | null
+          source_entity_id: string
+          strategy: string
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_type: string
+          id?: string
+          meta_error_code?: number | null
+          meta_error_message?: string | null
+          meta_error_subcode?: number | null
+          new_entity_id?: string | null
+          source_entity_id: string
+          strategy?: string
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_type?: string
+          id?: string
+          meta_error_code?: number | null
+          meta_error_message?: string | null
+          meta_error_subcode?: number | null
+          new_entity_id?: string | null
+          source_entity_id?: string
+          strategy?: string
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       integration_tests: {
         Row: {
           created_at: string
