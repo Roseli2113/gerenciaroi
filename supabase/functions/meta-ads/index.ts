@@ -501,11 +501,14 @@ serve(async (req) => {
       }
 
       const results: MetaPayload[] = [];
+      const isParentEntity = entityType === "campaign" || entityType === "adset";
+      const sourceAdSetId = entityType === "ad"
+        ? await fetchSourceAdAdSetId(baseUrl, sourceEntityId, accessToken)
+        : null;
+
       for (let i = 0; i < numCopies; i++) {
         const params = new URLSearchParams();
         params.set("access_token", accessToken);
-
-        const isParentEntity = entityType === "campaign" || entityType === "adset";
 
         // `status_option` and `start_time` are valid for parent entity copy flows.
         // For ad copies, sending these fields can trigger Meta "Invalid parameter".
@@ -516,6 +519,10 @@ serve(async (req) => {
           if (scheduledDate) {
             params.set("start_time", scheduledDate);
           }
+        }
+
+        if (entityType === "ad" && sourceAdSetId) {
+          params.set("adset_id", sourceAdSetId);
         }
 
         console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
