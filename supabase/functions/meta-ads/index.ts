@@ -5,12 +5,50 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type MetaPayload = Record<string, unknown>;
+type MetaApiError = {
+  message?: string;
+  type?: string;
+  code?: number;
+  error_subcode?: number;
+  error_user_title?: string;
+  error_user_msg?: string;
+  fbtrace_id?: string;
+  is_transient?: boolean;
+};
+
+type MetaPayload = Record<string, unknown> & {
+  error?: MetaApiError;
+};
+
+function formatMetaErrorMessage(error: MetaApiError): string {
+  const baseMessage = error.message || "Erro desconhecido da Meta API";
+  const details = [
+    typeof error.code === "number" ? `code=${error.code}` : null,
+    typeof error.error_subcode === "number" ? `error_subcode=${error.error_subcode}` : null,
+    error.error_user_title ? `error_user_title=${error.error_user_title}` : null,
+  ].filter(Boolean);
+
+  return details.length ? `${baseMessage} (${details.join(", ")})` : baseMessage;
+}
+
+function logMetaError(context: string, payload: MetaPayload | null): void {
+  if (!payload?.error) return;
+
+  console.error(`${context}:`, JSON.stringify({
+    message: payload.error.message,
+    type: payload.error.type,
+    code: payload.error.code,
+    error_subcode: payload.error.error_subcode,
+    error_user_title: payload.error.error_user_title,
+    error_user_msg: payload.error.error_user_msg,
+    fbtrace_id: payload.error.fbtrace_id,
+    is_transient: payload.error.is_transient,
+  }));
+}
 
 function getMetaErrorMessage(payload: MetaPayload | null): string | null {
   if (!payload?.error) return null;
-  const err = payload.error as { message?: string };
-  return err?.message || JSON.stringify(payload.error);
+  return formatMetaErrorMessage(payload.error);
 }
 
 function isRateLimitMessage(message: string): boolean {
