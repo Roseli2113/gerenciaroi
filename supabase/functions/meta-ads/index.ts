@@ -188,7 +188,7 @@ serve(async (req) => {
       );
     }
 
-    const baseUrl = "https://graph.facebook.com/v18.0";
+    const baseUrl = "https://graph.facebook.com/v21.0";
 
     if (action === "get-campaigns") {
       const fields = [
