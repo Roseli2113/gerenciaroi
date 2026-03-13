@@ -173,6 +173,100 @@ async function fetchSourceAdAdSetId(baseUrl: string, adId: string, accessToken: 
   return null;
 }
 
+type AdFallbackData = {
+  adsetId: string;
+  creativeId: string;
+  name: string;
+  status: string | null;
+};
+
+function isCreativeEnhancementError(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+  return (
+    normalizedMessage.includes("error_subcode=3858504") ||
+    normalizedMessage.includes("aprimoramentos padrão") ||
+    normalizedMessage.includes("default enhancements")
+  );
+}
+
+function buildCopyName(baseName: string, copyIndex: number, totalCopies: number): string {
+  if (totalCopies > 1) {
+    return `${baseName} - Copy ${copyIndex + 1}`;
+  }
+  return `${baseName} - Copy`;
+}
+
+async function fetchAdFallbackData(baseUrl: string, adId: string, accessToken: string): Promise<AdFallbackData> {
+  const fields = ["name", "status", "adset_id", "creative{id}"].join(",");
+  const adDetailsUrl = `${baseUrl}/${adId}?fields=${fields}&access_token=${accessToken}`;
+  const response = await fetch(adDetailsUrl);
+  const payload = await response.json() as MetaPayload;
+
+  const errorMessage = getMetaErrorMessage(payload) || (!response.ok ? `Meta API HTTP ${response.status}` : null);
+  if (errorMessage) {
+    logMetaError("Meta API ad fallback lookup error", payload);
+    throw new Error(errorMessage);
+  }
+
+  const adsetId = typeof payload.adset_id === "string"
+    ? payload.adset_id
+    : (payload.adset_id as { id?: unknown } | null)?.id;
+
+  const creativeId = (payload.creative as { id?: unknown } | null)?.id;
+  const adName = typeof payload.name === "string" ? payload.name : "Ad";
+  const adStatus = typeof payload.status === "string" ? payload.status : null;
+
+  if (typeof adsetId !== "string" || !adsetId) {
+    throw new Error("Não foi possível identificar o adset_id do anúncio de origem");
+  }
+
+  if (typeof creativeId !== "string" || !creativeId) {
+    throw new Error("Não foi possível identificar o creative_id do anúncio de origem");
+  }
+
+  return {
+    adsetId,
+    creativeId,
+    name: adName,
+    status: adStatus,
+  };
+}
+
+async function createAdCopyFromCreative(
+  baseUrl: string,
+  adAccountId: string,
+  accessToken: string,
+  sourceAdData: AdFallbackData,
+  copyIndex: number,
+  totalCopies: number,
+  statusOption?: string,
+): Promise<MetaPayload> {
+  const createEndpoint = `${baseUrl}/${adAccountId}/ads`;
+  const fallbackStatus = statusOption === "ACTIVE" || statusOption === "PAUSED"
+    ? statusOption
+    : (sourceAdData.status === "ACTIVE" ? "ACTIVE" : "PAUSED");
+
+  const params = new URLSearchParams();
+  params.set("access_token", accessToken);
+  params.set("name", buildCopyName(sourceAdData.name, copyIndex, totalCopies));
+  params.set("adset_id", sourceAdData.adsetId);
+  params.set("creative", JSON.stringify({ creative_id: sourceAdData.creativeId }));
+  params.set("status", fallbackStatus);
+
+  console.log("Using ad fallback duplication with creative_id", JSON.stringify({
+    adAccountId,
+    adsetId: sourceAdData.adsetId,
+    creativeId: sourceAdData.creativeId,
+    fallbackStatus,
+  }));
+
+  const createdAd = await postFormWithRetry(createEndpoint, params);
+  return {
+    ...createdAd,
+    fallback_strategy: "create_from_existing_creative_id",
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -505,6 +599,7 @@ serve(async (req) => {
       const sourceAdSetId = entityType === "ad"
         ? await fetchSourceAdAdSetId(baseUrl, sourceEntityId, accessToken)
         : null;
+      let sourceAdFallbackData: AdFallbackData | null = null;
 
       for (let i = 0; i < numCopies; i++) {
         const params = new URLSearchParams();
@@ -525,20 +620,51 @@ serve(async (req) => {
           if (sourceAdSetId) {
             params.set("adset_id", sourceAdSetId);
           }
-          // Disable standard enhancements on the creative copy to avoid
-          // Meta error 100/3858504 ("O criativo não deve incluir aprimoramentos padrão").
           params.set("rename_options", JSON.stringify({ rename_suffix: " - Copy" }));
         }
 
         console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
         const copyEndpoint = `${baseUrl}/${sourceEntityId}/copies`;
-        const copiedEntity = await postFormWithRetry(copyEndpoint, params);
-        console.log(`Copy response:`, JSON.stringify(copiedEntity));
 
-        // For campaign/adset copies we force deep_copy=true so child entities
-        // (adsets/ads) are duplicated together with the parent.
+        try {
+          const copiedEntity = await postFormWithRetry(copyEndpoint, params);
+          console.log("Copy response:", JSON.stringify(copiedEntity));
+          results.push(copiedEntity);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
 
-        results.push(copiedEntity);
+          if (entityType === "ad" && isCreativeEnhancementError(message)) {
+            if (!adAccountId) {
+              throw new Error("Ad Account ID is required for fallback ad duplication");
+            }
+
+            console.warn("Meta copy failed with deprecated creative enhancements, applying fallback strategy", JSON.stringify({
+              sourceEntityId,
+              adAccountId,
+              message,
+            }));
+
+            if (!sourceAdFallbackData) {
+              sourceAdFallbackData = await fetchAdFallbackData(baseUrl, sourceEntityId, accessToken);
+            }
+
+            const fallbackCopiedEntity = await createAdCopyFromCreative(
+              baseUrl,
+              adAccountId,
+              accessToken,
+              sourceAdFallbackData,
+              i,
+              numCopies,
+              statusOption,
+            );
+
+            console.log("Fallback copy response:", JSON.stringify(fallbackCopiedEntity));
+            results.push(fallbackCopiedEntity);
+            continue;
+          }
+
+          throw error;
+        }
       }
 
       return new Response(JSON.stringify({ success: true, results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
