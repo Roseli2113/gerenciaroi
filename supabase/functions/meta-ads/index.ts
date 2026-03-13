@@ -110,6 +110,16 @@ async function postFormWithRetry(url: string, params: URLSearchParams, maxRetrie
       return data;
     }
 
+    const safeParams = new URLSearchParams(params);
+    safeParams.delete("access_token");
+    logMetaError("Meta API POST error", data);
+    console.error("Meta API POST context:", JSON.stringify({
+      url,
+      params: Object.fromEntries(safeParams.entries()),
+      status: response.status,
+      attempt: attempt + 1,
+    }));
+
     if (!isRateLimitMessage(errorMessage) || attempt === maxRetries) {
       throw new Error(errorMessage);
     }
