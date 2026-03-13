@@ -822,7 +822,28 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       else body.adId = sourceId;
 
       const { data, error } = await supabase.functions.invoke('meta-ads', { body });
-      if (error || data?.error) throw new Error(data?.error || error?.message);
+
+      if (error) {
+        let errorMessage = error.message;
+        const errorWithContext = error as { context?: Response };
+
+        if (errorWithContext.context) {
+          try {
+            const errorBody = await errorWithContext.context.json() as { error?: string };
+            if (errorBody?.error) {
+              errorMessage = errorBody.error;
+            }
+          } catch {
+            // keep fallback error.message
+          }
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       toast.success(`${type === 'campaign' ? 'Campanha' : type === 'adset' ? 'Conjunto' : 'Anúncio'} duplicado com sucesso!`, {
         style: { background: '#16a34a', color: '#ffffff', border: 'none' }
