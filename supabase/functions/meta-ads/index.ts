@@ -399,6 +399,43 @@ serve(async (req) => {
       );
     }
 
+    if (action === "get-adsets-with-insights") {
+      const entityFields = [
+        "id", "name", "status", "daily_budget", "lifetime_budget",
+        "targeting", "optimization_goal", "campaign_id"
+      ].join(",");
+      const insightFields = [
+        "adset_id", "adset_name", "spend", "impressions", "clicks",
+        "cpc", "cpm", "ctr", "reach", "frequency", "actions",
+        "action_values", "cost_per_action_type",
+        "video_p25_watched_actions", "video_p50_watched_actions",
+        "video_p75_watched_actions", "video_p100_watched_actions"
+      ].join(",");
+
+      let dateParams = '';
+      if (dateSince && dateUntil) {
+        dateParams = `&time_range={"since":"${dateSince}","until":"${dateUntil}"}`;
+      } else {
+        dateParams = `&date_preset=${dateRange || "today"}`;
+      }
+
+      const entityUrl = `${baseUrl}/${adAccountId}/adsets?fields=${entityFields}&limit=500&access_token=${accessToken}`;
+      const insightsUrl = `${baseUrl}/${adAccountId}/insights?fields=${insightFields}&level=adset${dateParams}&limit=500&access_token=${accessToken}`;
+
+      const [adsets, insights] = await Promise.all([
+        fetchAllPages(entityUrl),
+        fetchAllPages(insightsUrl).catch((err) => {
+          console.error("Adset insights fetch failed (non-blocking):", err.message);
+          return [];
+        }),
+      ]);
+
+      return new Response(
+        JSON.stringify({ adsets, insights }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (action === "get-adset-insights") {
       const fields = [
         "adset_id",
@@ -467,6 +504,42 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ insights }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "get-ads-with-insights") {
+      const entityFields = [
+        "id", "name", "status", "creative", "adset_id"
+      ].join(",");
+      const insightFields = [
+        "ad_id", "ad_name", "spend", "impressions", "clicks",
+        "cpc", "cpm", "ctr", "reach", "frequency", "actions",
+        "action_values", "cost_per_action_type",
+        "video_p25_watched_actions", "video_p50_watched_actions",
+        "video_p75_watched_actions", "video_p100_watched_actions"
+      ].join(",");
+
+      let dateParams = '';
+      if (dateSince && dateUntil) {
+        dateParams = `&time_range={"since":"${dateSince}","until":"${dateUntil}"}`;
+      } else {
+        dateParams = `&date_preset=${dateRange || "today"}`;
+      }
+
+      const entityUrl = `${baseUrl}/${adAccountId}/ads?fields=${entityFields}&limit=500&access_token=${accessToken}`;
+      const insightsUrl = `${baseUrl}/${adAccountId}/insights?fields=${insightFields}&level=ad${dateParams}&limit=500&access_token=${accessToken}`;
+
+      const [ads, insights] = await Promise.all([
+        fetchAllPages(entityUrl),
+        fetchAllPages(insightsUrl).catch((err) => {
+          console.error("Ad insights fetch failed (non-blocking):", err.message);
+          return [];
+        }),
+      ]);
+
+      return new Response(
+        JSON.stringify({ ads, insights }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
