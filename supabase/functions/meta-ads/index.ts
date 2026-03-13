@@ -709,23 +709,24 @@ serve(async (req) => {
           const message = error instanceof Error ? error.message : String(error);
 
           if (entityType === "ad" && isCreativeEnhancementError(message)) {
-            if (!adAccountId) {
-              throw new Error("Ad Account ID is required for fallback ad duplication");
-            }
-
-            console.warn("Meta copy failed with deprecated creative enhancements, applying fallback strategy", JSON.stringify({
-              sourceEntityId,
-              adAccountId,
-              message,
-            }));
-
             if (!sourceAdFallbackData) {
               sourceAdFallbackData = await fetchAdFallbackData(baseUrl, sourceEntityId, accessToken);
             }
 
+            const resolvedAdAccountId = adAccountId || sourceAdFallbackData.adAccountId;
+            if (!resolvedAdAccountId) {
+              throw new Error("Não foi possível identificar a conta de anúncios para concluir a duplicação");
+            }
+
+            console.warn("Meta copy failed with deprecated creative enhancements, applying fallback strategy", JSON.stringify({
+              sourceEntityId,
+              adAccountId: resolvedAdAccountId,
+              message,
+            }));
+
             const fallbackCopiedEntity = await createAdCopyFromCreative(
               baseUrl,
-              adAccountId,
+              resolvedAdAccountId,
               accessToken,
               sourceAdFallbackData,
               i,
