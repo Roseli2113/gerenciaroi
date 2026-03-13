@@ -431,6 +431,11 @@ serve(async (req) => {
         const params = new URLSearchParams();
         params.set("access_token", accessToken);
         params.set("status_option", statusOption || "INHERITED_FROM_SOURCE");
+
+        if (entityType === "campaign" || entityType === "adset") {
+          params.set("deep_copy", "true");
+        }
+
         if (scheduledDate) {
           params.set("start_time", scheduledDate);
         }
@@ -440,8 +445,8 @@ serve(async (req) => {
         const copiedEntity = await postFormWithRetry(copyEndpoint, params);
         console.log(`Copy response:`, JSON.stringify(copiedEntity));
 
-        // Meta's /copies endpoint for adsets and campaigns already
-        // duplicates all child objects (ads, adsets) automatically.
+        // For campaign/adset copies we force deep_copy=true so child entities
+        // (adsets/ads) are duplicated together with the parent.
 
         results.push(copiedEntity);
       }
