@@ -430,14 +430,18 @@ serve(async (req) => {
       for (let i = 0; i < numCopies; i++) {
         const params = new URLSearchParams();
         params.set("access_token", accessToken);
-        params.set("status_option", statusOption || "INHERITED_FROM_SOURCE");
 
-        if (entityType === "campaign" || entityType === "adset") {
+        const isParentEntity = entityType === "campaign" || entityType === "adset";
+
+        // `status_option` and `start_time` are valid for parent entity copy flows.
+        // For ad copies, sending these fields can trigger Meta "Invalid parameter".
+        if (isParentEntity) {
+          params.set("status_option", statusOption || "INHERITED_FROM_SOURCE");
           params.set("deep_copy", "true");
-        }
 
-        if (scheduledDate) {
-          params.set("start_time", scheduledDate);
+          if (scheduledDate) {
+            params.set("start_time", scheduledDate);
+          }
         }
 
         console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
