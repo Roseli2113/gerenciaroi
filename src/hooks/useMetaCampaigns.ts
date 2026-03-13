@@ -519,8 +519,15 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       const allAds: Ad[] = [];
 
       await Promise.all(activeAccountIds.map(async (accountId) => {
+        // Single combined call: fetches entities + insights in parallel on the server
         const { data, error } = await supabase.functions.invoke('meta-ads', {
-          body: { action: 'get-ads', accessToken, adAccountId: accountId }
+          body: {
+            action: 'get-ads-with-insights',
+            accessToken,
+            adAccountId: accountId,
+            dateRange: datePreset,
+            ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {})
+          }
         });
 
         if (error || data?.error) {
@@ -528,18 +535,9 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
           return;
         }
 
-        // Fetch insights with retry (up to 3 attempts)
-        let insightsData: any = null;
-        const insightsBody = { action: 'get-ad-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) };
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const { data: iData, error: iError } = await supabase.functions.invoke('meta-ads', { body: insightsBody });
-          if (!iError && !iData?.error && iData?.insights) { insightsData = iData; break; }
-          if (attempt < 2) await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
-        }
-
         const insightsMap = new Map();
-        if (insightsData?.insights) {
-          insightsData.insights.forEach((i: { ad_id: string } & Omit<CampaignInsight, 'campaign_id'>) =>
+        if (data?.insights) {
+          data.insights.forEach((i: { ad_id: string } & Omit<CampaignInsight, 'campaign_id'>) =>
             insightsMap.set(i.ad_id, i)
           );
         }
