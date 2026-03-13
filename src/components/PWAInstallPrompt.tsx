@@ -15,6 +15,8 @@ export function PWAInstallPrompt() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
+    if (!isMobile) return;
+
     // Check if already dismissed this session
     if (sessionStorage.getItem('pwa-dismissed')) {
       setDismissed(true);
@@ -28,7 +30,7 @@ export function PWAInstallPrompt() {
 
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+  }, [isMobile]);
 
   if (!isMobile || !showBanner || dismissed) return null;
 
