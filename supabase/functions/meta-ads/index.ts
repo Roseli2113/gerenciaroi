@@ -599,6 +599,7 @@ serve(async (req) => {
       const sourceAdSetId = entityType === "ad"
         ? await fetchSourceAdAdSetId(baseUrl, sourceEntityId, accessToken)
         : null;
+      let sourceAdFallbackData: AdFallbackData | null = null;
 
       for (let i = 0; i < numCopies; i++) {
         const params = new URLSearchParams();
@@ -619,20 +620,51 @@ serve(async (req) => {
           if (sourceAdSetId) {
             params.set("adset_id", sourceAdSetId);
           }
-          // Disable standard enhancements on the creative copy to avoid
-          // Meta error 100/3858504 ("O criativo não deve incluir aprimoramentos padrão").
           params.set("rename_options", JSON.stringify({ rename_suffix: " - Copy" }));
         }
 
         console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
         const copyEndpoint = `${baseUrl}/${sourceEntityId}/copies`;
-        const copiedEntity = await postFormWithRetry(copyEndpoint, params);
-        console.log(`Copy response:`, JSON.stringify(copiedEntity));
 
-        // For campaign/adset copies we force deep_copy=true so child entities
-        // (adsets/ads) are duplicated together with the parent.
+        try {
+          const copiedEntity = await postFormWithRetry(copyEndpoint, params);
+          console.log("Copy response:", JSON.stringify(copiedEntity));
+          results.push(copiedEntity);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
 
-        results.push(copiedEntity);
+          if (entityType === "ad" && isCreativeEnhancementError(message)) {
+            if (!adAccountId) {
+              throw new Error("Ad Account ID is required for fallback ad duplication");
+            }
+
+            console.warn("Meta copy failed with deprecated creative enhancements, applying fallback strategy", JSON.stringify({
+              sourceEntityId,
+              adAccountId,
+              message,
+            }));
+
+            if (!sourceAdFallbackData) {
+              sourceAdFallbackData = await fetchAdFallbackData(baseUrl, sourceEntityId, accessToken);
+            }
+
+            const fallbackCopiedEntity = await createAdCopyFromCreative(
+              baseUrl,
+              adAccountId,
+              accessToken,
+              sourceAdFallbackData,
+              i,
+              numCopies,
+              statusOption,
+            );
+
+            console.log("Fallback copy response:", JSON.stringify(fallbackCopiedEntity));
+            results.push(fallbackCopiedEntity);
+            continue;
+          }
+
+          throw error;
+        }
       }
 
       return new Response(JSON.stringify({ success: true, results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
