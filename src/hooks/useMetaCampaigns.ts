@@ -828,10 +828,17 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
         style: { background: '#16a34a', color: '#ffffff', border: 'none' }
       });
 
-      // Refresh data
-      if (type === 'campaign') await fetchCampaigns();
-      else if (type === 'adset') await fetchAdSets();
-      else await fetchAds();
+      // Refresh data - for campaigns and adsets, refresh all levels since children are duplicated too
+      if (type === 'campaign') {
+        await fetchCampaigns();
+        await fetchAdSets();
+        await fetchAds();
+      } else if (type === 'adset') {
+        await fetchAdSets();
+        await fetchAds();
+      } else {
+        await fetchAds();
+      }
 
       return true;
     } catch (err) {
