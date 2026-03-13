@@ -440,37 +440,8 @@ serve(async (req) => {
         const copiedEntity = await postFormWithRetry(copyEndpoint, params);
         console.log(`Copy response:`, JSON.stringify(copiedEntity));
 
-        if (entityType === "adset") {
-          const copiedAdsetId = extractCopiedAdSetId(copiedEntity);
-          if (!copiedAdsetId) {
-            throw new Error("Meta não retornou o ID do conjunto duplicado");
-          }
-
-          const sourceAds = await fetchAllPages(`${baseUrl}/${sourceEntityId}/ads?fields=id&limit=500&access_token=${accessToken}`);
-          const sourceAdIds = sourceAds
-            .map((ad) => {
-              const item = ad as { id?: string };
-              return typeof item.id === "string" ? item.id : null;
-            })
-            .filter((id): id is string => Boolean(id));
-
-          const duplicatedAds: MetaPayload[] = [];
-          for (const sourceAdId of sourceAdIds) {
-            const adParams = new URLSearchParams();
-            adParams.set("access_token", accessToken);
-            adParams.set("adset_id", copiedAdsetId);
-            adParams.set("status_option", statusOption || "INHERITED_FROM_SOURCE");
-
-            const copiedAd = await postFormWithRetry(`${baseUrl}/${sourceAdId}/copies`, adParams);
-            duplicatedAds.push(copiedAd);
-          }
-
-          results.push({
-            ...copiedEntity,
-            duplicated_ads_count: duplicatedAds.length,
-          });
-          continue;
-        }
+        // Meta's /copies endpoint for adsets and campaigns already
+        // duplicates all child objects (ads, adsets) automatically.
 
         results.push(copiedEntity);
       }
