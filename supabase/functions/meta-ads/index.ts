@@ -697,6 +697,9 @@ serve(async (req) => {
           }
         };
 
+        const isCopyTooLargeError = (msg: string) =>
+          msg.includes("1885194") || msg.toLowerCase().includes("cópia é muito grande") || msg.toLowerCase().includes("copy request is too large");
+
         try {
           const copiedEntity = await postFormWithRetry(copyEndpoint, params);
           console.log("Copy response:", JSON.stringify(copiedEntity));
@@ -707,6 +710,34 @@ serve(async (req) => {
           await logDuplication({ newEntityId: newId, strategy: "copies_endpoint", success: true });
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : String(error);
+
+          // For campaigns/adsets: if deep_copy is too large, retry without deep_copy
+          if (isParentEntity && isCopyTooLargeError(message)) {
+            console.warn(`Deep copy too large for ${entityType} ${sourceEntityId}, retrying without deep_copy`);
+            const shallowParams = new URLSearchParams();
+            shallowParams.set("access_token", accessToken);
+            shallowParams.set("status_option", statusOption || "INHERITED_FROM_SOURCE");
+            if (scheduledDate) {
+              shallowParams.set("start_time", scheduledDate);
+            }
+            // No deep_copy param = shallow copy
+
+            try {
+              const copiedEntity = await postFormWithRetry(copyEndpoint, shallowParams);
+              console.log("Shallow copy response:", JSON.stringify(copiedEntity));
+              results.push(copiedEntity);
+
+              const newId = typeof copiedEntity.id === "string" ? copiedEntity.id
+                : (copiedEntity.copied_adset_id as string) || (copiedEntity.ad_object_ids as Array<{copied_id?: string}>)?.[0]?.copied_id || undefined;
+              await logDuplication({ newEntityId: newId, strategy: "shallow_copy_fallback", success: true, metaErrorSubcode: 1885194, metaErrorMessage: message });
+              continue;
+            } catch (shallowError: unknown) {
+              const shallowMsg = shallowError instanceof Error ? shallowError.message : String(shallowError);
+              console.error("Shallow copy also failed:", shallowMsg);
+              await logDuplication({ strategy: "shallow_copy_fallback", success: false, metaErrorSubcode: 1885194, metaErrorMessage: shallowMsg });
+              throw shallowError;
+            }
+          }
 
           if (entityType === "ad" && isCreativeEnhancementError(message)) {
             if (!sourceAdFallbackData) {
