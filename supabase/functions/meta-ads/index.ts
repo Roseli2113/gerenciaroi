@@ -179,6 +179,7 @@ type AdFallbackData = {
   creativeId: string;
   name: string;
   status: string | null;
+  adAccountId: string | null;
 };
 
 function isCreativeEnhancementError(message: string): boolean {
@@ -190,6 +191,18 @@ function isCreativeEnhancementError(message: string): boolean {
   );
 }
 
+function normalizeMetaAccountId(accountId: unknown): string | null {
+  if (typeof accountId === "string" && accountId.trim().length > 0) {
+    return accountId.startsWith("act_") ? accountId : `act_${accountId}`;
+  }
+
+  if (typeof accountId === "number") {
+    return `act_${accountId}`;
+  }
+
+  return null;
+}
+
 function buildCopyName(baseName: string, copyIndex: number, totalCopies: number): string {
   if (totalCopies > 1) {
     return `${baseName} - Copy ${copyIndex + 1}`;
@@ -197,8 +210,22 @@ function buildCopyName(baseName: string, copyIndex: number, totalCopies: number)
   return `${baseName} - Copy`;
 }
 
+async function fetchAdSetAccountId(baseUrl: string, adsetId: string, accessToken: string): Promise<string | null> {
+  const adsetUrl = `${baseUrl}/${adsetId}?fields=account_id&access_token=${accessToken}`;
+  const response = await fetch(adsetUrl);
+  const payload = await response.json() as MetaPayload;
+
+  const errorMessage = getMetaErrorMessage(payload) || (!response.ok ? `Meta API HTTP ${response.status}` : null);
+  if (errorMessage) {
+    logMetaError("Meta API adset account lookup error", payload);
+    return null;
+  }
+
+  return normalizeMetaAccountId(payload.account_id);
+}
+
 async function fetchAdFallbackData(baseUrl: string, adId: string, accessToken: string): Promise<AdFallbackData> {
-  const fields = ["name", "status", "adset_id", "creative{id}"].join(",");
+  const fields = ["name", "status", "adset_id", "creative{id}", "account_id"].join(",");
   const adDetailsUrl = `${baseUrl}/${adId}?fields=${fields}&access_token=${accessToken}`;
   const response = await fetch(adDetailsUrl);
   const payload = await response.json() as MetaPayload;
@@ -225,11 +252,14 @@ async function fetchAdFallbackData(baseUrl: string, adId: string, accessToken: s
     throw new Error("Não foi possível identificar o creative_id do anúncio de origem");
   }
 
+  const adAccountId = normalizeMetaAccountId(payload.account_id) || await fetchAdSetAccountId(baseUrl, adsetId, accessToken);
+
   return {
     adsetId,
     creativeId,
     name: adName,
     status: adStatus,
+    adAccountId,
   };
 }
 
@@ -679,23 +709,24 @@ serve(async (req) => {
           const message = error instanceof Error ? error.message : String(error);
 
           if (entityType === "ad" && isCreativeEnhancementError(message)) {
-            if (!adAccountId) {
-              throw new Error("Ad Account ID is required for fallback ad duplication");
-            }
-
-            console.warn("Meta copy failed with deprecated creative enhancements, applying fallback strategy", JSON.stringify({
-              sourceEntityId,
-              adAccountId,
-              message,
-            }));
-
             if (!sourceAdFallbackData) {
               sourceAdFallbackData = await fetchAdFallbackData(baseUrl, sourceEntityId, accessToken);
             }
 
+            const resolvedAdAccountId = adAccountId || sourceAdFallbackData.adAccountId;
+            if (!resolvedAdAccountId) {
+              throw new Error("Não foi possível identificar a conta de anúncios para concluir a duplicação");
+            }
+
+            console.warn("Meta copy failed with deprecated creative enhancements, applying fallback strategy", JSON.stringify({
+              sourceEntityId,
+              adAccountId: resolvedAdAccountId,
+              message,
+            }));
+
             const fallbackCopiedEntity = await createAdCopyFromCreative(
               baseUrl,
-              adAccountId,
+              resolvedAdAccountId,
               accessToken,
               sourceAdFallbackData,
               i,
