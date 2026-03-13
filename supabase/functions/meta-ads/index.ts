@@ -627,10 +627,54 @@ serve(async (req) => {
         console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
         const copyEndpoint = `${baseUrl}/${sourceEntityId}/copies`;
 
+        // Helper to log duplication audit
+        const logDuplication = async (log: {
+          newEntityId?: string;
+          strategy: string;
+          success: boolean;
+          metaErrorCode?: number;
+          metaErrorSubcode?: number;
+          metaErrorMessage?: string;
+        }) => {
+          try {
+            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+            const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+            const sb = createClient(supabaseUrl, supabaseKey);
+
+            // Extract user_id from the authorization header
+            const authHeader = req.headers.get("authorization");
+            let userId: string | null = null;
+            if (authHeader) {
+              const { data: { user } } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
+              userId = user?.id || null;
+            }
+
+            if (userId) {
+              await sb.from("duplication_logs").insert({
+                user_id: userId,
+                source_entity_id: sourceEntityId,
+                entity_type: entityType,
+                new_entity_id: log.newEntityId || null,
+                strategy: log.strategy,
+                success: log.success,
+                meta_error_code: log.metaErrorCode || null,
+                meta_error_subcode: log.metaErrorSubcode || null,
+                meta_error_message: log.metaErrorMessage || null,
+              });
+            }
+          } catch (logErr) {
+            console.error("Failed to write duplication audit log:", logErr);
+          }
+        };
+
         try {
           const copiedEntity = await postFormWithRetry(copyEndpoint, params);
           console.log("Copy response:", JSON.stringify(copiedEntity));
           results.push(copiedEntity);
+
+          const newId = typeof copiedEntity.id === "string" ? copiedEntity.id
+            : (copiedEntity.copied_adset_id as string) || (copiedEntity.ad_object_ids as Array<{copied_id?: string}>)?.[0]?.copied_id || undefined;
+          await logDuplication({ newEntityId: newId, strategy: "copies_endpoint", success: true });
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : String(error);
 
@@ -661,9 +705,24 @@ serve(async (req) => {
 
             console.log("Fallback copy response:", JSON.stringify(fallbackCopiedEntity));
             results.push(fallbackCopiedEntity);
+
+            const newId = typeof fallbackCopiedEntity.id === "string" ? fallbackCopiedEntity.id : undefined;
+            await logDuplication({
+              newEntityId: newId,
+              strategy: "create_from_existing_creative_id",
+              success: true,
+              metaErrorCode: 100,
+              metaErrorSubcode: 3858504,
+              metaErrorMessage: message,
+            });
             continue;
           }
 
+          await logDuplication({
+            strategy: "copies_endpoint",
+            success: false,
+            metaErrorMessage: message,
+          });
           throw error;
         }
       }
