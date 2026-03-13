@@ -5,12 +5,50 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type MetaPayload = Record<string, unknown>;
+type MetaApiError = {
+  message?: string;
+  type?: string;
+  code?: number;
+  error_subcode?: number;
+  error_user_title?: string;
+  error_user_msg?: string;
+  fbtrace_id?: string;
+  is_transient?: boolean;
+};
+
+type MetaPayload = Record<string, unknown> & {
+  error?: MetaApiError;
+};
+
+function formatMetaErrorMessage(error: MetaApiError): string {
+  const baseMessage = error.message || "Erro desconhecido da Meta API";
+  const details = [
+    typeof error.code === "number" ? `code=${error.code}` : null,
+    typeof error.error_subcode === "number" ? `error_subcode=${error.error_subcode}` : null,
+    error.error_user_title ? `error_user_title=${error.error_user_title}` : null,
+  ].filter(Boolean);
+
+  return details.length ? `${baseMessage} (${details.join(", ")})` : baseMessage;
+}
+
+function logMetaError(context: string, payload: MetaPayload | null): void {
+  if (!payload?.error) return;
+
+  console.error(`${context}:`, JSON.stringify({
+    message: payload.error.message,
+    type: payload.error.type,
+    code: payload.error.code,
+    error_subcode: payload.error.error_subcode,
+    error_user_title: payload.error.error_user_title,
+    error_user_msg: payload.error.error_user_msg,
+    fbtrace_id: payload.error.fbtrace_id,
+    is_transient: payload.error.is_transient,
+  }));
+}
 
 function getMetaErrorMessage(payload: MetaPayload | null): string | null {
   if (!payload?.error) return null;
-  const err = payload.error as { message?: string };
-  return err?.message || JSON.stringify(payload.error);
+  return formatMetaErrorMessage(payload.error);
 }
 
 function isRateLimitMessage(message: string): boolean {
@@ -32,6 +70,7 @@ async function fetchAllPages(url: string, maxRetries = 4): Promise<unknown[]> {
       const errorMessage = getMetaErrorMessage(data);
       if (!errorMessage) break;
 
+      logMetaError("Meta API fetch error", data);
       if (!isRateLimitMessage(errorMessage) || attempt === maxRetries) {
         throw new Error(errorMessage);
       }
@@ -71,6 +110,16 @@ async function postFormWithRetry(url: string, params: URLSearchParams, maxRetrie
       return data;
     }
 
+    const safeParams = new URLSearchParams(params);
+    safeParams.delete("access_token");
+    logMetaError("Meta API POST error", data);
+    console.error("Meta API POST context:", JSON.stringify({
+      url,
+      params: Object.fromEntries(safeParams.entries()),
+      status: response.status,
+      attempt: attempt + 1,
+    }));
+
     if (!isRateLimitMessage(errorMessage) || attempt === maxRetries) {
       throw new Error(errorMessage);
     }
@@ -97,6 +146,31 @@ function extractCopiedAdSetId(payload: MetaPayload): string | null {
   }) as { copied_id?: string } | undefined;
 
   return adSetObject?.copied_id || null;
+}
+
+async function fetchSourceAdAdSetId(baseUrl: string, adId: string, accessToken: string): Promise<string | null> {
+  const adDetailsUrl = `${baseUrl}/${adId}?fields=adset_id&access_token=${accessToken}`;
+  const response = await fetch(adDetailsUrl);
+  const payload = await response.json() as MetaPayload;
+
+  const errorMessage = getMetaErrorMessage(payload) || (!response.ok ? `Meta API HTTP ${response.status}` : null);
+  if (errorMessage) {
+    logMetaError("Meta API ad lookup error", payload);
+    throw new Error(errorMessage);
+  }
+
+  if (typeof payload.adset_id === "string") {
+    return payload.adset_id;
+  }
+
+  if (payload.adset_id && typeof payload.adset_id === "object") {
+    const nestedId = (payload.adset_id as { id?: unknown }).id;
+    if (typeof nestedId === "string") {
+      return nestedId;
+    }
+  }
+
+  return null;
 }
 
 serve(async (req) => {
@@ -427,11 +501,14 @@ serve(async (req) => {
       }
 
       const results: MetaPayload[] = [];
+      const isParentEntity = entityType === "campaign" || entityType === "adset";
+      const sourceAdSetId = entityType === "ad"
+        ? await fetchSourceAdAdSetId(baseUrl, sourceEntityId, accessToken)
+        : null;
+
       for (let i = 0; i < numCopies; i++) {
         const params = new URLSearchParams();
         params.set("access_token", accessToken);
-
-        const isParentEntity = entityType === "campaign" || entityType === "adset";
 
         // `status_option` and `start_time` are valid for parent entity copy flows.
         // For ad copies, sending these fields can trigger Meta "Invalid parameter".
@@ -442,6 +519,10 @@ serve(async (req) => {
           if (scheduledDate) {
             params.set("start_time", scheduledDate);
           }
+        }
+
+        if (entityType === "ad" && sourceAdSetId) {
+          params.set("adset_id", sourceAdSetId);
         }
 
         console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
