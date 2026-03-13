@@ -383,10 +383,8 @@ serve(async (req) => {
         const params = new URLSearchParams();
         params.set('access_token', accessToken);
         params.set('status_option', statusOption || 'INHERITED_FROM_SOURCE');
-        // Deep copy: include child objects (ad sets + ads for campaigns, ads for ad sets)
-        if (entityType === 'campaign' || entityType === 'adset') {
-          params.set('deep_copy', 'true');
-        }
+        // Note: do NOT use deep_copy — Meta API copies child objects by default
+        // and deep_copy causes "copy request too large" errors for campaigns/adsets with many children
         if (scheduledDate) {
           params.set('start_time', scheduledDate);
         }
