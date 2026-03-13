@@ -188,7 +188,7 @@ serve(async (req) => {
       );
     }
 
-    const baseUrl = "https://graph.facebook.com/v18.0";
+    const baseUrl = "https://graph.facebook.com/v21.0";
 
     if (action === "get-campaigns") {
       const fields = [
@@ -521,8 +521,13 @@ serve(async (req) => {
           }
         }
 
-        if (entityType === "ad" && sourceAdSetId) {
-          params.set("adset_id", sourceAdSetId);
+        if (entityType === "ad") {
+          if (sourceAdSetId) {
+            params.set("adset_id", sourceAdSetId);
+          }
+          // Disable standard enhancements on the creative copy to avoid
+          // Meta error 100/3858504 ("O criativo não deve incluir aprimoramentos padrão").
+          params.set("rename_options", JSON.stringify({ rename_suffix: " - Copy" }));
         }
 
         console.log(`Duplicating ${entityType} ${sourceEntityId}, attempt ${i + 1}/${numCopies}`);
