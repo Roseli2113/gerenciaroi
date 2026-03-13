@@ -728,8 +728,56 @@ serve(async (req) => {
               results.push(copiedEntity);
 
               const newId = typeof copiedEntity.id === "string" ? copiedEntity.id
-                : (copiedEntity.copied_adset_id as string) || (copiedEntity.ad_object_ids as Array<{copied_id?: string}>)?.[0]?.copied_id || undefined;
+                : extractCopiedAdSetId(copiedEntity) || undefined;
               await logDuplication({ newEntityId: newId, strategy: "shallow_copy_fallback", success: true, metaErrorSubcode: 1885194, metaErrorMessage: message });
+
+              // For adsets: after shallow copy, manually duplicate all ads from the source adset into the new one
+              if (entityType === "adset" && newId) {
+                console.log(`Shallow copy created adset ${newId}, now duplicating ads from source ${sourceEntityId}`);
+                try {
+                  const adsUrl = `${baseUrl}/${sourceEntityId}/ads?fields=id,name,status,creative&limit=500&access_token=${accessToken}`;
+                  const sourceAds = await fetchAllPages(adsUrl) as Array<{ id: string; name?: string; status?: string; creative?: { id?: string } }>;
+                  console.log(`Found ${sourceAds.length} ads to duplicate into new adset ${newId}`);
+
+                  for (const ad of sourceAds) {
+                    try {
+                      // Try native copy first
+                      const adCopyParams = new URLSearchParams();
+                      adCopyParams.set("access_token", accessToken);
+                      adCopyParams.set("adset_id", newId);
+                      adCopyParams.set("rename_options", JSON.stringify({ rename_suffix: " - Copy" }));
+                      const adCopyEndpoint = `${baseUrl}/${ad.id}/copies`;
+                      const adCopied = await postFormWithRetry(adCopyEndpoint, adCopyParams);
+                      console.log(`Ad ${ad.id} copied to new adset:`, JSON.stringify(adCopied));
+                    } catch (adCopyErr: unknown) {
+                      const adMsg = adCopyErr instanceof Error ? adCopyErr.message : String(adCopyErr);
+                      console.warn(`Native ad copy failed for ${ad.id}, trying creative fallback:`, adMsg);
+                      // Fallback: create ad from creative
+                      if (ad.creative?.id) {
+                        const resolvedAccountId = adAccountId || await fetchAdSetAccountId(baseUrl, sourceEntityId, accessToken);
+                        if (resolvedAccountId) {
+                          const fallbackData: AdFallbackData = {
+                            adsetId: newId,
+                            creativeId: ad.creative.id,
+                            name: ad.name || "Ad",
+                            status: ad.status || null,
+                            adAccountId: resolvedAccountId,
+                          };
+                          const createdAd = await createAdCopyFromCreative(baseUrl, resolvedAccountId, accessToken, fallbackData, 0, 1, statusOption);
+                          console.log(`Ad ${ad.id} recreated via creative fallback:`, JSON.stringify(createdAd));
+                        } else {
+                          console.error(`Cannot fallback-copy ad ${ad.id}: no account_id available`);
+                        }
+                      } else {
+                        console.error(`Cannot fallback-copy ad ${ad.id}: no creative_id`);
+                      }
+                    }
+                  }
+                } catch (adsErr: unknown) {
+                  console.error("Failed to duplicate ads after shallow adset copy:", adsErr);
+                }
+              }
+
               continue;
             } catch (shallowError: unknown) {
               const shallowMsg = shallowError instanceof Error ? shallowError.message : String(shallowError);
