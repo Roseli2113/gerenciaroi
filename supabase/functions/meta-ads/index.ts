@@ -376,32 +376,34 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "Source ID is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Use the copies endpoint for campaigns/adsets
-      const copyEndpoint = entityType === 'campaign' 
-        ? `${baseUrl}/${sourceEntityId}/copies`
-        : entityType === 'adset'
-        ? `${baseUrl}/${sourceEntityId}/copies`
-        : `${baseUrl}/${sourceEntityId}/copies`;
+      const copyEndpoint = `${baseUrl}/${sourceEntityId}/copies`;
 
-      const copyBody: any = {
-        status_option: statusOption || "INHERITED_FROM_SOURCE",
+      // Build form params - Meta API expects form-encoded data for copies endpoint
+      const buildFormParams = () => {
+        const params = new URLSearchParams();
+        params.set('access_token', accessToken);
+        params.set('status_option', statusOption || 'INHERITED_FROM_SOURCE');
+        // Deep copy: include child objects (ad sets + ads for campaigns, ads for ad sets)
+        if (entityType === 'campaign' || entityType === 'adset') {
+          params.set('deep_copy', 'true');
+        }
+        if (scheduledDate) {
+          params.set('start_time', scheduledDate);
+        }
+        return params;
       };
-      // Deep copy: include child objects (ad sets + ads for campaigns, ads for ad sets)
-      if (entityType === 'campaign' || entityType === 'adset') {
-        copyBody.deep_copy = true;
-      }
-      if (scheduledDate) {
-        copyBody.start_time = scheduledDate;
-      }
 
       const results = [];
       for (let i = 0; i < numCopies; i++) {
-        const response = await fetch(`${copyEndpoint}?access_token=${accessToken}`, {
+        const params = buildFormParams();
+        console.log(`Duplicating ${entityType} ${sourceEntityId}, deep_copy=true, attempt ${i + 1}/${numCopies}`);
+        const response = await fetch(copyEndpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(copyBody)
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString()
         });
         const data = await response.json();
+        console.log(`Copy response:`, JSON.stringify(data));
         if (data.error) {
           return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
