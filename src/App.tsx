@@ -46,6 +46,7 @@ const App = () => (
               <Route path="/onboarding/strategy" element={<ProtectedRoute><OnboardingStrategy /></ProtectedRoute>} />
               <Route path="/onboarding/setup" element={<ProtectedRoute><OnboardingSetup /></ProtectedRoute>} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/privacidade" element={<Privacy />} />
               <Route path="/exclusao-de-dados" element={<DataDeletion />} />
               <Route path="/termos" element={<Terms />} />
