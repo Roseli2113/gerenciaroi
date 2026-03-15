@@ -351,7 +351,6 @@ serve(async (req) => {
         "actions",
         "action_values",
         "cost_per_action_type",
-        "video_3_sec_watched_actions",
         "video_p25_watched_actions",
         "video_p50_watched_actions",
         "video_p75_watched_actions",
@@ -409,7 +408,7 @@ serve(async (req) => {
         "adset_id", "adset_name", "spend", "impressions", "clicks",
         "cpc", "cpm", "ctr", "reach", "frequency", "actions",
         "action_values", "cost_per_action_type",
-        "video_3_sec_watched_actions", "video_p25_watched_actions", "video_p50_watched_actions",
+        "video_p25_watched_actions", "video_p50_watched_actions",
         "video_p75_watched_actions", "video_p100_watched_actions"
       ].join(",");
 
@@ -452,7 +451,6 @@ serve(async (req) => {
         "actions",
         "action_values",
         "cost_per_action_type",
-        "video_3_sec_watched_actions",
         "video_p25_watched_actions",
         "video_p50_watched_actions",
         "video_p75_watched_actions",
@@ -489,7 +487,6 @@ serve(async (req) => {
         "actions",
         "action_values",
         "cost_per_action_type",
-        "video_3_sec_watched_actions",
         "video_p25_watched_actions",
         "video_p50_watched_actions",
         "video_p75_watched_actions",
@@ -519,7 +516,7 @@ serve(async (req) => {
         "ad_id", "ad_name", "spend", "impressions", "clicks",
         "cpc", "cpm", "ctr", "reach", "frequency", "actions",
         "action_values", "cost_per_action_type",
-        "video_3_sec_watched_actions", "video_p25_watched_actions", "video_p50_watched_actions",
+        "video_p25_watched_actions", "video_p50_watched_actions",
         "video_p75_watched_actions", "video_p100_watched_actions"
       ].join(",");
 
