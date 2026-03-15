@@ -183,9 +183,7 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="flex flex-col items-center space-y-2">
-          <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
-            <TrendingUp className="w-7 h-7 text-primary-foreground" />
-          </div>
+            <img src={logoAuth} alt="Gerencia ROI" className="w-16 h-16 object-contain" />
           <h1 className="text-2xl font-bold text-foreground">Gerencia ROI</h1>
           <p className="text-muted-foreground text-center">
             Gestão inteligente de campanhas de marketing
