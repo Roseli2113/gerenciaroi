@@ -412,6 +412,7 @@ const Campaigns = () => {
         return formatPercent(item.ctr);
       case 'frequencia':
         return item.frequency !== null ? item.frequency.toFixed(2) : 'N/A';
+      case 'hook':
       case 'playRateHook':
         return formatPercent(item.hookPlayRate);
       case 'holdRate':
