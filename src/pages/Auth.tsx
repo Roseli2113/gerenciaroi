@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, TrendingUp, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import logoAuth from '@/assets/logo-auth.png';
 import { supabase } from '@/integrations/supabase/client';
 
 function PasswordField({
@@ -128,9 +129,7 @@ export default function Auth() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center space-y-2">
-            <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-7 h-7 text-primary-foreground" />
-            </div>
+            <img src={logoAuth} alt="Gerencia ROI" className="w-16 h-16 object-contain" />
             <h1 className="text-2xl font-bold text-foreground">Gerencia ROI</h1>
           </div>
           <Card className="glass-strong">
@@ -184,9 +183,7 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="flex flex-col items-center space-y-2">
-          <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
-            <TrendingUp className="w-7 h-7 text-primary-foreground" />
-          </div>
+            <img src={logoAuth} alt="Gerencia ROI" className="w-16 h-16 object-contain" />
           <h1 className="text-2xl font-bold text-foreground">Gerencia ROI</h1>
           <p className="text-muted-foreground text-center">
             Gestão inteligente de campanhas de marketing
