@@ -17,6 +17,7 @@ interface CampaignInsight {
   actions?: Array<{ action_type: string; value: string }>;
   action_values?: Array<{ action_type: string; value: string }>;
   cost_per_action_type?: Array<{ action_type: string; value: string }>;
+  video_3_sec_watched_actions?: Array<{ action_type: string; value: string }>;
   video_p25_watched_actions?: Array<{ action_type: string; value: string }>;
   video_p50_watched_actions?: Array<{ action_type: string; value: string }>;
   video_p75_watched_actions?: Array<{ action_type: string; value: string }>;
@@ -229,9 +230,11 @@ function parseMetrics(insight: CampaignInsight | null) {
   const ctaClicks = linkClickAction ? parseInt(linkClickAction.value) : 0;
 
   // Video metrics for hook play rate and hold rate
+  // Hook = Vídeos assistidos 3 seg / Impressões (%)
+  const video3sec = insight.video_3_sec_watched_actions?.find(a => a.action_type === 'video_view')?.value;
   const videoPlays = insight.video_p25_watched_actions?.find(a => a.action_type === 'video_view')?.value;
   const video100 = insight.video_p100_watched_actions?.find(a => a.action_type === 'video_view')?.value;
-  const hookPlayRate = impressions > 0 && videoPlays ? (parseInt(videoPlays) / impressions) * 100 : null;
+  const hookPlayRate = impressions > 0 && video3sec ? (parseInt(video3sec) / impressions) * 100 : null;
   const holdRate = videoPlays && video100 ? (parseInt(video100) / parseInt(videoPlays)) * 100 : null;
 
   // Calculate metrics
