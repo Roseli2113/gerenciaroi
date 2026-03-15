@@ -91,6 +91,22 @@ export default function Auth() {
     setIsLoading(false);
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Email de recuperação enviado! Verifique sua caixa de entrada.');
+    }
+    setForgotLoading(false);
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -106,6 +122,62 @@ export default function Auth() {
 
     setIsLoading(false);
   };
+
+  if (showForgot) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex flex-col items-center space-y-2">
+            <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-7 h-7 text-primary-foreground" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Gerencia ROI</h1>
+          </div>
+          <Card className="glass-strong">
+            <CardHeader className="text-center">
+              <CardTitle>Recuperar Senha</CardTitle>
+              <CardDescription>
+                Digite seu email para receber o link de recuperação
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">Email</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={forgotLoading}>
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Enviar link de recuperação'
+                  )}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(false)}
+                  className="flex items-center justify-center gap-1 w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar ao login
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
