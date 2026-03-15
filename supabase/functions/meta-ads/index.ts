@@ -489,6 +489,7 @@ serve(async (req) => {
         "actions",
         "action_values",
         "cost_per_action_type",
+        "video_3_sec_watched_actions",
         "video_p25_watched_actions",
         "video_p50_watched_actions",
         "video_p75_watched_actions",
