@@ -9,61 +9,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Loader2, TrendingUp, Eye, EyeOff } from 'lucide-react';
 
-export default function Auth() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Login realizado com sucesso!');
-      navigate('/');
-    }
-    
-    setIsLoading(false);
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    const { error } = await signUp(email, password);
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Conta criada com sucesso!');
-      navigate('/');
-    }
-    
-    setIsLoading(false);
-  };
-
-  const PasswordInput = ({ id, placeholder }: { id: string; placeholder: string }) => (
+function PasswordField({
+  id,
+  placeholder,
+  value,
+  onChange,
+  showPassword,
+  onToggle,
+  minLength,
+}: {
+  id: string;
+  placeholder: string;
+  value: string;
+  onChange: (val: string) => void;
+  showPassword: boolean;
+  onToggle: () => void;
+  minLength?: number;
+}) {
+  return (
     <div className="relative">
       <Input
         id={id}
         type={showPassword ? 'text' : 'password'}
         placeholder={placeholder}
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        minLength={id.includes('register') ? 6 : undefined}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        minLength={minLength}
         required
         className="pr-10"
       />
       <button
         type="button"
-        onClick={() => setShowPassword(!showPassword)}
+        onClick={onToggle}
         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
         tabIndex={-1}
       >
@@ -71,6 +48,60 @@ export default function Auth() {
       </button>
     </div>
   );
+}
+
+export default function Auth() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
+  const navigate = useNavigate();
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
+  const handlePhoneChange = (val: string) => {
+    setPhone(formatPhone(val));
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const { error } = await signIn(email, password);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Login realizado com sucesso!');
+      navigate('/');
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const { error } = await signUp(email, password, { displayName: name, phone: phone.replace(/\D/g, '') });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Conta criada com sucesso! Verifique seu email.');
+      navigate('/');
+    }
+
+    setIsLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -116,7 +147,14 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="login-password">Senha</Label>
-                    <PasswordInput id="login-password" placeholder="••••••••" />
+                    <PasswordField
+                      id="login-password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={setPassword}
+                      showPassword={showPassword}
+                      onToggle={() => setShowPassword(!showPassword)}
+                    />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
@@ -134,6 +172,17 @@ export default function Auth() {
               <TabsContent value="register">
                 <form onSubmit={handleSignUp} className="space-y-4 mt-4">
                   <div className="space-y-2">
+                    <Label htmlFor="register-name">Nome completo</Label>
+                    <Input
+                      id="register-name"
+                      type="text"
+                      placeholder="Seu nome completo"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="register-email">Email</Label>
                     <Input
                       id="register-email"
@@ -145,8 +194,27 @@ export default function Auth() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="register-phone">Celular</Label>
+                    <Input
+                      id="register-phone"
+                      type="tel"
+                      placeholder="(00) 00000-0000"
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="register-password">Senha</Label>
-                    <PasswordInput id="register-password" placeholder="••••••••" />
+                    <PasswordField
+                      id="register-password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={setPassword}
+                      showPassword={showPassword}
+                      onToggle={() => setShowPassword(!showPassword)}
+                      minLength={6}
+                    />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
