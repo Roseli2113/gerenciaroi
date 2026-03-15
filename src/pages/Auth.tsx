@@ -91,7 +91,7 @@ export default function Auth() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = await signUp(email, password);
+    const { error } = await signUp(email, password, { displayName: name, phone: phone.replace(/\D/g, '') });
 
     if (error) {
       toast.error(error.message);
