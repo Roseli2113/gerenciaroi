@@ -27,6 +27,7 @@ import OnboardingStrategy from "./pages/OnboardingStrategy";
 import OnboardingSetup from "./pages/OnboardingSetup";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
+import DataDeletion from "./pages/DataDeletion";
 
 const queryClient = new QueryClient();
 
