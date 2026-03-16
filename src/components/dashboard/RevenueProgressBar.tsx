@@ -45,7 +45,7 @@ export function RevenueProgressBar() {
   const percentage = Math.min((revenue / goal) * 100, 100);
 
   return (
-    <div className="flex items-center gap-3 bg-card/80 border border-primary/40 rounded-xl px-4 py-2 min-w-[280px]">
+    <div className="flex items-center gap-3 bg-card/80 border border-border rounded-xl px-4 py-2 min-w-[280px]">
       <TrendingUp className="w-4 h-4 text-success shrink-0" />
       <div className="flex-1 space-y-1">
         <div className="flex items-center justify-between text-xs">
