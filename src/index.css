@@ -71,42 +71,41 @@
   }
 
   .dark {
-    /* UTMify Dark Theme - Background hierarchy */
-    /* Background Main: #151C30 */
-    --background: 223 37% 14%;
-    --foreground: 0 5% 97%;
+    /* Deep navy dark theme inspired by Pushin Pay */
+    /* Background Main: ~#080c1a */
+    --background: 228 50% 7%;
+    --foreground: 220 20% 95%;
 
-    /* Background Secondary: #292E43 */
-    --card: 230 24% 21%;
-    --card-foreground: 0 5% 97%;
+    /* Card/Secondary bg: ~#111633 */
+    --card: 232 52% 14%;
+    --card-foreground: 220 20% 95%;
 
-    /* Popover uses secondary background */
-    --popover: 230 24% 21%;
-    --popover-foreground: 0 5% 97%;
+    /* Popover */
+    --popover: 232 52% 14%;
+    --popover-foreground: 220 20% 95%;
 
-    /* Primary Blue: #0857CC */
-    --primary: 214 93% 42%;
+    /* Primary: indigo/purple ~#5b5bd6 */
+    --primary: 240 58% 60%;
     --primary-foreground: 0 0% 100%;
 
-    /* Background Tertiary: #373F56 */
-    --secondary: 225 21% 28%;
-    --secondary-foreground: 0 5% 97%;
+    /* Secondary: ~#1a1f3a */
+    --secondary: 230 40% 16%;
+    --secondary-foreground: 220 20% 95%;
 
-    /* Muted uses tertiary with secondary text */
-    --muted: 225 21% 28%;
-    /* Text Secondary: #A4ACB2 */
-    --muted-foreground: 206 7% 67%;
+    /* Muted */
+    --muted: 230 40% 16%;
+    --muted-foreground: 225 15% 55%;
 
-    /* Accent uses primary blue */
-    --accent: 214 93% 42%;
+    /* Accent: indigo */
+    --accent: 240 58% 60%;
     --accent-foreground: 0 0% 100%;
 
-    /* Danger: #EF4444 */
+    /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --destructive-bright: 0 84% 60%;
 
-    /* Success: #22C55E */
+    /* Success */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
@@ -114,26 +113,26 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    /* Border/Divider: #68727B */
-    --border: 209 8% 45%;
-    --input: 225 21% 28%;
-    --ring: 214 93% 42%;
+    /* Border: subtle blue ~#1e2448 */
+    --border: 233 42% 20%;
+    --input: 230 40% 16%;
+    --ring: 240 58% 60%;
 
-    /* Sidebar uses main background */
-    --sidebar-background: 223 37% 14%;
-    --sidebar-foreground: 0 5% 97%;
-    --sidebar-primary: 214 93% 42%;
+    /* Sidebar */
+    --sidebar-background: 228 50% 7%;
+    --sidebar-foreground: 220 20% 95%;
+    --sidebar-primary: 240 58% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 24% 21%;
-    --sidebar-accent-foreground: 214 93% 42%;
-    --sidebar-border: 209 8% 45%;
-    --sidebar-ring: 214 93% 42%;
+    --sidebar-accent: 232 52% 14%;
+    --sidebar-accent-foreground: 240 58% 60%;
+    --sidebar-border: 233 42% 20%;
+    --sidebar-ring: 240 58% 60%;
 
     /* Dark gradients */
-    --gradient-card: linear-gradient(135deg, hsl(230, 24%, 23%) 0%, hsl(230, 24%, 21%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(232, 52%, 16%) 0%, hsl(232, 52%, 14%) 100%);
 
-    /* Opaque selected row bg (primary/10 mixed with card in dark) */
-    --row-selected: 225 30% 23%;
+    /* Selected row */
+    --row-selected: 240 50% 15%;
   }
 }
 
