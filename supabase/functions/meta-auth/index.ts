@@ -134,7 +134,7 @@ serve(async (req) => {
       let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?` +
         `fields=id,name,account_status,currency,timezone_name` +
         `&limit=100` +
-        `&access_token=${accessToken}`;
+        `&access_token=${providedAccessToken}`;
 
       while (url) {
         const resp = await fetch(url);
