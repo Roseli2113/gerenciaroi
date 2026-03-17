@@ -5,6 +5,72 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Fetch all ad accounts: personal (/me/adaccounts) + from Business Managers (/me/businesses -> owned_ad_accounts)
+const fetchAllAdAccounts = async (accessToken: string) => {
+  const accountsMap = new Map<string, any>();
+
+  // 1. Personal ad accounts
+  let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
+  while (url) {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data?.data) {
+      for (const acc of data.data) {
+        accountsMap.set(acc.id, acc);
+      }
+    }
+    url = data?.paging?.next || null;
+  }
+
+  // 2. Business Manager ad accounts
+  let bmUrl: string | null = `https://graph.facebook.com/v18.0/me/businesses?fields=id,name&limit=100&access_token=${accessToken}`;
+  while (bmUrl) {
+    const bmResp = await fetch(bmUrl);
+    const bmData = await bmResp.json();
+    if (bmData?.data) {
+      // Fetch owned_ad_accounts for each BM in parallel
+      const bmFetches = bmData.data.map(async (bm: any) => {
+        let bmAccUrl: string | null = `https://graph.facebook.com/v18.0/${bm.id}/owned_ad_accounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
+        while (bmAccUrl) {
+          try {
+            const accResp = await fetch(bmAccUrl);
+            const accData = await accResp.json();
+            if (accData?.data) {
+              for (const acc of accData.data) {
+                accountsMap.set(acc.id, acc);
+              }
+            }
+            bmAccUrl = accData?.paging?.next || null;
+          } catch {
+            bmAccUrl = null;
+          }
+        }
+
+        // Also fetch client_ad_accounts (accounts managed by this BM)
+        let clientUrl: string | null = `https://graph.facebook.com/v18.0/${bm.id}/client_ad_accounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
+        while (clientUrl) {
+          try {
+            const clientResp = await fetch(clientUrl);
+            const clientData = await clientResp.json();
+            if (clientData?.data) {
+              for (const acc of clientData.data) {
+                accountsMap.set(acc.id, acc);
+              }
+            }
+            clientUrl = clientData?.paging?.next || null;
+          } catch {
+            clientUrl = null;
+          }
+        }
+      });
+      await Promise.all(bmFetches);
+    }
+    bmUrl = bmData?.paging?.next || null;
+  }
+
+  return Array.from(accountsMap.values());
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -27,7 +93,6 @@ serve(async (req) => {
     }
 
     if (action === "get-auth-url") {
-      // Generate Meta OAuth URL
       const scopes = [
         "ads_read",
         "ads_management",
@@ -48,7 +113,6 @@ serve(async (req) => {
     }
 
     if (action === "exchange-code") {
-      // Exchange authorization code for access token
       const tokenUrl = `https://graph.facebook.com/v18.0/oauth/access_token?` +
         `client_id=${META_APP_ID}` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
@@ -65,7 +129,6 @@ serve(async (req) => {
         );
       }
 
-      // Get long-lived token
       const longLivedUrl = `https://graph.facebook.com/v18.0/oauth/access_token?` +
         `grant_type=fb_exchange_token` +
         `&client_id=${META_APP_ID}` +
@@ -82,7 +145,6 @@ serve(async (req) => {
         );
       }
 
-      // Get user info and ad accounts
       const userUrl = `https://graph.facebook.com/v18.0/me?` +
         `fields=id,name,email` +
         `&access_token=${longLivedData.access_token}`;
@@ -90,26 +152,9 @@ serve(async (req) => {
       const userResponse = await fetch(userUrl);
       const userData = await userResponse.json();
 
-      // Get ALL ad accounts with pagination
-      let allAdAccounts: any[] = [];
-      let adAccountsUrl: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?` +
-        `fields=id,name,account_status,currency,timezone_name` +
-        `&limit=100` +
-        `&access_token=${longLivedData.access_token}`;
-
-      while (adAccountsUrl) {
-        const adAccountsResponse = await fetch(adAccountsUrl);
-        const adAccountsData = await adAccountsResponse.json();
-        
-        if (adAccountsData.data) {
-          allAdAccounts = allAdAccounts.concat(adAccountsData.data);
-        }
-        
-        // Check for next page
-        adAccountsUrl = adAccountsData.paging?.next || null;
-      }
-
-      console.log(`Total ad accounts fetched: ${allAdAccounts.length}`);
+      // Fetch ALL ad accounts (personal + BM)
+      const allAdAccounts = await fetchAllAdAccounts(longLivedData.access_token);
+      console.log(`Total ad accounts fetched (personal + BM): ${allAdAccounts.length}`);
 
       return new Response(
         JSON.stringify({
@@ -130,26 +175,8 @@ serve(async (req) => {
         );
       }
 
-      let allAccounts: any[] = [];
-      let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?` +
-        `fields=id,name,account_status,currency,timezone_name` +
-        `&limit=100` +
-        `&access_token=${providedAccessToken}`;
-
-      while (url) {
-        const resp = await fetch(url);
-        const data = await resp.json();
-        if (data.error) {
-          return new Response(
-            JSON.stringify({ error: data.error.message }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        if (data.data) allAccounts = allAccounts.concat(data.data);
-        url = data.paging?.next || null;
-      }
-
-      console.log(`Refresh: Total ad accounts fetched: ${allAccounts.length}`);
+      const allAccounts = await fetchAllAdAccounts(providedAccessToken);
+      console.log(`Refresh: Total ad accounts fetched (personal + BM): ${allAccounts.length}`);
 
       return new Response(
         JSON.stringify({ adAccounts: allAccounts }),
