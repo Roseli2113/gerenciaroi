@@ -20,25 +20,59 @@ type MetaSyncStatus = {
 };
 
 const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]> => {
-  let allAccounts: MetaAdAccount[] = [];
-  let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
+  const accountsMap = new Map<string, MetaAdAccount>();
 
+  // 1. Personal ad accounts
+  let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
   while (url) {
     const response = await fetch(url);
     const data = await response.json();
-
     if (!response.ok || data?.error) {
       throw new Error(data?.error?.message || "Failed to fetch Meta ad accounts");
     }
-
     if (Array.isArray(data?.data)) {
-      allAccounts = allAccounts.concat(data.data);
+      for (const acc of data.data) {
+        accountsMap.set(acc.id, acc);
+      }
     }
-
     url = data?.paging?.next || null;
   }
 
-  return allAccounts;
+  // 2. Business Manager ad accounts (owned + client)
+  let bmUrl: string | null = `https://graph.facebook.com/v18.0/me/businesses?fields=id,name&limit=100&access_token=${accessToken}`;
+  while (bmUrl) {
+    const bmResp = await fetch(bmUrl);
+    const bmData = await bmResp.json();
+    if (bmData?.data) {
+      const bmFetches = bmData.data.map(async (bm: { id: string }) => {
+        // owned_ad_accounts
+        let ownedUrl: string | null = `https://graph.facebook.com/v18.0/${bm.id}/owned_ad_accounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
+        while (ownedUrl) {
+          try {
+            const r = await fetch(ownedUrl);
+            const d = await r.json();
+            if (d?.data) for (const acc of d.data) accountsMap.set(acc.id, acc);
+            ownedUrl = d?.paging?.next || null;
+          } catch { ownedUrl = null; }
+        }
+        // client_ad_accounts
+        let clientUrl: string | null = `https://graph.facebook.com/v18.0/${bm.id}/client_ad_accounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
+        while (clientUrl) {
+          try {
+            const r = await fetch(clientUrl);
+            const d = await r.json();
+            if (d?.data) for (const acc of d.data) accountsMap.set(acc.id, acc);
+            clientUrl = d?.paging?.next || null;
+          } catch { clientUrl = null; }
+        }
+      });
+      await Promise.all(bmFetches);
+    }
+    bmUrl = bmData?.paging?.next || null;
+  }
+
+  console.log(`Admin panel: Total ad accounts fetched (personal + BM): ${accountsMap.size}`);
+  return Array.from(accountsMap.values());
 };
 
 serve(async (req) => {
