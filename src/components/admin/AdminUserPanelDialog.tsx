@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Facebook, Radio, Code, Zap, Key, ShoppingCart, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Facebook, Radio, Code, Zap, Key, ShoppingCart, XCircle } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
 interface UserPanelData {
@@ -36,11 +36,12 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
       const { data: result, error } = await supabase.functions.invoke('admin-user-panel', {
         body: { targetUserId: userId },
       });
-      console.log('Admin panel response:', result, 'error:', error);
+
       if (error) throw error;
       if (!result || result.error) {
         throw new Error(result?.error || 'Resposta vazia do servidor');
       }
+
       setData(result);
     } catch (err: any) {
       console.error('Error fetching user panel:', err);
@@ -50,8 +51,14 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
     }
   };
 
+  useEffect(() => {
+    if (open && userId) {
+      setData(null);
+      fetchData();
+    }
+  }, [open, userId]);
+
   const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen && !data) fetchData();
     if (!isOpen) setData(null);
     onOpenChange(isOpen);
   };
