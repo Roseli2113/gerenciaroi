@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Facebook, Radio, Code, Zap, Key, ShoppingCart, XCircle } from 'lucide-react';
@@ -10,6 +11,10 @@ import { toast } from '@/components/ui/sonner';
 
 interface UserPanelData {
   metaConnection: any | null;
+  metaSyncStatus?: {
+    state: 'not_connected' | 'cached' | 'live_synced' | 'permissions_error' | 'fetch_error';
+    message?: string;
+  };
   adAccounts: any[];
   sales: any[];
   webhooks: any[];
@@ -116,6 +121,12 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                     </p>
                   </div>
                   
+                  {data.metaSyncStatus?.message && data.adAccounts.length === 0 ? (
+                    <Alert>
+                      <AlertDescription>{data.metaSyncStatus.message}</AlertDescription>
+                    </Alert>
+                  ) : null}
+
                   <p className="text-sm font-medium text-foreground">Contas de Anúncio ({data.adAccounts.length})</p>
                   {data.adAccounts.length > 0 ? (
                     <div className="space-y-2">
@@ -137,7 +148,7 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Nenhuma conta de anúncio</p>
+                    <p className="text-sm text-muted-foreground">{data.metaSyncStatus?.message || 'Nenhuma conta de anúncio'}</p>
                   )}
                 </div>
               ) : (

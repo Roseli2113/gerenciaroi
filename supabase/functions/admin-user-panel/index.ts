@@ -14,6 +14,11 @@ type MetaAdAccount = {
   timezone_name: string | null;
 };
 
+type MetaSyncStatus = {
+  state: "not_connected" | "cached" | "live_synced" | "permissions_error" | "fetch_error";
+  message?: string;
+};
+
 const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]> => {
   let allAccounts: MetaAdAccount[] = [];
   let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
@@ -158,7 +163,11 @@ serve(async (req) => {
       throw queryErrors[0];
     }
 
-    let adAccounts = cachedAdAccountsRes.data || [];
+    const cachedAdAccounts = cachedAdAccountsRes.data || [];
+    let adAccounts = cachedAdAccounts;
+    let metaSyncStatus: MetaSyncStatus = metaConnectionRes.data
+      ? { state: cachedAdAccounts.length > 0 ? "cached" : "fetch_error" }
+      : { state: "not_connected" };
 
     if (metaConnectionRes.data?.access_token) {
       try {
@@ -171,9 +180,11 @@ serve(async (req) => {
           currency: acc.currency,
           account_status: acc.account_status,
           timezone_name: acc.timezone_name,
-          is_active: adAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
+          is_active: cachedAdAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
           created_at: null,
         }));
+
+        metaSyncStatus = { state: "live_synced" };
 
         if (liveAdAccounts.length > 0) {
           const rowsToUpsert = liveAdAccounts.map((acc) => ({
@@ -184,7 +195,7 @@ serve(async (req) => {
             account_status: acc.account_status,
             currency: acc.currency,
             timezone_name: acc.timezone_name,
-            is_active: adAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
+            is_active: cachedAdAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
           }));
 
           const { error: upsertError } = await serviceClient
@@ -197,6 +208,15 @@ serve(async (req) => {
         }
       } catch (metaFetchError) {
         console.error("Admin panel live Meta fetch error:", metaFetchError);
+        const rawMessage = metaFetchError instanceof Error ? metaFetchError.message : "Unknown error";
+        const isPermissionError = rawMessage.includes("(#200)") || rawMessage.toLowerCase().includes("missing permissions");
+
+        metaSyncStatus = {
+          state: isPermissionError ? "permissions_error" : "fetch_error",
+          message: isPermissionError
+            ? "A conexão Meta deste usuário não tem permissão para listar as contas de anúncio. É preciso reconectar a integração Meta para sincronizar todas as contas."
+            : "Não foi possível sincronizar as contas de anúncio da Meta agora.",
+        };
       }
     }
 
@@ -212,6 +232,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         metaConnection,
+        metaSyncStatus,
         adAccounts,
         sales: salesRes.data || [],
         webhooks: webhooksRes.data || [],
