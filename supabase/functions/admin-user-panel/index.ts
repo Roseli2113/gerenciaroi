@@ -12,6 +12,7 @@ type MetaAdAccount = {
   account_status: number;
   currency: string | null;
   timezone_name: string | null;
+  source: "personal" | "bm";
 };
 
 type MetaSyncStatus = {
@@ -32,7 +33,7 @@ const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]
     }
     if (Array.isArray(data?.data)) {
       for (const acc of data.data) {
-        accountsMap.set(acc.id, acc);
+        accountsMap.set(acc.id, { ...acc, source: "personal" });
       }
     }
     url = data?.paging?.next || null;
@@ -51,7 +52,7 @@ const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]
           try {
             const r = await fetch(ownedUrl);
             const d = await r.json();
-            if (d?.data) for (const acc of d.data) accountsMap.set(acc.id, acc);
+            if (d?.data) for (const acc of d.data) { if (!accountsMap.has(acc.id)) accountsMap.set(acc.id, { ...acc, source: "bm" }); }
             ownedUrl = d?.paging?.next || null;
           } catch { ownedUrl = null; }
         }
@@ -61,7 +62,7 @@ const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]
           try {
             const r = await fetch(clientUrl);
             const d = await r.json();
-            if (d?.data) for (const acc of d.data) accountsMap.set(acc.id, acc);
+            if (d?.data) for (const acc of d.data) { if (!accountsMap.has(acc.id)) accountsMap.set(acc.id, { ...acc, source: "bm" }); }
             clientUrl = d?.paging?.next || null;
           } catch { clientUrl = null; }
         }
@@ -176,6 +177,7 @@ serve(async (req) => {
             account_status: acc.account_status,
             timezone_name: acc.timezone_name,
             is_active: cachedAdAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
+            source: acc.source,
             created_at: null,
           }));
 
