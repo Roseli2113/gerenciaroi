@@ -7,8 +7,8 @@ export interface Webhook {
   user_id: string;
   platform: string;
   name: string;
-  client_id: string | null;
-  client_secret: string | null;
+  client_id?: string | null;
+  client_secret?: string | null;
   webhook_url: string | null;
   token: string | null;
   pixel_id: string | null;
@@ -37,7 +37,7 @@ export function useWebhooks() {
       setLoading(true);
       const { data, error } = await supabase
         .from('webhooks')
-        .select('*')
+        .select('id, user_id, name, platform, status, token, webhook_url, pixel_id, created_at, updated_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
