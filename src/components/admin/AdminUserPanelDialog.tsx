@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Facebook, Radio, Code, Zap, Key, ShoppingCart, XCircle, RefreshCw, ExternalLink } from 'lucide-react';
+import { Loader2, Facebook, Radio, Code, Zap, Key, ShoppingCart, XCircle, RefreshCw, User, Copy, CheckCircle2 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
 interface UserPanelData {
@@ -16,10 +16,12 @@ interface UserPanelData {
     state: 'not_connected' | 'cached' | 'live_synced' | 'permissions_error' | 'fetch_error';
     message?: string;
   };
+  profile: any | null;
   adAccounts: any[];
   sales: any[];
   webhooks: any[];
   pixels: any[];
+  pixelMetaIds: any[];
   rules: any[];
   credentials: any[];
 }
@@ -36,6 +38,14 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [data, setData] = useState<UserPanelData | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyText = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    toast.success(`${label} copiado!`);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -43,12 +53,8 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
       const { data: result, error } = await supabase.functions.invoke('admin-user-panel', {
         body: { targetUserId: userId },
       });
-
       if (error) throw error;
-      if (!result || result.error) {
-        throw new Error(result?.error || 'Resposta vazia do servidor');
-      }
-
+      if (!result || result.error) throw new Error(result?.error || 'Resposta vazia do servidor');
       setData(result);
     } catch (err: any) {
       console.error('Error fetching user panel:', err);
@@ -64,15 +70,9 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
       const { data: result, error } = await supabase.functions.invoke('admin-user-panel', {
         body: { targetUserId: userId, action: 'resync-meta' },
       });
-
       if (error) throw error;
-      if (!result || result.error) {
-        throw new Error(result?.error || 'Erro ao ressincronizar');
-      }
-
-      // Refresh panel data
+      if (!result || result.error) throw new Error(result?.error || 'Erro ao ressincronizar');
       setData(result);
-      
       if (result.metaSyncStatus?.state === 'live_synced') {
         toast.success(`Sincronizado! ${result.adAccounts.length} contas encontradas.`);
       } else if (result.metaSyncStatus?.state === 'permissions_error') {
@@ -88,12 +88,6 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
     }
   };
 
-  const handleViewAsDashboard = () => {
-    // Open the user's view context in a new tab with admin impersonation param
-    const url = `/?admin_view_user=${userId}`;
-    window.open(url, '_blank');
-  };
-
   useEffect(() => {
     if (open && userId) {
       setData(null);
@@ -106,28 +100,28 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
     onOpenChange(isOpen);
   };
 
+  const InfoRow = ({ label, value, copyable }: { label: string; value: string | null | undefined; copyable?: boolean }) => (
+    <div className="flex items-center justify-between text-sm py-1">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-foreground font-medium">{value || '—'}</span>
+        {copyable && value && (
+          <button onClick={() => copyText(value, label)} className="text-muted-foreground hover:text-foreground transition-colors">
+            {copiedField === label ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>Painel do Usuário</DialogTitle>
-              <DialogDescription>
-                {userName || 'Sem nome'} • {userEmail || 'Sem email'}
-              </DialogDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={handleViewAsDashboard}
-              title="Ver dashboard completo do usuário"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Ver Dashboard
-            </Button>
-          </div>
+          <DialogTitle>Painel Completo do Usuário</DialogTitle>
+          <DialogDescription>
+            {userName || 'Sem nome'} • {userEmail || 'Sem email'} • ID: {userId.slice(0, 8)}...
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -135,8 +129,11 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : data ? (
-          <Tabs defaultValue="meta" className="space-y-4">
+          <Tabs defaultValue="profile" className="space-y-4">
             <TabsList className="bg-muted h-auto p-1 flex-wrap">
+              <TabsTrigger value="profile" className="gap-1.5 text-xs">
+                <User className="w-3.5 h-3.5" /> Perfil
+              </TabsTrigger>
               <TabsTrigger value="meta" className="gap-1.5 text-xs">
                 <Facebook className="w-3.5 h-3.5" /> Meta ({data.adAccounts.length})
               </TabsTrigger>
@@ -157,6 +154,27 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
               </TabsTrigger>
             </TabsList>
 
+            {/* Profile Tab */}
+            <TabsContent value="profile" className="space-y-3">
+              {data.profile ? (
+                <div className="p-4 bg-muted/50 rounded-lg space-y-1">
+                  <InfoRow label="Nome" value={data.profile.display_name} />
+                  <InfoRow label="Email" value={data.profile.email} copyable />
+                  <InfoRow label="Celular" value={data.profile.phone} copyable />
+                  <InfoRow label="Plano" value={data.profile.plan || 'free'} />
+                  <InfoRow label="Status Plano" value={data.profile.plan_status} />
+                  <InfoRow label="Bloqueado" value={data.profile.is_blocked ? 'Sim' : 'Não'} />
+                  <InfoRow label="Som de Notificação" value={data.profile.notification_sound} />
+                  <InfoRow label="Notif. Email" value={data.profile.notify_email ? 'Sim' : 'Não'} />
+                  <InfoRow label="Notif. Push" value={data.profile.notify_push ? 'Sim' : 'Não'} />
+                  <InfoRow label="Cadastro" value={new Date(data.profile.created_at).toLocaleDateString('pt-BR')} />
+                  <InfoRow label="User ID" value={userId} copyable />
+                </div>
+              ) : (
+                <p className="text-center py-6 text-muted-foreground">Perfil não encontrado</p>
+              )}
+            </TabsContent>
+
             {/* Meta Tab */}
             <TabsContent value="meta" className="space-y-4">
               {data.metaConnection ? (
@@ -168,13 +186,7 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                         <span className="font-medium text-foreground">{data.metaConnection.meta_user_name || 'Sem nome'}</span>
                         <Badge className="bg-success/20 text-success border-0">Conectado</Badge>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={handleResyncMeta}
-                        disabled={syncing}
-                      >
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={handleResyncMeta} disabled={syncing}>
                         <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
                         {syncing ? 'Sincronizando...' : 'Ressincronizar'}
                       </Button>
@@ -184,30 +196,23 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                       Expira: {new Date(data.metaConnection.expires_at).toLocaleDateString('pt-BR')}
                     </p>
                     {data.metaSyncStatus && (
-                      <div className="flex items-center gap-2">
-                        <Badge variant={
-                          data.metaSyncStatus.state === 'live_synced' ? 'default' :
-                          data.metaSyncStatus.state === 'permissions_error' ? 'destructive' :
-                          'secondary'
-                        } className={
-                          data.metaSyncStatus.state === 'live_synced' ? 'bg-success/20 text-success border-0 text-xs' :
-                          data.metaSyncStatus.state === 'permissions_error' ? 'text-xs' :
-                          'text-xs'
-                        }>
-                          {data.metaSyncStatus.state === 'live_synced' ? '✓ Ao vivo' :
-                           data.metaSyncStatus.state === 'cached' ? '📦 Cache' :
-                           data.metaSyncStatus.state === 'permissions_error' ? '⚠ Sem permissão' :
-                           data.metaSyncStatus.state === 'fetch_error' ? '⚠ Erro' : '—'}
-                        </Badge>
-                      </div>
+                      <Badge variant={
+                        data.metaSyncStatus.state === 'live_synced' ? 'default' :
+                        data.metaSyncStatus.state === 'permissions_error' ? 'destructive' : 'secondary'
+                      } className={data.metaSyncStatus.state === 'live_synced' ? 'bg-success/20 text-success border-0 text-xs' : 'text-xs'}>
+                        {data.metaSyncStatus.state === 'live_synced' ? '✓ Ao vivo' :
+                         data.metaSyncStatus.state === 'cached' ? '📦 Cache' :
+                         data.metaSyncStatus.state === 'permissions_error' ? '⚠ Sem permissão' :
+                         data.metaSyncStatus.state === 'fetch_error' ? '⚠ Erro' : '—'}
+                      </Badge>
                     )}
                   </div>
                   
-                  {data.metaSyncStatus?.message ? (
+                  {data.metaSyncStatus?.message && (
                     <Alert variant={data.metaSyncStatus.state === 'permissions_error' ? 'destructive' : 'default'}>
                       <AlertDescription>{data.metaSyncStatus.message}</AlertDescription>
                     </Alert>
-                  ) : null}
+                  )}
 
                   <p className="text-sm font-medium text-foreground">Contas de Anúncio ({data.adAccounts.length})</p>
                   {data.adAccounts.length > 0 ? (
@@ -272,16 +277,29 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
             {/* Webhooks Tab */}
             <TabsContent value="webhooks" className="space-y-2">
               {data.webhooks.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {data.webhooks.map((wh: any) => (
-                    <div key={wh.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm">
-                      <div>
-                        <span className="font-medium text-foreground">{wh.name}</span>
-                        <p className="text-xs text-muted-foreground">{wh.platform}</p>
+                    <div key={wh.id} className="p-3 bg-muted/30 rounded-lg space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground text-sm">{wh.name}</span>
+                          <Badge variant="secondary" className="text-xs">{wh.platform}</Badge>
+                        </div>
+                        <Badge variant={wh.status === 'active' ? 'default' : 'secondary'} className={wh.status === 'active' ? 'bg-success/20 text-success border-0' : ''}>
+                          {wh.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </Badge>
                       </div>
-                      <Badge variant={wh.status === 'active' ? 'default' : 'secondary'} className={wh.status === 'active' ? 'bg-success/20 text-success border-0' : ''}>
-                        {wh.status === 'active' ? 'Ativo' : 'Inativo'}
-                      </Badge>
+                      {wh.webhook_url && (
+                        <div className="flex items-center gap-1.5">
+                          <code className="text-xs bg-muted p-1.5 rounded break-all text-muted-foreground flex-1">{wh.webhook_url}</code>
+                          <button onClick={() => copyText(wh.webhook_url, 'Webhook URL')} className="text-muted-foreground hover:text-foreground shrink-0">
+                            {copiedField === 'Webhook URL' ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      )}
+                      {wh.token && (
+                        <p className="text-xs text-muted-foreground">Token: {wh.token.slice(0, 12)}...</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -291,20 +309,48 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
             </TabsContent>
 
             {/* Pixels Tab */}
-            <TabsContent value="pixels" className="space-y-2">
+            <TabsContent value="pixels" className="space-y-3">
               {data.pixels.length > 0 ? (
-                <div className="space-y-2">
-                  {data.pixels.map((px: any) => (
-                    <div key={px.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm">
-                      <div>
-                        <span className="font-medium text-foreground">{px.name}</span>
-                        <p className="text-xs text-muted-foreground">{px.pixel_type}</p>
+                <div className="space-y-3">
+                  {data.pixels.map((px: any) => {
+                    const metaIds = (data.pixelMetaIds || []).filter((m: any) => m.pixel_id === px.id);
+                    return (
+                      <div key={px.id} className="p-3 bg-muted/30 rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground text-sm">{px.name}</span>
+                            <Badge variant="secondary" className="text-xs">{px.pixel_type}</Badge>
+                          </div>
+                          <Badge variant={px.status === 'active' ? 'default' : 'secondary'} className={px.status === 'active' ? 'bg-success/20 text-success border-0' : ''}>
+                            {px.status === 'active' ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                          <span>Compra: {px.purchase_send_config}</span>
+                          <span>Valor: {px.purchase_value_type}</span>
+                          <span>Checkout: {px.initiate_checkout_rule}</span>
+                          <span>Detecção: {px.checkout_detection_rule}</span>
+                          <span>Lead: {px.lead_rule}</span>
+                          <span>Carrinho: {px.add_to_cart_rule}</span>
+                          <span>IP: {px.ip_config}</span>
+                        </div>
+                        {metaIds.length > 0 && (
+                          <div className="space-y-1 pt-1 border-t border-border">
+                            <p className="text-xs font-medium text-foreground">Pixel IDs Meta ({metaIds.length})</p>
+                            {metaIds.map((m: any) => (
+                              <div key={m.id} className="flex items-center gap-2 text-xs">
+                                <span className="text-muted-foreground">{m.apelido || '—'}</span>
+                                <code className="bg-muted px-1.5 py-0.5 rounded text-foreground">{m.meta_pixel_id}</code>
+                                <button onClick={() => copyText(m.meta_pixel_id, 'Pixel ID')} className="text-muted-foreground hover:text-foreground">
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <Badge variant={px.status === 'active' ? 'default' : 'secondary'} className={px.status === 'active' ? 'bg-success/20 text-success border-0' : ''}>
-                        {px.status === 'active' ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-center py-6 text-muted-foreground">Nenhum pixel configurado</p>
@@ -316,18 +362,23 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
               {data.rules.length > 0 ? (
                 <div className="space-y-2">
                   {data.rules.map((rule: any) => (
-                    <div key={rule.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm">
-                      <div>
-                        <span className="font-medium text-foreground">{rule.name}</span>
-                        <p className="text-xs text-muted-foreground">
-                          {rule.condition_type} → {rule.action_type} • {rule.executions} execuções
-                        </p>
+                    <div key={rule.id} className="p-3 bg-muted/30 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-foreground text-sm">{rule.name}</span>
+                        {rule.is_active ? (
+                          <Badge className="bg-success/20 text-success border-0">Ativa</Badge>
+                        ) : (
+                          <Badge variant="secondary">Inativa</Badge>
+                        )}
                       </div>
-                      {rule.is_active ? (
-                        <Badge className="bg-success/20 text-success border-0">Ativa</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inativa</Badge>
-                      )}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                        <span>Condição: {rule.condition_type} ({rule.condition_value})</span>
+                        <span>Ação: {rule.action_type}</span>
+                        <span>Frequência: {rule.frequency}</span>
+                        <span>Aplicado a: {rule.applied_to}</span>
+                        <span>Execuções: {rule.executions}</span>
+                        <span>Última: {rule.last_execution ? new Date(rule.last_execution).toLocaleDateString('pt-BR') : '—'}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
