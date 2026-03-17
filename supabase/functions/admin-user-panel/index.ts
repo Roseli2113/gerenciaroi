@@ -177,6 +177,7 @@ serve(async (req) => {
             account_status: acc.account_status,
             timezone_name: acc.timezone_name,
             is_active: cachedAdAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
+            source: acc.source,
             created_at: null,
           }));
 
