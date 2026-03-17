@@ -33,7 +33,7 @@ const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]
     }
     if (Array.isArray(data?.data)) {
       for (const acc of data.data) {
-        accountsMap.set(acc.id, acc);
+        accountsMap.set(acc.id, { ...acc, source: "personal" });
       }
     }
     url = data?.paging?.next || null;
