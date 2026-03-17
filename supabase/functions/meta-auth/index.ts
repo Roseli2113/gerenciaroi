@@ -123,12 +123,7 @@ serve(async (req) => {
     }
 
     if (action === "refresh-accounts") {
-      const { accessToken } = await req.json().catch(() => ({ accessToken: null }));
-      const token = accessToken || (await req.json()).accessToken;
-      
-      // Re-parse since we already consumed the body above
-      // accessToken comes from the initial parse at line 14
-      if (!accessToken) {
+      if (!providedAccessToken) {
         return new Response(
           JSON.stringify({ error: "Access token required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
