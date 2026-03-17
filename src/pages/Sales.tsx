@@ -464,7 +464,7 @@ const Sales = () => {
                                           window.open(`https://wa.me/${phone}`, '_blank');
                                         }}
                                       >
-                                        <img src={whatsappIcon} alt="" className="h-4 w-4 mr-2" />
+                                        <img src={whatsappIcon} alt="" className="h-5 w-5 mr-2" />
                                         Chamar
                                       </DropdownMenuItem>
                                     )}
