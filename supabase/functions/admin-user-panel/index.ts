@@ -224,12 +224,14 @@ serve(async (req) => {
     // Default: get full panel with Meta sync
     const { metaConnection, metaSyncStatus, adAccounts } = await syncMetaAccounts();
 
-    const [salesRes, webhooksRes, pixelsRes, rulesRes, credentialsRes] = await Promise.all([
+    const [salesRes, webhooksRes, pixelsRes, rulesRes, credentialsRes, profileRes, pixelMetaIdsRes] = await Promise.all([
       serviceClient.from("sales").select("id, amount, status, platform, product_name, customer_name, customer_email, created_at").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(50),
-      serviceClient.from("webhooks").select("id, name, platform, status, webhook_url, created_at").eq("user_id", targetUserId).order("created_at", { ascending: false }),
-      serviceClient.from("pixels").select("id, name, pixel_type, status").eq("user_id", targetUserId),
-      serviceClient.from("automation_rules").select("id, name, is_active, condition_type, action_type, executions, last_execution").eq("user_id", targetUserId),
+      serviceClient.from("webhooks").select("id, name, platform, status, webhook_url, token, created_at").eq("user_id", targetUserId).order("created_at", { ascending: false }),
+      serviceClient.from("pixels").select("id, name, pixel_type, status, purchase_send_config, purchase_value_type, ip_config, initiate_checkout_rule, checkout_detection_rule, lead_rule, add_to_cart_rule").eq("user_id", targetUserId),
+      serviceClient.from("automation_rules").select("id, name, is_active, condition_type, condition_value, action_type, frequency, applied_to, executions, last_execution").eq("user_id", targetUserId),
       serviceClient.from("api_credentials").select("id, name, status, created_at").eq("user_id", targetUserId),
+      serviceClient.from("profiles").select("display_name, email, phone, plan, plan_status, is_blocked, notification_sound, notify_email, notify_push, created_at").eq("user_id", targetUserId).maybeSingle(),
+      serviceClient.from("pixel_meta_ids").select("id, pixel_id, meta_pixel_id, apelido, token").eq("user_id", targetUserId),
     ]);
 
     const queryErrors = [salesRes.error, webhooksRes.error, pixelsRes.error, rulesRes.error, credentialsRes.error].filter(Boolean);
