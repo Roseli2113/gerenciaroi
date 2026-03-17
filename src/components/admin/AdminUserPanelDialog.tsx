@@ -11,6 +11,10 @@ import { toast } from '@/components/ui/sonner';
 
 interface UserPanelData {
   metaConnection: any | null;
+  metaSyncStatus?: {
+    state: 'not_connected' | 'cached' | 'live_synced' | 'permissions_error' | 'fetch_error';
+    message?: string;
+  };
   adAccounts: any[];
   sales: any[];
   webhooks: any[];
