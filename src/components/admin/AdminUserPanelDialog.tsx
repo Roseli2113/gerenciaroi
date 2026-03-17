@@ -121,6 +121,12 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                     </p>
                   </div>
                   
+                  {data.metaSyncStatus?.message && data.adAccounts.length === 0 ? (
+                    <Alert>
+                      <AlertDescription>{data.metaSyncStatus.message}</AlertDescription>
+                    </Alert>
+                  ) : null}
+
                   <p className="text-sm font-medium text-foreground">Contas de Anúncio ({data.adAccounts.length})</p>
                   {data.adAccounts.length > 0 ? (
                     <div className="space-y-2">
@@ -142,7 +148,7 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Nenhuma conta de anúncio</p>
+                    <p className="text-sm text-muted-foreground">{data.metaSyncStatus?.message || 'Nenhuma conta de anúncio'}</p>
                   )}
                 </div>
               ) : (
