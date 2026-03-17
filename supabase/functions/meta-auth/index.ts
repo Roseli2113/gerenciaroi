@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, code, redirectUri } = await req.json();
+    const { action, code, redirectUri, accessToken: providedAccessToken } = await req.json();
 
     const META_APP_ID = Deno.env.get("META_APP_ID");
     const META_APP_SECRET = Deno.env.get("META_APP_SECRET");
