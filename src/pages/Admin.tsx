@@ -22,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useApiCredentials } from '@/hooks/useApiCredentials';
+import { AdminUserPanelDialog } from '@/components/admin/AdminUserPanelDialog';
 const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
 
 interface UserProfile {
