@@ -60,6 +60,7 @@ export default function Admin() {
   const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [panelUser, setPanelUser] = useState<UserProfile | null>(null);
   const ITEMS_PER_PAGE = 10;
   const { credentials } = useApiCredentials();
 
