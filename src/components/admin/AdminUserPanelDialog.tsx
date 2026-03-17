@@ -36,11 +36,15 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
       const { data: result, error } = await supabase.functions.invoke('admin-user-panel', {
         body: { targetUserId: userId },
       });
+      console.log('Admin panel response:', result, 'error:', error);
       if (error) throw error;
+      if (!result || result.error) {
+        throw new Error(result?.error || 'Resposta vazia do servidor');
+      }
       setData(result);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching user panel:', err);
-      toast.error('Erro ao carregar painel do usuário');
+      toast.error(`Erro ao carregar painel: ${err?.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
