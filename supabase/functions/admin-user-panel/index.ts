@@ -14,6 +14,11 @@ type MetaAdAccount = {
   timezone_name: string | null;
 };
 
+type MetaSyncStatus = {
+  state: "not_connected" | "cached" | "live_synced" | "permissions_error" | "fetch_error";
+  message?: string;
+};
+
 const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]> => {
   let allAccounts: MetaAdAccount[] = [];
   let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
