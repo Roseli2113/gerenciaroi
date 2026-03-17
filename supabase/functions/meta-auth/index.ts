@@ -122,6 +122,46 @@ serve(async (req) => {
       );
     }
 
+    if (action === "refresh-accounts") {
+      const { accessToken } = await req.json().catch(() => ({ accessToken: null }));
+      const token = accessToken || (await req.json()).accessToken;
+      
+      // Re-parse since we already consumed the body above
+      // accessToken comes from the initial parse at line 14
+      if (!accessToken) {
+        return new Response(
+          JSON.stringify({ error: "Access token required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let allAccounts: any[] = [];
+      let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?` +
+        `fields=id,name,account_status,currency,timezone_name` +
+        `&limit=100` +
+        `&access_token=${accessToken}`;
+
+      while (url) {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.error) {
+          return new Response(
+            JSON.stringify({ error: data.error.message }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (data.data) allAccounts = allAccounts.concat(data.data);
+        url = data.paging?.next || null;
+      }
+
+      console.log(`Refresh: Total ad accounts fetched: ${allAccounts.length}`);
+
+      return new Response(
+        JSON.stringify({ adAccounts: allAccounts }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
