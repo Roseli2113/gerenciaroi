@@ -228,9 +228,9 @@ export function useMetaAuth() {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('meta-ads', {
+      const { data, error } = await supabase.functions.invoke('meta-auth', {
         body: {
-          action: 'get-ad-accounts',
+          action: 'refresh-accounts',
           accessToken: connection.accessToken
         }
       });
