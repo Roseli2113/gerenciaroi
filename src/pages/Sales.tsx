@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import whatsappIcon from '@/assets/whatsapp-icon.png';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useSales, Sale } from '@/hooks/useSales';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -456,6 +457,17 @@ const Sales = () => {
                                       <Eye className="h-4 w-4 mr-2" />
                                       Ver Detalhes
                                     </DropdownMenuItem>
+                                    {sale.customer_phone && (
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          const phone = sale.customer_phone!.replace(/\D/g, '');
+                                          window.open(`https://wa.me/${phone}`, '_blank');
+                                        }}
+                                      >
+                                        <img src={whatsappIcon} alt="" className="h-4 w-4 mr-2" />
+                                        Chamar
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem 
                                       onClick={() => setSaleToDelete(sale)}
                                       className="text-destructive"
