@@ -119,11 +119,12 @@ export function useMetaAuth() {
           });
 
           if (fnError || data?.error) {
-            throw new Error(data?.error || fnError?.message || 'Erro ao trocar código de autorização');
+            throw new Error(data?.error || data?.message || fnError?.message || 'Erro ao trocar código de autorização');
           }
 
-          // Save to database
-          const expiresAt = new Date(Date.now() + (data.expiresIn * 1000));
+          // Save to database - default to 60 days if expiresIn is missing
+          const expiresInSeconds = data.expiresIn || (60 * 24 * 60 * 60);
+          const expiresAt = new Date(Date.now() + (expiresInSeconds * 1000));
 
           // Upsert meta connection
           const { data: savedConnection, error: saveError } = await supabase
