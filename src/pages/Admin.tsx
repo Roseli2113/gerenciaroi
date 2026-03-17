@@ -395,6 +395,9 @@ export default function Admin() {
                     <TableCell>{getPlanBadge(getDisplayPlanStatus(u))}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setPanelUser(u)} title="Acessar painel">
+                          <LayoutDashboard className="w-4 h-4 text-primary" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => { setSelectedUser(u); setDetailsOpen(true); }} title="Ver detalhes">
                           <Eye className="w-4 h-4" />
                         </Button>
