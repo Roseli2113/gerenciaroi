@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import whatsappIcon from '@/assets/whatsapp-icon.png';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useSales, Sale } from '@/hooks/useSales';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
