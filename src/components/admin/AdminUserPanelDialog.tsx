@@ -5,8 +5,9 @@ import {
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Facebook, Radio, Code, Zap, Key, ShoppingCart, XCircle } from 'lucide-react';
+import { Loader2, Facebook, Radio, Code, Zap, Key, ShoppingCart, XCircle, RefreshCw, ExternalLink } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
 interface UserPanelData {
@@ -33,6 +34,7 @@ interface AdminUserPanelDialogProps {
 
 export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, userName }: AdminUserPanelDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [data, setData] = useState<UserPanelData | null>(null);
 
   const fetchData = async () => {
@@ -56,6 +58,42 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
     }
   };
 
+  const handleResyncMeta = async () => {
+    setSyncing(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('admin-user-panel', {
+        body: { targetUserId: userId, action: 'resync-meta' },
+      });
+
+      if (error) throw error;
+      if (!result || result.error) {
+        throw new Error(result?.error || 'Erro ao ressincronizar');
+      }
+
+      // Refresh panel data
+      setData(result);
+      
+      if (result.metaSyncStatus?.state === 'live_synced') {
+        toast.success(`Sincronizado! ${result.adAccounts.length} contas encontradas.`);
+      } else if (result.metaSyncStatus?.state === 'permissions_error') {
+        toast.error('Erro de permissão Meta. O usuário precisa reconectar a integração.');
+      } else {
+        toast.warning(result.metaSyncStatus?.message || 'Sincronização concluída com avisos.');
+      }
+    } catch (err: any) {
+      console.error('Error resyncing Meta:', err);
+      toast.error(`Erro ao ressincronizar: ${err?.message || 'Erro desconhecido'}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleViewAsDashboard = () => {
+    // Open the user's view context in a new tab with admin impersonation param
+    const url = `/?admin_view_user=${userId}`;
+    window.open(url, '_blank');
+  };
+
   useEffect(() => {
     if (open && userId) {
       setData(null);
@@ -72,10 +110,24 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Painel do Usuário</DialogTitle>
-          <DialogDescription>
-            {userName || 'Sem nome'} • {userEmail || 'Sem email'}
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Painel do Usuário</DialogTitle>
+              <DialogDescription>
+                {userName || 'Sem nome'} • {userEmail || 'Sem email'}
+              </DialogDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleViewAsDashboard}
+              title="Ver dashboard completo do usuário"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Ver Dashboard
+            </Button>
+          </div>
         </DialogHeader>
 
         {loading ? (
@@ -109,20 +161,50 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
             <TabsContent value="meta" className="space-y-4">
               {data.metaConnection ? (
                 <div className="space-y-3">
-                  <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Facebook className="w-4 h-4 text-blue-500" />
-                      <span className="font-medium text-foreground">{data.metaConnection.meta_user_name || 'Sem nome'}</span>
-                      <Badge className="bg-success/20 text-success border-0">Conectado</Badge>
+                  <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Facebook className="w-4 h-4 text-blue-500" />
+                        <span className="font-medium text-foreground">{data.metaConnection.meta_user_name || 'Sem nome'}</span>
+                        <Badge className="bg-success/20 text-success border-0">Conectado</Badge>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={handleResyncMeta}
+                        disabled={syncing}
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                        {syncing ? 'Sincronizando...' : 'Ressincronizar'}
+                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Email: {data.metaConnection.meta_user_email || '—'} • 
                       Expira: {new Date(data.metaConnection.expires_at).toLocaleDateString('pt-BR')}
                     </p>
+                    {data.metaSyncStatus && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant={
+                          data.metaSyncStatus.state === 'live_synced' ? 'default' :
+                          data.metaSyncStatus.state === 'permissions_error' ? 'destructive' :
+                          'secondary'
+                        } className={
+                          data.metaSyncStatus.state === 'live_synced' ? 'bg-success/20 text-success border-0 text-xs' :
+                          data.metaSyncStatus.state === 'permissions_error' ? 'text-xs' :
+                          'text-xs'
+                        }>
+                          {data.metaSyncStatus.state === 'live_synced' ? '✓ Ao vivo' :
+                           data.metaSyncStatus.state === 'cached' ? '📦 Cache' :
+                           data.metaSyncStatus.state === 'permissions_error' ? '⚠ Sem permissão' :
+                           data.metaSyncStatus.state === 'fetch_error' ? '⚠ Erro' : '—'}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                   
-                  {data.metaSyncStatus?.message && data.adAccounts.length === 0 ? (
-                    <Alert>
+                  {data.metaSyncStatus?.message ? (
+                    <Alert variant={data.metaSyncStatus.state === 'permissions_error' ? 'destructive' : 'default'}>
                       <AlertDescription>{data.metaSyncStatus.message}</AlertDescription>
                     </Alert>
                   ) : null}
@@ -131,7 +213,7 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                   {data.adAccounts.length > 0 ? (
                     <div className="space-y-2">
                       {data.adAccounts.map((acc: any) => (
-                        <div key={acc.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm">
+                        <div key={acc.id || acc.account_id} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm">
                           <div>
                             <span className="font-medium text-foreground">{acc.name}</span>
                             <span className="text-xs text-muted-foreground ml-2">{acc.account_id}</span>
