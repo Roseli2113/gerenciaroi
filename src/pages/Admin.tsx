@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight, Copy, Link2, CheckCircle2,
+  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight, Copy, Link2, CheckCircle2, LayoutDashboard,
 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { toast } from '@/components/ui/sonner';
@@ -22,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useApiCredentials } from '@/hooks/useApiCredentials';
+import { AdminUserPanelDialog } from '@/components/admin/AdminUserPanelDialog';
 const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
 
 interface UserProfile {
@@ -59,6 +60,7 @@ export default function Admin() {
   const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [panelUser, setPanelUser] = useState<UserProfile | null>(null);
   const ITEMS_PER_PAGE = 10;
   const { credentials } = useApiCredentials();
 
@@ -393,6 +395,9 @@ export default function Admin() {
                     <TableCell>{getPlanBadge(getDisplayPlanStatus(u))}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setPanelUser(u)} title="Acessar painel">
+                          <LayoutDashboard className="w-4 h-4 text-primary" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => { setSelectedUser(u); setDetailsOpen(true); }} title="Ver detalhes">
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -523,6 +528,17 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Admin User Panel Dialog */}
+      {panelUser && (
+        <AdminUserPanelDialog
+          open={!!panelUser}
+          onOpenChange={(open) => !open && setPanelUser(null)}
+          userId={panelUser.user_id}
+          userEmail={panelUser.email}
+          userName={panelUser.display_name}
+        />
+      )}
     </MainLayout>
   );
 }
