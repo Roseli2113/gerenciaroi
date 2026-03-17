@@ -7,8 +7,8 @@ export interface Webhook {
   user_id: string;
   platform: string;
   name: string;
-  client_id: string | null;
-  client_secret: string | null;
+  client_id?: string | null;
+  client_secret?: string | null;
   webhook_url: string | null;
   token: string | null;
   pixel_id: string | null;
