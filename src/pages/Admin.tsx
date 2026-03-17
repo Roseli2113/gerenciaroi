@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight, Copy, Link2, CheckCircle2,
+  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight, Copy, Link2, CheckCircle2, LayoutDashboard,
 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { toast } from '@/components/ui/sonner';
