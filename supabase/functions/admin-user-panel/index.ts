@@ -234,7 +234,7 @@ serve(async (req) => {
       serviceClient.from("pixel_meta_ids").select("id, pixel_id, meta_pixel_id, apelido, token").eq("user_id", targetUserId),
     ]);
 
-    const queryErrors = [salesRes.error, webhooksRes.error, pixelsRes.error, rulesRes.error, credentialsRes.error].filter(Boolean);
+    const queryErrors = [salesRes.error, webhooksRes.error, pixelsRes.error, rulesRes.error, credentialsRes.error, profileRes.error, pixelMetaIdsRes.error].filter(Boolean);
     if (queryErrors.length > 0) throw queryErrors[0];
 
     return new Response(
@@ -242,9 +242,11 @@ serve(async (req) => {
         metaConnection,
         metaSyncStatus,
         adAccounts,
+        profile: profileRes.data || null,
         sales: salesRes.data || [],
         webhooks: webhooksRes.data || [],
         pixels: pixelsRes.data || [],
+        pixelMetaIds: pixelMetaIdsRes.data || [],
         rules: rulesRes.data || [],
         credentials: credentialsRes.data || [],
       }),
