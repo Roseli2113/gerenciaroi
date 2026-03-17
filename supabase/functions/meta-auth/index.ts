@@ -109,12 +109,14 @@ serve(async (req) => {
         adAccountsUrl = adAccountsData.paging?.next || null;
       }
 
+      console.log(`Total ad accounts fetched: ${allAdAccounts.length}`);
+
       return new Response(
         JSON.stringify({
           accessToken: longLivedData.access_token,
           expiresIn: longLivedData.expires_in,
           user: userData,
-          adAccounts: adAccountsData.data || []
+          adAccounts: allAdAccounts
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
