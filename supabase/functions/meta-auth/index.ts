@@ -90,13 +90,24 @@ serve(async (req) => {
       const userResponse = await fetch(userUrl);
       const userData = await userResponse.json();
 
-      // Get ad accounts
-      const adAccountsUrl = `https://graph.facebook.com/v18.0/me/adaccounts?` +
+      // Get ALL ad accounts with pagination
+      let allAdAccounts: any[] = [];
+      let adAccountsUrl: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?` +
         `fields=id,name,account_status,currency,timezone_name` +
+        `&limit=100` +
         `&access_token=${longLivedData.access_token}`;
 
-      const adAccountsResponse = await fetch(adAccountsUrl);
-      const adAccountsData = await adAccountsResponse.json();
+      while (adAccountsUrl) {
+        const adAccountsResponse = await fetch(adAccountsUrl);
+        const adAccountsData = await adAccountsResponse.json();
+        
+        if (adAccountsData.data) {
+          allAdAccounts = allAdAccounts.concat(adAccountsData.data);
+        }
+        
+        // Check for next page
+        adAccountsUrl = adAccountsData.paging?.next || null;
+      }
 
       return new Response(
         JSON.stringify({
