@@ -214,14 +214,31 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                     </Alert>
                   )}
 
-                  <p className="text-sm font-medium text-foreground">Contas de Anúncio ({data.adAccounts.length})</p>
+                  {(() => {
+                    const personalCount = data.adAccounts.filter((a: any) => a.source === 'personal').length;
+                    const bmCount = data.adAccounts.filter((a: any) => a.source === 'bm').length;
+                    return (
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <p className="text-sm font-medium text-foreground">Contas de Anúncio ({data.adAccounts.length})</p>
+                        {data.adAccounts.length > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-xs gap-1">👤 Pessoais: {personalCount}</Badge>
+                            <Badge variant="outline" className="text-xs gap-1">🏢 BM: {bmCount}</Badge>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {data.adAccounts.length > 0 ? (
                     <div className="space-y-2">
                       {data.adAccounts.map((acc: any) => (
                         <div key={acc.id || acc.account_id} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm">
-                          <div>
-                            <span className="font-medium text-foreground">{acc.name}</span>
-                            <span className="text-xs text-muted-foreground ml-2">{acc.account_id}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs">{acc.source === 'bm' ? '🏢' : '👤'}</span>
+                            <div>
+                              <span className="font-medium text-foreground">{acc.name}</span>
+                              <span className="text-xs text-muted-foreground ml-2">{acc.account_id}</span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">{acc.currency}</span>
