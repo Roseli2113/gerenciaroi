@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -16,7 +16,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify the caller is an admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -29,7 +28,11 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user: caller }, error: authError } = await anonClient.auth.getUser();
+    const {
+      data: { user: caller },
+      error: authError,
+    } = await anonClient.auth.getUser();
+
     if (authError || !caller) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -37,15 +40,18 @@ serve(async (req) => {
       });
     }
 
-    // Check if caller is admin using service role
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-    
-    const { data: roleData } = await serviceClient
+
+    const { data: roleData, error: roleError } = await serviceClient
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
       .eq("role", "admin")
       .maybeSingle();
+
+    if (roleError) {
+      throw roleError;
+    }
 
     if (!roleData) {
       return new Response(JSON.stringify({ error: "Forbidden: Admin only" }), {
@@ -54,15 +60,16 @@ serve(async (req) => {
       });
     }
 
-    const { targetUserId } = await req.json();
-    if (!targetUserId) {
+    const body = await req.json().catch(() => null);
+    const targetUserId = body?.targetUserId;
+
+    if (!targetUserId || typeof targetUserId !== "string") {
       return new Response(JSON.stringify({ error: "targetUserId required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch all user data using service role (bypasses RLS)
     const [
       metaConnectionRes,
       adAccountsRes,
@@ -72,14 +79,54 @@ serve(async (req) => {
       rulesRes,
       credentialsRes,
     ] = await Promise.all([
-      serviceClient.from("meta_connections").select("*").eq("user_id", targetUserId).maybeSingle(),
-      serviceClient.from("meta_ad_accounts").select("*").eq("user_id", targetUserId).order("created_at", { ascending: false }),
-      serviceClient.from("sales").select("id, amount, status, platform, product_name, customer_name, customer_email, created_at").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(50),
-      serviceClient.from("webhooks").select("*").eq("user_id", targetUserId).order("created_at", { ascending: false }),
-      serviceClient.from("pixels").select("id, name, pixel_type, status").eq("user_id", targetUserId),
-      serviceClient.from("automation_rules").select("id, name, is_active, condition_type, action_type, executions, last_execution").eq("user_id", targetUserId),
-      serviceClient.from("api_credentials").select("id, name, status, created_at").eq("user_id", targetUserId),
+      serviceClient
+        .from("meta_connections")
+        .select("id, meta_user_name, meta_user_email, expires_at")
+        .eq("user_id", targetUserId)
+        .maybeSingle(),
+      serviceClient
+        .from("meta_ad_accounts")
+        .select("id, name, account_id, currency, is_active")
+        .eq("user_id", targetUserId)
+        .order("created_at", { ascending: false }),
+      serviceClient
+        .from("sales")
+        .select("id, amount, status, platform, product_name, customer_name, customer_email, created_at")
+        .eq("user_id", targetUserId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      serviceClient
+        .from("webhooks")
+        .select("id, name, platform, status, webhook_url, created_at")
+        .eq("user_id", targetUserId)
+        .order("created_at", { ascending: false }),
+      serviceClient
+        .from("pixels")
+        .select("id, name, pixel_type, status")
+        .eq("user_id", targetUserId),
+      serviceClient
+        .from("automation_rules")
+        .select("id, name, is_active, condition_type, action_type, executions, last_execution")
+        .eq("user_id", targetUserId),
+      serviceClient
+        .from("api_credentials")
+        .select("id, name, status, created_at")
+        .eq("user_id", targetUserId),
     ]);
+
+    const queryErrors = [
+      metaConnectionRes.error,
+      adAccountsRes.error,
+      salesRes.error,
+      webhooksRes.error,
+      pixelsRes.error,
+      rulesRes.error,
+      credentialsRes.error,
+    ].filter(Boolean);
+
+    if (queryErrors.length > 0) {
+      throw queryErrors[0];
+    }
 
     return new Response(
       JSON.stringify({
