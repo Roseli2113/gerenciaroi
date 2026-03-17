@@ -6,6 +6,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type MetaAdAccount = {
+  id: string;
+  name: string;
+  account_status: number;
+  currency: string | null;
+  timezone_name: string | null;
+};
+
+const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]> => {
+  let allAccounts: MetaAdAccount[] = [];
+  let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${accessToken}`;
+
+  while (url) {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!response.ok || data?.error) {
+      throw new Error(data?.error?.message || "Failed to fetch Meta ad accounts");
+    }
+
+    if (Array.isArray(data?.data)) {
+      allAccounts = allAccounts.concat(data.data);
+    }
+
+    url = data?.paging?.next || null;
+  }
+
+  return allAccounts;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -72,7 +102,7 @@ serve(async (req) => {
 
     const [
       metaConnectionRes,
-      adAccountsRes,
+      cachedAdAccountsRes,
       salesRes,
       webhooksRes,
       pixelsRes,
@@ -81,12 +111,12 @@ serve(async (req) => {
     ] = await Promise.all([
       serviceClient
         .from("meta_connections")
-        .select("id, meta_user_name, meta_user_email, expires_at")
+        .select("id, meta_user_name, meta_user_email, expires_at, access_token")
         .eq("user_id", targetUserId)
         .maybeSingle(),
       serviceClient
         .from("meta_ad_accounts")
-        .select("id, name, account_id, currency, is_active")
+        .select("id, name, account_id, currency, account_status, timezone_name, is_active, created_at")
         .eq("user_id", targetUserId)
         .order("created_at", { ascending: false }),
       serviceClient
@@ -116,7 +146,7 @@ serve(async (req) => {
 
     const queryErrors = [
       metaConnectionRes.error,
-      adAccountsRes.error,
+      cachedAdAccountsRes.error,
       salesRes.error,
       webhooksRes.error,
       pixelsRes.error,
@@ -128,10 +158,61 @@ serve(async (req) => {
       throw queryErrors[0];
     }
 
+    let adAccounts = cachedAdAccountsRes.data || [];
+
+    if (metaConnectionRes.data?.access_token) {
+      try {
+        const liveAdAccounts = await fetchMetaAdAccounts(metaConnectionRes.data.access_token);
+
+        adAccounts = liveAdAccounts.map((acc) => ({
+          id: acc.id,
+          name: acc.name,
+          account_id: acc.id,
+          currency: acc.currency,
+          account_status: acc.account_status,
+          timezone_name: acc.timezone_name,
+          is_active: adAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
+          created_at: null,
+        }));
+
+        if (liveAdAccounts.length > 0) {
+          const rowsToUpsert = liveAdAccounts.map((acc) => ({
+            connection_id: metaConnectionRes.data!.id,
+            user_id: targetUserId,
+            account_id: acc.id,
+            name: acc.name,
+            account_status: acc.account_status,
+            currency: acc.currency,
+            timezone_name: acc.timezone_name,
+            is_active: adAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
+          }));
+
+          const { error: upsertError } = await serviceClient
+            .from("meta_ad_accounts")
+            .upsert(rowsToUpsert, { onConflict: "connection_id,account_id" });
+
+          if (upsertError) {
+            console.error("Admin panel sync accounts error:", upsertError);
+          }
+        }
+      } catch (metaFetchError) {
+        console.error("Admin panel live Meta fetch error:", metaFetchError);
+      }
+    }
+
+    const metaConnection = metaConnectionRes.data
+      ? {
+          id: metaConnectionRes.data.id,
+          meta_user_name: metaConnectionRes.data.meta_user_name,
+          meta_user_email: metaConnectionRes.data.meta_user_email,
+          expires_at: metaConnectionRes.data.expires_at,
+        }
+      : null;
+
     return new Response(
       JSON.stringify({
-        metaConnection: metaConnectionRes.data,
-        adAccounts: adAccountsRes.data || [],
+        metaConnection,
+        adAccounts,
         sales: salesRes.data || [],
         webhooks: webhooksRes.data || [],
         pixels: pixelsRes.data || [],
