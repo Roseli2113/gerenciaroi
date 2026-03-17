@@ -221,129 +221,19 @@ serve(async (req) => {
       );
     }
 
-    const [
-      metaConnectionRes,
-      cachedAdAccountsRes,
-      salesRes,
-      webhooksRes,
-      pixelsRes,
-      rulesRes,
-      credentialsRes,
-    ] = await Promise.all([
-      serviceClient
-        .from("meta_connections")
-        .select("id, meta_user_name, meta_user_email, expires_at, access_token")
-        .eq("user_id", targetUserId)
-        .maybeSingle(),
-      serviceClient
-        .from("meta_ad_accounts")
-        .select("id, name, account_id, currency, account_status, timezone_name, is_active, created_at")
-        .eq("user_id", targetUserId)
-        .order("created_at", { ascending: false }),
-      serviceClient
-        .from("sales")
-        .select("id, amount, status, platform, product_name, customer_name, customer_email, created_at")
-        .eq("user_id", targetUserId)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      serviceClient
-        .from("webhooks")
-        .select("id, name, platform, status, webhook_url, created_at")
-        .eq("user_id", targetUserId)
-        .order("created_at", { ascending: false }),
-      serviceClient
-        .from("pixels")
-        .select("id, name, pixel_type, status")
-        .eq("user_id", targetUserId),
-      serviceClient
-        .from("automation_rules")
-        .select("id, name, is_active, condition_type, action_type, executions, last_execution")
-        .eq("user_id", targetUserId),
-      serviceClient
-        .from("api_credentials")
-        .select("id, name, status, created_at")
-        .eq("user_id", targetUserId),
+    // Default: get full panel with Meta sync
+    const { metaConnection, metaSyncStatus, adAccounts } = await syncMetaAccounts();
+
+    const [salesRes, webhooksRes, pixelsRes, rulesRes, credentialsRes] = await Promise.all([
+      serviceClient.from("sales").select("id, amount, status, platform, product_name, customer_name, customer_email, created_at").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(50),
+      serviceClient.from("webhooks").select("id, name, platform, status, webhook_url, created_at").eq("user_id", targetUserId).order("created_at", { ascending: false }),
+      serviceClient.from("pixels").select("id, name, pixel_type, status").eq("user_id", targetUserId),
+      serviceClient.from("automation_rules").select("id, name, is_active, condition_type, action_type, executions, last_execution").eq("user_id", targetUserId),
+      serviceClient.from("api_credentials").select("id, name, status, created_at").eq("user_id", targetUserId),
     ]);
 
-    const queryErrors = [
-      metaConnectionRes.error,
-      cachedAdAccountsRes.error,
-      salesRes.error,
-      webhooksRes.error,
-      pixelsRes.error,
-      rulesRes.error,
-      credentialsRes.error,
-    ].filter(Boolean);
-
-    if (queryErrors.length > 0) {
-      throw queryErrors[0];
-    }
-
-    const cachedAdAccounts = cachedAdAccountsRes.data || [];
-    let adAccounts = cachedAdAccounts;
-    let metaSyncStatus: MetaSyncStatus = metaConnectionRes.data
-      ? { state: cachedAdAccounts.length > 0 ? "cached" : "fetch_error" }
-      : { state: "not_connected" };
-
-    if (metaConnectionRes.data?.access_token) {
-      try {
-        const liveAdAccounts = await fetchMetaAdAccounts(metaConnectionRes.data.access_token);
-
-        adAccounts = liveAdAccounts.map((acc) => ({
-          id: acc.id,
-          name: acc.name,
-          account_id: acc.id,
-          currency: acc.currency,
-          account_status: acc.account_status,
-          timezone_name: acc.timezone_name,
-          is_active: cachedAdAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
-          created_at: null,
-        }));
-
-        metaSyncStatus = { state: "live_synced" };
-
-        if (liveAdAccounts.length > 0) {
-          const rowsToUpsert = liveAdAccounts.map((acc) => ({
-            connection_id: metaConnectionRes.data!.id,
-            user_id: targetUserId,
-            account_id: acc.id,
-            name: acc.name,
-            account_status: acc.account_status,
-            currency: acc.currency,
-            timezone_name: acc.timezone_name,
-            is_active: cachedAdAccounts.some((cached) => cached.account_id === acc.id && cached.is_active),
-          }));
-
-          const { error: upsertError } = await serviceClient
-            .from("meta_ad_accounts")
-            .upsert(rowsToUpsert, { onConflict: "connection_id,account_id" });
-
-          if (upsertError) {
-            console.error("Admin panel sync accounts error:", upsertError);
-          }
-        }
-      } catch (metaFetchError) {
-        console.error("Admin panel live Meta fetch error:", metaFetchError);
-        const rawMessage = metaFetchError instanceof Error ? metaFetchError.message : "Unknown error";
-        const isPermissionError = rawMessage.includes("(#200)") || rawMessage.toLowerCase().includes("missing permissions");
-
-        metaSyncStatus = {
-          state: isPermissionError ? "permissions_error" : "fetch_error",
-          message: isPermissionError
-            ? "A conexão Meta deste usuário não tem permissão para listar as contas de anúncio. É preciso reconectar a integração Meta para sincronizar todas as contas."
-            : "Não foi possível sincronizar as contas de anúncio da Meta agora.",
-        };
-      }
-    }
-
-    const metaConnection = metaConnectionRes.data
-      ? {
-          id: metaConnectionRes.data.id,
-          meta_user_name: metaConnectionRes.data.meta_user_name,
-          meta_user_email: metaConnectionRes.data.meta_user_email,
-          expires_at: metaConnectionRes.data.expires_at,
-        }
-      : null;
+    const queryErrors = [salesRes.error, webhooksRes.error, pixelsRes.error, rulesRes.error, credentialsRes.error].filter(Boolean);
+    if (queryErrors.length > 0) throw queryErrors[0];
 
     return new Response(
       JSON.stringify({
