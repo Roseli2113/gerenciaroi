@@ -549,7 +549,21 @@ const Sales = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Telefone</label>
-                    <p>{selectedSale.customer_phone || '-'}</p>
+                    <div className="flex items-center gap-2">
+                      <p>{selectedSale.customer_phone || '-'}</p>
+                      {selectedSale.customer_phone && (
+                        <button
+                          onClick={() => {
+                            const phone = selectedSale.customer_phone!.replace(/\D/g, '');
+                            window.open(`https://wa.me/${phone}`, '_blank');
+                          }}
+                          className="inline-flex items-center justify-center rounded-md hover:bg-accent p-1"
+                          title="Chamar no WhatsApp"
+                        >
+                          <img src={whatsappIcon} alt="WhatsApp" className="h-5 w-5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
