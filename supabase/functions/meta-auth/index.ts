@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, code, redirectUri } = await req.json();
+    const { action, code, redirectUri, accessToken: providedAccessToken } = await req.json();
 
     const META_APP_ID = Deno.env.get("META_APP_ID");
     const META_APP_SECRET = Deno.env.get("META_APP_SECRET");
@@ -118,6 +118,41 @@ serve(async (req) => {
           user: userData,
           adAccounts: allAdAccounts
         }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "refresh-accounts") {
+      if (!providedAccessToken) {
+        return new Response(
+          JSON.stringify({ error: "Access token required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let allAccounts: any[] = [];
+      let url: string | null = `https://graph.facebook.com/v18.0/me/adaccounts?` +
+        `fields=id,name,account_status,currency,timezone_name` +
+        `&limit=100` +
+        `&access_token=${providedAccessToken}`;
+
+      while (url) {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.error) {
+          return new Response(
+            JSON.stringify({ error: data.error.message }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (data.data) allAccounts = allAccounts.concat(data.data);
+        url = data.paging?.next || null;
+      }
+
+      console.log(`Refresh: Total ad accounts fetched: ${allAccounts.length}`);
+
+      return new Response(
+        JSON.stringify({ adAccounts: allAccounts }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

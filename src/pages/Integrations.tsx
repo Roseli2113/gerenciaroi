@@ -415,9 +415,20 @@ export default function Integrations() {
                               <p className="text-sm text-muted-foreground">
                                 Contas de Anúncio ({connection.adAccounts.length})
                               </p>
-                              <p className="text-xs text-muted-foreground">
-                                Ative uma conta para gerenciar campanhas
-                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={refreshAdAccounts}
+                                disabled={isLoading}
+                                className="gap-2"
+                              >
+                                {isLoading ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-4 h-4" />
+                                )}
+                                Atualizar contas
+                              </Button>
                             </div>
                             
                             <div className="flex items-center justify-between mb-2">
@@ -460,10 +471,24 @@ export default function Integrations() {
                         )}
 
                         {connection?.adAccounts && connection.adAccounts.length === 0 && (
-                          <div className="text-center py-6 text-muted-foreground">
-                            <XCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <div className="text-center py-6 text-muted-foreground space-y-3">
+                            <XCircle className="w-8 h-8 mx-auto opacity-50" />
                             <p>Nenhuma conta de anúncio encontrada.</p>
                             <p className="text-sm">Verifique se você tem acesso a contas de anúncio no Meta Business.</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={refreshAdAccounts}
+                              disabled={isLoading}
+                              className="gap-2 mt-2"
+                            >
+                              {isLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-4 h-4" />
+                              )}
+                              Atualizar contas
+                            </Button>
                           </div>
                         )}
                       </>
