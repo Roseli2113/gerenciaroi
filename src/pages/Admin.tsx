@@ -528,6 +528,17 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Admin User Panel Dialog */}
+      {panelUser && (
+        <AdminUserPanelDialog
+          open={!!panelUser}
+          onOpenChange={(open) => !open && setPanelUser(null)}
+          userId={panelUser.user_id}
+          userEmail={panelUser.email}
+          userName={panelUser.display_name}
+        />
+      )}
     </MainLayout>
   );
 }
