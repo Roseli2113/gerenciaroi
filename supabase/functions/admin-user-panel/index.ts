@@ -12,6 +12,7 @@ type MetaAdAccount = {
   account_status: number;
   currency: string | null;
   timezone_name: string | null;
+  source: "personal" | "bm";
 };
 
 type MetaSyncStatus = {
