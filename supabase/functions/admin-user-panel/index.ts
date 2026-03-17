@@ -52,7 +52,7 @@ const fetchMetaAdAccounts = async (accessToken: string): Promise<MetaAdAccount[]
           try {
             const r = await fetch(ownedUrl);
             const d = await r.json();
-            if (d?.data) for (const acc of d.data) accountsMap.set(acc.id, acc);
+            if (d?.data) for (const acc of d.data) { if (!accountsMap.has(acc.id)) accountsMap.set(acc.id, { ...acc, source: "bm" }); }
             ownedUrl = d?.paging?.next || null;
           } catch { ownedUrl = null; }
         }
