@@ -168,8 +168,8 @@ const Landing = () => {
               </div>
             </div>
             <div className="relative">
-              <div className="rounded-2xl overflow-hidden border border-border shadow-2xl">
-                <img src={dashboardImg} alt="Dashboard Gerencia ROI" className="w-full" />
+              <div className="rounded-2xl overflow-hidden shadow-2xl">
+                <img src={heroImg} alt="Dashboard Gerencia ROI em múltiplos dispositivos" className="w-full" />
               </div>
               <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-primary/20 rounded-full blur-3xl" />
               <div className="absolute -top-4 -left-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
