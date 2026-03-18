@@ -2,18 +2,20 @@
  import { supabase } from '@/integrations/supabase/client';
  import { toast } from 'sonner';
  
- export interface Rule {
-   id: string;
-   name: string;
-   conditionType: string;
-   conditionValue: string;
-   actionType: string;
-   frequency: string;
-   appliedTo: string;
-   isActive: boolean;
-   executions: number;
-   lastExecution?: string;
- }
+export interface Rule {
+  id: string;
+  name: string;
+  conditionType: string;
+  conditionValue: string;
+  actionType: string;
+  frequency: string;
+  appliedTo: string;
+  isActive: boolean;
+  executions: number;
+  lastExecution?: string;
+  lastExecutionResult?: string | null;
+  lastExecutionAffected?: number;
+}
  
  export interface ExecutionLog {
    id: string;
@@ -52,18 +54,20 @@
  
        if (error) throw error;
  
-       const mappedRules: Rule[] = (data || []).map((r: any) => ({
-         id: r.id,
-         name: r.name,
-         conditionType: r.condition_type,
-         conditionValue: r.condition_value,
-         actionType: r.action_type,
-         frequency: r.frequency,
-         appliedTo: r.applied_to,
-         isActive: r.is_active,
-         executions: r.executions,
-         lastExecution: r.last_execution ? formatTimeAgo(new Date(r.last_execution)) : undefined,
-       }));
+        const mappedRules: Rule[] = (data || []).map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          conditionType: r.condition_type,
+          conditionValue: r.condition_value,
+          actionType: r.action_type,
+          frequency: r.frequency,
+          appliedTo: r.applied_to,
+          isActive: r.is_active,
+          executions: r.executions,
+          lastExecution: r.last_execution ? formatTimeAgo(new Date(r.last_execution)) : undefined,
+          lastExecutionResult: r.last_execution_result || null,
+          lastExecutionAffected: r.last_execution_affected || 0,
+        }));
  
        setRules(mappedRules);
      } catch (error) {

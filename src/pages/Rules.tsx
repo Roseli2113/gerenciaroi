@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Zap, TrendingUp, Pause, Clock, History, Pencil, Trash2, Loader2, Play } from 'lucide-react';
+import { Plus, Zap, TrendingUp, Pause, Clock, History, Pencil, Trash2, Loader2, Play, CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRules, Rule } from '@/hooks/useRules';
@@ -416,9 +416,34 @@ const Rules = () => {
                 </div>
 
                 {rule.lastExecution && (
-                  <p className="text-xs text-muted-foreground">
-                    Última execução: {rule.lastExecution}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Última execução: {rule.lastExecution}
+                    </p>
+                    {rule.lastExecutionResult && (
+                      <div className="flex items-center gap-1.5">
+                        {rule.lastExecutionResult === 'success' ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                        ) : rule.lastExecutionResult === 'partial' ? (
+                          <MinusCircle className="w-3.5 h-3.5 text-yellow-500" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                        )}
+                        <span className={cn(
+                          'text-xs font-medium',
+                          rule.lastExecutionResult === 'success' ? 'text-success' :
+                          rule.lastExecutionResult === 'partial' ? 'text-yellow-500' :
+                          'text-muted-foreground'
+                        )}>
+                          {rule.lastExecutionResult === 'success' 
+                            ? `${rule.lastExecutionAffected} afetado(s)` 
+                            : rule.lastExecutionResult === 'partial'
+                            ? `${rule.lastExecutionAffected} afetado(s) (parcial)`
+                            : 'Sem correspondência'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>

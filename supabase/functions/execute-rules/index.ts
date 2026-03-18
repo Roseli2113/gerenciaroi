@@ -10,6 +10,7 @@ const BASE_URL = "https://graph.facebook.com/v21.0";
 
 interface AutomationRule {
   id: string;
+  user_id: string;
   name: string;
   condition_type: string;
   condition_value: string;
@@ -17,6 +18,8 @@ interface AutomationRule {
   frequency: string;
   applied_to: string;
   is_active: boolean;
+  executions: number;
+  last_execution: string | null;
 }
 
 interface MetaEntity {
@@ -36,6 +39,25 @@ interface InsightData {
   spend: string;
   actions?: Array<{ action_type: string; value: string }>;
   action_values?: Array<{ action_type: string; value: string }>;
+}
+
+// Map frequency to minutes
+function frequencyToMinutes(frequency: string): number {
+  switch (frequency) {
+    case "15min": return 15;
+    case "30min": return 30;
+    case "1hour": return 60;
+    case "2hours": return 120;
+    case "daily": return 1440;
+    default: return 30;
+  }
+}
+
+function shouldExecuteRule(rule: AutomationRule): boolean {
+  if (!rule.last_execution) return true;
+  const lastExec = new Date(rule.last_execution).getTime();
+  const intervalMs = frequencyToMinutes(rule.frequency) * 60 * 1000;
+  return Date.now() - lastExec >= intervalMs;
 }
 
 function getEntityTypeAndStatus(appliedTo: string): { entityType: "campaign" | "adset" | "ad"; statusFilter: "ACTIVE" | "PAUSED" | null } {
@@ -103,7 +125,6 @@ async function fetchEntitiesWithInsights(
   const results: Array<{ entity: MetaEntity; spent: number; cpa: number | null; roi: number | null }> = [];
 
   for (const raw of entities as MetaEntity[]) {
-    // Filter by status
     if (statusFilter && raw.status !== statusFilter) continue;
 
     const insight = insightsMap.get(raw.id);
@@ -143,7 +164,7 @@ function evaluateCondition(
     case "cpa_less": return cpa !== null && cpa < threshold;
     case "roi_greater": return roi !== null && (roi * 100) > threshold;
     case "roi_less": return roi !== null && (roi * 100) < threshold;
-    case "spend_greater": return spent > threshold && cpa === null; // spent > X sem vendas
+    case "spend_greater": return spent > threshold && cpa === null;
     default: return false;
   }
 }
@@ -152,7 +173,6 @@ function getActionForEntityType(
   actionType: string,
   entityType: "campaign" | "adset" | "ad"
 ): { metaAction: string; description: string } | null {
-  // Map rule action to the appropriate Meta action based on entity type
   switch (actionType) {
     case "pause":
     case "pause_adset":
@@ -222,6 +242,103 @@ async function executeAction(
   }
 }
 
+async function processRulesForUser(
+  supabase: any,
+  userId: string,
+  rules: AutomationRule[],
+  forceExecute: boolean
+): Promise<Array<{ ruleName: string; entityName: string; action: string; success: boolean }>> {
+  // Get Meta connection
+  const { data: connection } = await supabase
+    .from("meta_connections")
+    .select("access_token")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!connection?.access_token) return [];
+
+  // Get active ad accounts
+  const { data: accounts } = await supabase
+    .from("meta_ad_accounts")
+    .select("account_id")
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (!accounts || accounts.length === 0) return [];
+
+  const accessToken = connection.access_token;
+  const executionResults: Array<{ ruleName: string; entityName: string; action: string; success: boolean }> = [];
+
+  for (const rule of rules) {
+    // Check frequency timing (skip if called from cron and not due yet)
+    if (!forceExecute && !shouldExecuteRule(rule)) continue;
+
+    const { entityType, statusFilter } = getEntityTypeAndStatus(rule.applied_to);
+    const actionInfo = getActionForEntityType(rule.action_type, entityType);
+    if (!actionInfo) continue;
+
+    let ruleAffected = 0;
+    let ruleSuccess = true;
+
+    for (const account of accounts) {
+      try {
+        const entities = await fetchEntitiesWithInsights(
+          accessToken,
+          account.account_id.startsWith("act_") ? account.account_id : `act_${account.account_id}`,
+          entityType,
+          statusFilter
+        );
+
+        for (const { entity, spent, cpa, roi } of entities) {
+          if (!evaluateCondition(rule.condition_type, rule.condition_value, spent, cpa, roi)) {
+            continue;
+          }
+
+          const success = await executeAction(accessToken, entity, actionInfo);
+
+          if (success) {
+            ruleAffected++;
+            await supabase.from("rule_execution_logs").insert({
+              rule_id: rule.id,
+              user_id: userId,
+              rule_name: rule.name,
+              campaign_name: entity.name,
+              action_description: `${actionInfo.description}: ${entity.name}`,
+              action_type: rule.action_type,
+            });
+          } else {
+            ruleSuccess = false;
+          }
+
+          executionResults.push({
+            ruleName: rule.name,
+            entityName: entity.name,
+            action: actionInfo.description,
+            success,
+          });
+        }
+      } catch (err) {
+        ruleSuccess = false;
+        console.error(`Error processing rule ${rule.name} for account ${account.account_id}:`, err);
+      }
+    }
+
+    // Update rule with execution result
+    const resultStatus = ruleAffected > 0 ? (ruleSuccess ? "success" : "partial") : "no_match";
+    await supabase
+      .from("automation_rules")
+      .update({
+        executions: rule.executions + ruleAffected,
+        last_execution: new Date().toISOString(),
+        last_execution_result: resultStatus,
+        last_execution_affected: ruleAffected,
+      })
+      .eq("id", rule.id);
+  }
+
+  return executionResults;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -232,8 +349,53 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get auth user
     const authHeader = req.headers.get("Authorization");
+    let body: Record<string, unknown> = {};
+    try { body = await req.json(); } catch { /* empty body ok for cron */ }
+    const isCron = !!body.cron;
+
+    if (isCron) {
+      // Cron mode: process all users with active rules
+      console.log("Cron execution started");
+
+      const { data: allRules } = await supabase
+        .from("automation_rules")
+        .select("*")
+        .eq("is_active", true);
+
+      if (!allRules || allRules.length === 0) {
+        return new Response(
+          JSON.stringify({ message: "No active rules", executed: 0 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Group rules by user
+      const rulesByUser = new Map<string, AutomationRule[]>();
+      for (const rule of allRules as AutomationRule[]) {
+        const existing = rulesByUser.get(rule.user_id) || [];
+        existing.push(rule);
+        rulesByUser.set(rule.user_id, existing);
+      }
+
+      let totalExecuted = 0;
+      for (const [userId, userRules] of rulesByUser) {
+        try {
+          const results = await processRulesForUser(supabase, userId, userRules, false);
+          totalExecuted += results.length;
+        } catch (err) {
+          console.error(`Error processing rules for user ${userId}:`, err);
+        }
+      }
+
+      console.log(`Cron execution completed. Total actions: ${totalExecuted}`);
+      return new Response(
+        JSON.stringify({ executed: totalExecuted }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Manual mode: requires auth
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -252,35 +414,6 @@ serve(async (req) => {
       });
     }
 
-    // Get Meta connection
-    const { data: connection } = await supabase
-      .from("meta_connections")
-      .select("access_token")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (!connection?.access_token) {
-      return new Response(
-        JSON.stringify({ error: "Meta Ads não conectado", executed: 0 }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get active ad accounts
-    const { data: accounts } = await supabase
-      .from("meta_ad_accounts")
-      .select("account_id")
-      .eq("user_id", user.id)
-      .eq("is_active", true);
-
-    if (!accounts || accounts.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Nenhuma conta de anúncios ativa", executed: 0 }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get active rules
     const { data: rules } = await supabase
       .from("automation_rules")
       .select("*")
@@ -294,71 +427,10 @@ serve(async (req) => {
       );
     }
 
-    const accessToken = connection.access_token;
-    const executionResults: Array<{ ruleName: string; entityName: string; action: string; success: boolean }> = [];
-
-    // Process each rule
-    for (const rule of rules as AutomationRule[]) {
-      const { entityType, statusFilter } = getEntityTypeAndStatus(rule.applied_to);
-      const actionInfo = getActionForEntityType(rule.action_type, entityType);
-      if (!actionInfo) continue;
-
-      // Fetch entities from all accounts
-      for (const account of accounts) {
-        try {
-          const entities = await fetchEntitiesWithInsights(
-            accessToken,
-            account.account_id.startsWith("act_") ? account.account_id : `act_${account.account_id}`,
-            entityType,
-            statusFilter
-          );
-
-          for (const { entity, spent, cpa, roi } of entities) {
-            if (!evaluateCondition(rule.condition_type, rule.condition_value, spent, cpa, roi)) {
-              continue;
-            }
-
-            const success = await executeAction(accessToken, entity, actionInfo);
-
-            if (success) {
-              // Log execution
-              await supabase.from("rule_execution_logs").insert({
-                rule_id: rule.id,
-                user_id: user.id,
-                rule_name: rule.name,
-                campaign_name: entity.name,
-                action_description: `${actionInfo.description}: ${entity.name}`,
-                action_type: rule.action_type,
-              });
-
-              // Update rule execution count
-              await supabase
-                .from("automation_rules")
-                .update({
-                  executions: (rule as any).executions + 1,
-                  last_execution: new Date().toISOString(),
-                })
-                .eq("id", rule.id);
-            }
-
-            executionResults.push({
-              ruleName: rule.name,
-              entityName: entity.name,
-              action: actionInfo.description,
-              success,
-            });
-          }
-        } catch (err) {
-          console.error(`Error processing rule ${rule.name} for account ${account.account_id}:`, err);
-        }
-      }
-    }
+    const executionResults = await processRulesForUser(supabase, user.id, rules as AutomationRule[], true);
 
     return new Response(
-      JSON.stringify({
-        executed: executionResults.length,
-        results: executionResults,
-      }),
+      JSON.stringify({ executed: executionResults.length, results: executionResults }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
