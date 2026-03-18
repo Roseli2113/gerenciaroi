@@ -2,18 +2,20 @@
  import { supabase } from '@/integrations/supabase/client';
  import { toast } from 'sonner';
  
- export interface Rule {
-   id: string;
-   name: string;
-   conditionType: string;
-   conditionValue: string;
-   actionType: string;
-   frequency: string;
-   appliedTo: string;
-   isActive: boolean;
-   executions: number;
-   lastExecution?: string;
- }
+export interface Rule {
+  id: string;
+  name: string;
+  conditionType: string;
+  conditionValue: string;
+  actionType: string;
+  frequency: string;
+  appliedTo: string;
+  isActive: boolean;
+  executions: number;
+  lastExecution?: string;
+  lastExecutionResult?: string | null;
+  lastExecutionAffected?: number;
+}
  
  export interface ExecutionLog {
    id: string;
