@@ -93,7 +93,30 @@ const Notifications = () => {
     }
   };
 
-  const deleteNotification = (id: string) => {
+  const SALE_OPTION_DB_MAP: Record<string, string> = {
+    sendPending: 'sale_notif_send_pending',
+    sendApproved: 'sale_notif_send_approved',
+    saleValue: 'sale_notif_sale_value',
+    productName: 'sale_notif_product_name',
+    utmCampaign: 'sale_notif_utm_campaign',
+    dashboardName: 'sale_notif_dashboard_name',
+  };
+
+  const updateSaleOption = async (key: string, value: string) => {
+    const prev = saleOptions[key as keyof typeof saleOptions];
+    setSaleOptions(p => ({ ...p, [key]: value }));
+    if (!user) return;
+    const dbKey = SALE_OPTION_DB_MAP[key];
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [dbKey]: value, updated_at: new Date().toISOString() } as any)
+      .eq('user_id', user.id);
+    if (error) {
+      setSaleOptions(p => ({ ...p, [key]: prev }));
+      toast.error('Erro ao salvar configuração');
+    }
+  };
+
     setNotificationsList(prev => prev.filter(n => n.id !== id));
   };
 
