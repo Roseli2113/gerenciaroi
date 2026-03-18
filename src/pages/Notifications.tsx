@@ -55,7 +55,7 @@ const Notifications = () => {
     const load = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('notify_email, notify_push, notify_sms, notify_slack')
+        .select('notify_email, notify_push, notify_sms, notify_slack, sale_notif_send_pending, sale_notif_send_approved, sale_notif_sale_value, sale_notif_product_name, sale_notif_utm_campaign, sale_notif_dashboard_name')
         .eq('user_id', user.id)
         .single();
       if (data) {
@@ -64,6 +64,14 @@ const Notifications = () => {
           notify_push: data.notify_push ?? true,
           notify_sms: data.notify_sms ?? false,
           notify_slack: data.notify_slack ?? false,
+        });
+        setSaleOptions({
+          sendPending: (data as any).sale_notif_send_pending ?? 'disabled',
+          sendApproved: (data as any).sale_notif_send_approved ?? 'enabled',
+          saleValue: (data as any).sale_notif_sale_value ?? 'total',
+          productName: (data as any).sale_notif_product_name ?? 'hide',
+          utmCampaign: (data as any).sale_notif_utm_campaign ?? 'hide',
+          dashboardName: (data as any).sale_notif_dashboard_name ?? 'hide',
         });
       }
       setLoaded(true);
