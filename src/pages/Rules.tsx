@@ -51,11 +51,13 @@ const Rules = () => {
     createRule, 
     updateRule, 
     deleteRule, 
-    toggleRuleActive 
+    toggleRuleActive,
+    executeRules 
   } = useRules();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
   
   // Form state
   const [formName, setFormName] = useState('');
