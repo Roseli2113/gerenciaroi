@@ -18,6 +18,7 @@ const tutorials = [
     buttonLabel: 'Ver tutoriais',
     buttonIcon: <List className="w-4 h-4" />,
     url: '#',
+    disabled: true,
   },
   {
     icon: null,
@@ -114,15 +115,22 @@ export default function Support() {
                     <p className="text-xs text-muted-foreground">{item.description}</p>
                   </div>
                 </div>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
-                >
-                  {item.buttonIcon}
-                  {item.buttonLabel}
-                </a>
+                {item.disabled ? (
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-muted text-muted-foreground text-sm font-medium cursor-not-allowed opacity-50 whitespace-nowrap">
+                    {item.buttonIcon}
+                    {item.buttonLabel}
+                  </span>
+                ) : (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
+                  >
+                    {item.buttonIcon}
+                    {item.buttonLabel}
+                  </a>
+                )}
               </div>
             ))}
           </div>
