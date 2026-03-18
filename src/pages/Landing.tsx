@@ -6,7 +6,9 @@ import { Check, Zap, Crown, Rocket, TrendingUp, BarChart3, Target, ShieldCheck, 
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import logoImg from '@/assets/Logo_gerencia_roi.png';
-import dashboardImg from '@/assets/dashboard-preview.png';
+import heroImg from '@/assets/landing-hero.jpg';
+import campaignsImg from '@/assets/landing-campaigns.jpg';
+import chartsImg from '@/assets/landing-charts.jpg';
 
 const plansList = [
   {
@@ -166,8 +168,8 @@ const Landing = () => {
               </div>
             </div>
             <div className="relative">
-              <div className="rounded-2xl overflow-hidden border border-border shadow-2xl">
-                <img src={dashboardImg} alt="Dashboard Gerencia ROI" className="w-full" />
+              <div className="rounded-2xl overflow-hidden shadow-2xl">
+                <img src={heroImg} alt="Dashboard Gerencia ROI em múltiplos dispositivos" className="w-full" />
               </div>
               <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-primary/20 rounded-full blur-3xl" />
               <div className="absolute -top-4 -left-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
@@ -185,7 +187,7 @@ const Landing = () => {
               Chega de planilhas e ferramentas separadas. Gerencie tudo no Gerencia ROI.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {[
               { icon: BarChart3, title: 'Dashboard em Tempo Real', desc: 'Veja todas as suas métricas de campanhas, vendas e ROI atualizados ao vivo.' },
               { icon: Target, title: 'Regras Automáticas', desc: 'Crie regras para pausar, ativar ou ajustar campanhas automaticamente.' },
@@ -202,6 +204,14 @@ const Landing = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
+              <img src={campaignsImg} alt="Gestão de campanhas no Gerencia ROI" className="w-full h-full object-cover" />
+            </div>
+            <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
+              <img src={chartsImg} alt="Gráficos de receita e vendas por horário" className="w-full h-full object-cover" />
+            </div>
           </div>
         </div>
       </section>
