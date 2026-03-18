@@ -187,7 +187,7 @@ const Landing = () => {
               Chega de planilhas e ferramentas separadas. Gerencie tudo no Gerencia ROI.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {[
               { icon: BarChart3, title: 'Dashboard em Tempo Real', desc: 'Veja todas as suas métricas de campanhas, vendas e ROI atualizados ao vivo.' },
               { icon: Target, title: 'Regras Automáticas', desc: 'Crie regras para pausar, ativar ou ajustar campanhas automaticamente.' },
@@ -204,6 +204,14 @@ const Landing = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
+              <img src={campaignsImg} alt="Gestão de campanhas no Gerencia ROI" className="w-full h-full object-cover" />
+            </div>
+            <div className="rounded-2xl overflow-hidden border border-border shadow-xl">
+              <img src={chartsImg} alt="Gráficos de receita e vendas por horário" className="w-full h-full object-cover" />
+            </div>
           </div>
         </div>
       </section>
