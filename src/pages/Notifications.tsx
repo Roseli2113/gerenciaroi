@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Card,
   CardContent,
@@ -11,7 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play, Trash2, BellOff, BellRing, Send, Loader2 } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Smartphone, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Volume2, Play, Trash2, BellOff, BellRing, Send, Loader2, ShoppingCart, Info } from 'lucide-react';
+import logoIcon from '@/assets/logo-icon.png';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +41,14 @@ const Notifications = () => {
     notify_slack: false,
   });
   const [loaded, setLoaded] = useState(false);
+  const [saleOptions, setSaleOptions] = useState({
+    sendPending: 'disabled',
+    sendApproved: 'enabled',
+    saleValue: 'total',
+    productName: 'hide',
+    utmCampaign: 'hide',
+    dashboardName: 'hide',
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -281,7 +292,70 @@ const Notifications = () => {
               </CardContent>
             </Card>
 
-            {/* Sale Notification Sound */}
+            {/* Sale Notification Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5" />
+                  Notificações de Venda
+                </CardTitle>
+                <CardDescription>
+                  Seja notificado no app sempre que for realizada uma nova venda.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <TooltipProvider>
+                  {[
+                    { key: 'sendPending', label: 'Enviar vendas pendentes', tooltip: 'Receba notificações quando uma venda ficar pendente', options: [{ value: 'disabled', label: 'Desabilitado' }, { value: 'enabled', label: 'Habilitado' }] },
+                    { key: 'sendApproved', label: 'Enviar vendas aprovadas', tooltip: 'Receba notificações quando uma venda for aprovada', options: [{ value: 'disabled', label: 'Desabilitado' }, { value: 'enabled', label: 'Habilitado' }] },
+                    { key: 'saleValue', label: 'Valor da venda', tooltip: 'Como exibir o valor da venda na notificação', options: [{ value: 'total', label: 'Total' }, { value: 'net', label: 'Líquido' }, { value: 'hide', label: 'Esconder' }] },
+                    { key: 'productName', label: 'Nome do produto', tooltip: 'Exibir ou esconder o nome do produto', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
+                    { key: 'utmCampaign', label: 'Valor de utm_campaign', tooltip: 'Exibir o valor da utm_campaign na notificação', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
+                    { key: 'dashboardName', label: 'Nome do dashboard', tooltip: 'Exibir o nome do dashboard na notificação', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
+                  ].map((field) => (
+                    <div key={field.key} className="space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Label className="text-sm font-medium">{field.label}</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p className="text-xs">{field.tooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Select
+                        value={saleOptions[field.key as keyof typeof saleOptions]}
+                        onValueChange={(value) => setSaleOptions(prev => ({ ...prev, [field.key]: value }))}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </TooltipProvider>
+
+                {/* Notification Preview */}
+                <div className="space-y-2 pt-2">
+                  <Label className="text-sm font-semibold">Prévia de Notificação</Label>
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border/50">
+                    <img src={logoIcon} alt="Gerencia ROI" className="h-10 w-10 rounded-lg object-contain" />
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Venda aprovada!</p>
+                      <p className="text-xs text-muted-foreground">Valor: R$ 99,90</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
