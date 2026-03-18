@@ -131,11 +131,14 @@ const Rules = () => {
 
   const getFrequencyText = (value: string) => {
     switch (value) {
+      case '10min': return 'A cada 10 min';
       case '15min': return 'A cada 15 min';
       case '30min': return 'A cada 30 min';
       case '1hour': return 'A cada 1 hora';
       case '2hours': return 'A cada 2 horas';
-      case 'daily': return 'Diariamente';
+      case '3hours': return 'A cada 3 horas';
+      case '6hours': return 'A cada 6 horas';
+      case 'daily': return 'Uma vez por dia';
       default: return value;
     }
   };
@@ -300,11 +303,14 @@ const Rules = () => {
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="10min">A cada 10 min</SelectItem>
                         <SelectItem value="15min">A cada 15 min</SelectItem>
                         <SelectItem value="30min">A cada 30 min</SelectItem>
                         <SelectItem value="1hour">A cada 1 hora</SelectItem>
                         <SelectItem value="2hours">A cada 2 horas</SelectItem>
-                        <SelectItem value="daily">Diariamente</SelectItem>
+                        <SelectItem value="3hours">A cada 3 horas</SelectItem>
+                        <SelectItem value="6hours">A cada 6 horas</SelectItem>
+                        <SelectItem value="daily">Uma vez por dia</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
