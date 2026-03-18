@@ -359,7 +359,7 @@ const Notifications = () => {
                       </div>
                       <Select
                         value={saleOptions[field.key as keyof typeof saleOptions]}
-                        onValueChange={(value) => setSaleOptions(prev => ({ ...prev, [field.key]: value }))}
+                        onValueChange={(value) => updateSaleOption(field.key, value)}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue />
