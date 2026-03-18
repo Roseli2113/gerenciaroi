@@ -383,6 +383,37 @@ serve(async (req) => {
         try {
           const results = await processRulesForUser(supabase, userId, userRules, false);
           totalExecuted += results.length;
+
+          // Send push notification if any actions were executed
+          if (results.length > 0) {
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.filter(r => !r.success).length;
+            const ruleNames = [...new Set(results.map(r => r.ruleName))];
+
+            let body = `${successCount} ação(ões) executada(s)`;
+            if (failCount > 0) body += `, ${failCount} falha(s)`;
+            body += ` em: ${ruleNames.join(", ")}`;
+
+            try {
+              const pushUrl = `${supabaseUrl}/functions/v1/send-push`;
+              await fetch(pushUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseServiceKey}`,
+                },
+                body: JSON.stringify({
+                  user_id: userId,
+                  title: "⚙️ Regra Automática Executada",
+                  body,
+                  url: "/rules",
+                  tag: "rule-execution",
+                }),
+              });
+            } catch (pushErr) {
+              console.error(`Failed to send push for user ${userId}:`, pushErr);
+            }
+          }
         } catch (err) {
           console.error(`Error processing rules for user ${userId}:`, err);
         }
