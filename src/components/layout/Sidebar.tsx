@@ -32,6 +32,7 @@ const menuItems = [
   { icon: FileText, label: 'Relatórios', path: '/reports' },
   { icon: Bell, label: 'Notificações', path: '/notifications' },
   { icon: CreditCard, label: 'Assinatura', path: '/subscription' },
+  { icon: HelpCircle, label: 'Suporte', path: '/support' },
 ];
 
 export function Sidebar() {
