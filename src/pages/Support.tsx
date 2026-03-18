@@ -55,7 +55,7 @@ const supportItems = [
     description: 'Entre em contato conosco',
     buttonLabel: 'Contato',
     buttonIcon: <MessageCircle className="w-4 h-4" />,
-    url: 'https://wa.me/5500000000000',
+    url: 'https://wa.me/5515997109182',
   },
   {
     icon: 'whatsapp',
