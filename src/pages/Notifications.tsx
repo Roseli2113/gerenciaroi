@@ -117,6 +117,7 @@ const Notifications = () => {
     }
   };
 
+  const deleteNotification = (id: string) => {
     setNotificationsList(prev => prev.filter(n => n.id !== id));
   };
 
