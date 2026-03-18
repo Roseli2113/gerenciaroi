@@ -67,7 +67,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "^0.5.16",
-    "lovable-tagger": "^1.1.13"
+    "@tailwindcss/typography": "^0.5.16"
   }
 }
