@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Zap, TrendingUp, Pause, Clock, History, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Zap, TrendingUp, Pause, Clock, History, Pencil, Trash2, Loader2, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRules, Rule } from '@/hooks/useRules';
