@@ -41,6 +41,14 @@ const Notifications = () => {
     notify_slack: false,
   });
   const [loaded, setLoaded] = useState(false);
+  const [saleOptions, setSaleOptions] = useState({
+    sendPending: 'disabled',
+    sendApproved: 'enabled',
+    saleValue: 'total',
+    productName: 'hide',
+    utmCampaign: 'hide',
+    dashboardName: 'hide',
+  });
 
   useEffect(() => {
     if (!user) return;
