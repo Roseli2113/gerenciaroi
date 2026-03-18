@@ -1,8 +1,11 @@
-declare module 'recharts' {
-  import * as React from 'react';
+import * as React from 'react';
 
-  export type LegendProps = any;
-  export type TooltipProps = any;
+declare module 'recharts' {
+  export type LegendProps = {
+    payload?: any[];
+    verticalAlign?: 'top' | 'middle' | 'bottom';
+    [key: string]: any;
+  };
 
   export const ResponsiveContainer: React.ComponentType<any>;
   export const CartesianGrid: React.ComponentType<any>;
