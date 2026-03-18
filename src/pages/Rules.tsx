@@ -326,6 +326,7 @@ const Rules = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Rules Grid */}
