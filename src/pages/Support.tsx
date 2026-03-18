@@ -63,7 +63,7 @@ const supportItems = [
     description: 'Entre no grupo de avisos',
     buttonLabel: 'Entrar',
     buttonIcon: <Users className="w-4 h-4" />,
-    url: '#',
+    url: 'https://chat.whatsapp.com/JIuY9HZ3JM91EBAhti9xIy?mode=gi_t',
   },
   {
     icon: 'whatsapp',
@@ -71,6 +71,7 @@ const supportItems = [
     description: 'Entre no grupo de avisos',
     buttonLabel: 'Entrar',
     buttonIcon: <Users className="w-4 h-4" />,
+    disabled: true,
     url: '#',
   },
   {
