@@ -292,7 +292,70 @@ const Notifications = () => {
               </CardContent>
             </Card>
 
-            {/* Sale Notification Sound */}
+            {/* Sale Notification Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5" />
+                  Notificações de Venda
+                </CardTitle>
+                <CardDescription>
+                  Seja notificado no app sempre que for realizada uma nova venda.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <TooltipProvider>
+                  {[
+                    { key: 'sendPending', label: 'Enviar vendas pendentes', tooltip: 'Receba notificações quando uma venda ficar pendente', options: [{ value: 'disabled', label: 'Desabilitado' }, { value: 'enabled', label: 'Habilitado' }] },
+                    { key: 'sendApproved', label: 'Enviar vendas aprovadas', tooltip: 'Receba notificações quando uma venda for aprovada', options: [{ value: 'disabled', label: 'Desabilitado' }, { value: 'enabled', label: 'Habilitado' }] },
+                    { key: 'saleValue', label: 'Valor da venda', tooltip: 'Como exibir o valor da venda na notificação', options: [{ value: 'total', label: 'Total' }, { value: 'net', label: 'Líquido' }, { value: 'hide', label: 'Esconder' }] },
+                    { key: 'productName', label: 'Nome do produto', tooltip: 'Exibir ou esconder o nome do produto', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
+                    { key: 'utmCampaign', label: 'Valor de utm_campaign', tooltip: 'Exibir o valor da utm_campaign na notificação', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
+                    { key: 'dashboardName', label: 'Nome do dashboard', tooltip: 'Exibir o nome do dashboard na notificação', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
+                  ].map((field) => (
+                    <div key={field.key} className="space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Label className="text-sm font-medium">{field.label}</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p className="text-xs">{field.tooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Select
+                        value={saleOptions[field.key as keyof typeof saleOptions]}
+                        onValueChange={(value) => setSaleOptions(prev => ({ ...prev, [field.key]: value }))}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </TooltipProvider>
+
+                {/* Notification Preview */}
+                <div className="space-y-2 pt-2">
+                  <Label className="text-sm font-semibold">Prévia de Notificação</Label>
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border/50">
+                    <img src={logoIcon} alt="Gerencia ROI" className="h-10 w-10 rounded-lg object-contain" />
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Venda aprovada!</p>
+                      <p className="text-xs text-muted-foreground">Valor: R$ 99,90</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
