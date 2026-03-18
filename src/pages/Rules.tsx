@@ -192,16 +192,30 @@ const Rules = () => {
               Configure regras para automatizar o gerenciamento das suas campanhas
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreateDialog} className="gradient-primary text-primary-foreground gap-2">
-                <Plus className="w-4 h-4" />
-                Nova Regra
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              disabled={isExecuting || rules.filter(r => r.isActive).length === 0}
+              onClick={async () => {
+                setIsExecuting(true);
+                await executeRules();
+                setIsExecuting(false);
+              }}
+            >
+              {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              Executar Agora
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={openCreateDialog} className="gradient-primary text-primary-foreground gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nova Regra
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>{editingRuleId ? 'Editar Regra' : 'Criar Nova Regra'}</DialogTitle>
