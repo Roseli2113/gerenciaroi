@@ -92,7 +92,7 @@ interface SortableItemProps {
 }
 
 function SortableItem({ column, onRemove }: SortableItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: column.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: column.id } as any);
   
   const style = {
     transform: CSS.Transform.toString(transform),
