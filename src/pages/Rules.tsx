@@ -303,11 +303,14 @@ const Rules = () => {
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="10min">A cada 10 min</SelectItem>
                         <SelectItem value="15min">A cada 15 min</SelectItem>
                         <SelectItem value="30min">A cada 30 min</SelectItem>
                         <SelectItem value="1hour">A cada 1 hora</SelectItem>
                         <SelectItem value="2hours">A cada 2 horas</SelectItem>
-                        <SelectItem value="daily">Diariamente</SelectItem>
+                        <SelectItem value="3hours">A cada 3 horas</SelectItem>
+                        <SelectItem value="6hours">A cada 6 horas</SelectItem>
+                        <SelectItem value="daily">Uma vez por dia</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
