@@ -15,6 +15,7 @@ import {
   Shield,
   Menu,
   X,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminRole } from '@/hooks/useAdminRole';
