@@ -221,6 +221,12 @@ const Rules = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as campanhas</SelectItem>
+                      <SelectItem value="active_campaigns">Campanhas Ativas</SelectItem>
+                      <SelectItem value="active_adsets">Conjuntos Ativos</SelectItem>
+                      <SelectItem value="active_ads">Anúncios Ativos</SelectItem>
+                      <SelectItem value="paused_campaigns">Campanhas Pausadas</SelectItem>
+                      <SelectItem value="paused_adsets">Conjuntos Pausados</SelectItem>
+                      <SelectItem value="paused_ads">Anúncios Pausados</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
