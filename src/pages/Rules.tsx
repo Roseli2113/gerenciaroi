@@ -131,11 +131,14 @@ const Rules = () => {
 
   const getFrequencyText = (value: string) => {
     switch (value) {
+      case '10min': return 'A cada 10 min';
       case '15min': return 'A cada 15 min';
       case '30min': return 'A cada 30 min';
       case '1hour': return 'A cada 1 hora';
       case '2hours': return 'A cada 2 horas';
-      case 'daily': return 'Diariamente';
+      case '3hours': return 'A cada 3 horas';
+      case '6hours': return 'A cada 6 horas';
+      case 'daily': return 'Uma vez por dia';
       default: return value;
     }
   };
