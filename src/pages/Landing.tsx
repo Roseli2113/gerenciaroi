@@ -6,7 +6,9 @@ import { Check, Zap, Crown, Rocket, TrendingUp, BarChart3, Target, ShieldCheck, 
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import logoImg from '@/assets/Logo_gerencia_roi.png';
-import dashboardImg from '@/assets/dashboard-preview.png';
+import heroImg from '@/assets/landing-hero.jpg';
+import campaignsImg from '@/assets/landing-campaigns.jpg';
+import chartsImg from '@/assets/landing-charts.jpg';
 
 const plansList = [
   {
