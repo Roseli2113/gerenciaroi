@@ -190,14 +190,61 @@ Deno.serve(async (req) => {
 
     console.log('Sale recorded:', sale)
 
-    // Send push notification for new approved sales
-    if (!existingId && saleData.status === 'approved') {
-      try {
+    // Send push notification based on user preferences
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('sale_notif_send_pending, sale_notif_send_approved, sale_notif_sale_value, sale_notif_product_name, sale_notif_utm_campaign, sale_notif_dashboard_name')
+        .eq('user_id', userId)
+        .single()
+
+      const prefs = {
+        sendPending: profile?.sale_notif_send_pending ?? 'disabled',
+        sendApproved: profile?.sale_notif_send_approved ?? 'enabled',
+        saleValue: profile?.sale_notif_sale_value ?? 'total',
+        productName: profile?.sale_notif_product_name ?? 'hide',
+        utmCampaign: profile?.sale_notif_utm_campaign ?? 'hide',
+        dashboardName: profile?.sale_notif_dashboard_name ?? 'hide',
+      }
+
+      const shouldNotify =
+        (!existingId && saleData.status === 'approved' && prefs.sendApproved === 'enabled') ||
+        (!existingId && saleData.status === 'pending' && prefs.sendPending === 'enabled')
+
+      if (shouldNotify) {
         const amount = Number(saleData.amount || 0)
+        const commission = Number(saleData.commission || 0)
+        const isApproved = saleData.status === 'approved'
+
+        // Build title
+        let title = isApproved ? '💰 Venda aprovada!' : '⏳ Venda pendente!'
+
+        // Build body parts
+        const bodyParts: string[] = []
+
+        if (prefs.saleValue !== 'hide') {
+          const displayAmount = prefs.saleValue === 'net' ? (amount - commission) : amount
+          bodyParts.push(`Valor: R$ ${displayAmount.toFixed(2)}`)
+        }
+
+        if (prefs.productName === 'show' && saleData.product_name) {
+          bodyParts.push(`Produto: ${saleData.product_name}`)
+        }
+
+        if (prefs.utmCampaign === 'show' && saleData.campaign_id) {
+          bodyParts.push(`Campanha: ${saleData.campaign_id}`)
+        }
+
+        if (prefs.dashboardName === 'show' && saleData.platform) {
+          bodyParts.push(`Dashboard: ${saleData.platform}`)
+        }
+
+        const body = bodyParts.length > 0 ? bodyParts.join(' • ') : (saleData.customer_name || 'Venda recebida!')
+
         const pushPayload = {
           user_id: userId,
-          title: `💰 Nova venda: R$ ${amount.toFixed(2)}`,
-          body: saleData.customer_name || saleData.platform || 'Venda recebida!',
+          title,
+          body,
           url: '/dashboard',
           tag: `sale-${sale.id}`,
         }
@@ -210,9 +257,9 @@ Deno.serve(async (req) => {
           body: JSON.stringify(pushPayload),
         })
         console.log('Push notification sent for sale:', sale.id)
-      } catch (pushErr) {
-        console.error('Push notification error:', pushErr)
       }
+    } catch (pushErr) {
+      console.error('Push notification error:', pushErr)
     }
 
     // Fire Meta CAPI Purchase event if sale is approved

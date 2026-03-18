@@ -380,8 +380,17 @@ const Notifications = () => {
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border/50">
                     <img src={logoIcon} alt="Gerencia ROI" className="h-10 w-10 rounded-lg object-contain" />
                     <div>
-                      <p className="text-sm font-semibold text-foreground">Venda aprovada!</p>
-                      <p className="text-xs text-muted-foreground">Valor: R$ 99,90</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {saleOptions.sendApproved === 'enabled' ? '💰 Venda aprovada!' : '⏳ Venda pendente!'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {[
+                          saleOptions.saleValue !== 'hide' && `Valor: R$ ${saleOptions.saleValue === 'net' ? '89,90' : '99,90'}`,
+                          saleOptions.productName === 'show' && 'Produto: Curso XYZ',
+                          saleOptions.utmCampaign === 'show' && 'Campanha: 120934812',
+                          saleOptions.dashboardName === 'show' && 'Dashboard: lowify',
+                        ].filter(Boolean).join(' • ') || 'Venda recebida!'}
+                      </p>
                     </div>
                   </div>
                 </div>
