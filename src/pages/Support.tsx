@@ -18,6 +18,7 @@ const tutorials = [
     buttonLabel: 'Ver tutoriais',
     buttonIcon: <List className="w-4 h-4" />,
     url: '#',
+    disabled: true,
   },
   {
     icon: null,
