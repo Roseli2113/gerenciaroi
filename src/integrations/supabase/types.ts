@@ -56,6 +56,8 @@ export type Database = {
           id: string
           is_active: boolean
           last_execution: string | null
+          last_execution_affected: number | null
+          last_execution_result: string | null
           name: string
           updated_at: string
           user_id: string
@@ -71,6 +73,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_execution?: string | null
+          last_execution_affected?: number | null
+          last_execution_result?: string | null
           name: string
           updated_at?: string
           user_id: string
@@ -86,6 +90,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_execution?: string | null
+          last_execution_affected?: number | null
+          last_execution_result?: string | null
           name?: string
           updated_at?: string
           user_id?: string
