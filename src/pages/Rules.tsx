@@ -117,8 +117,12 @@ const Rules = () => {
   const getAppliedToText = (value: string) => {
     switch (value) {
       case 'all': return 'Todas as campanhas';
-      case 'campaign1': return 'Conversão - Produto Premium';
-      case 'campaign2': return 'Tráfego - Blog Posts';
+      case 'active_campaigns': return 'Campanhas Ativas';
+      case 'active_adsets': return 'Conjuntos Ativos';
+      case 'active_ads': return 'Anúncios Ativos';
+      case 'paused_campaigns': return 'Campanhas Pausadas';
+      case 'paused_adsets': return 'Conjuntos Pausados';
+      case 'paused_ads': return 'Anúncios Pausados';
       default: return value;
     }
   };
@@ -221,6 +225,12 @@ const Rules = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as campanhas</SelectItem>
+                      <SelectItem value="active_campaigns">Campanhas Ativas</SelectItem>
+                      <SelectItem value="active_adsets">Conjuntos Ativos</SelectItem>
+                      <SelectItem value="active_ads">Anúncios Ativos</SelectItem>
+                      <SelectItem value="paused_campaigns">Campanhas Pausadas</SelectItem>
+                      <SelectItem value="paused_adsets">Conjuntos Pausados</SelectItem>
+                      <SelectItem value="paused_ads">Anúncios Pausados</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
