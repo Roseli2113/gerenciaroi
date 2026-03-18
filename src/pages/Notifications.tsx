@@ -55,7 +55,7 @@ const Notifications = () => {
     const load = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('notify_email, notify_push, notify_sms, notify_slack')
+        .select('notify_email, notify_push, notify_sms, notify_slack, sale_notif_send_pending, sale_notif_send_approved, sale_notif_sale_value, sale_notif_product_name, sale_notif_utm_campaign, sale_notif_dashboard_name')
         .eq('user_id', user.id)
         .single();
       if (data) {
@@ -64,6 +64,14 @@ const Notifications = () => {
           notify_push: data.notify_push ?? true,
           notify_sms: data.notify_sms ?? false,
           notify_slack: data.notify_slack ?? false,
+        });
+        setSaleOptions({
+          sendPending: (data as any).sale_notif_send_pending ?? 'disabled',
+          sendApproved: (data as any).sale_notif_send_approved ?? 'enabled',
+          saleValue: (data as any).sale_notif_sale_value ?? 'total',
+          productName: (data as any).sale_notif_product_name ?? 'hide',
+          utmCampaign: (data as any).sale_notif_utm_campaign ?? 'hide',
+          dashboardName: (data as any).sale_notif_dashboard_name ?? 'hide',
         });
       }
       setLoaded(true);
@@ -81,6 +89,30 @@ const Notifications = () => {
       .eq('user_id', user.id);
     if (error) {
       setSettings(prev => ({ ...prev, [key]: !newValue }));
+      toast.error('Erro ao salvar configuração');
+    }
+  };
+
+  const SALE_OPTION_DB_MAP: Record<string, string> = {
+    sendPending: 'sale_notif_send_pending',
+    sendApproved: 'sale_notif_send_approved',
+    saleValue: 'sale_notif_sale_value',
+    productName: 'sale_notif_product_name',
+    utmCampaign: 'sale_notif_utm_campaign',
+    dashboardName: 'sale_notif_dashboard_name',
+  };
+
+  const updateSaleOption = async (key: string, value: string) => {
+    const prev = saleOptions[key as keyof typeof saleOptions];
+    setSaleOptions(p => ({ ...p, [key]: value }));
+    if (!user) return;
+    const dbKey = SALE_OPTION_DB_MAP[key];
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [dbKey]: value, updated_at: new Date().toISOString() } as any)
+      .eq('user_id', user.id);
+    if (error) {
+      setSaleOptions(p => ({ ...p, [key]: prev }));
       toast.error('Erro ao salvar configuração');
     }
   };
@@ -327,7 +359,7 @@ const Notifications = () => {
                       </div>
                       <Select
                         value={saleOptions[field.key as keyof typeof saleOptions]}
-                        onValueChange={(value) => setSaleOptions(prev => ({ ...prev, [field.key]: value }))}
+                        onValueChange={(value) => updateSaleOption(field.key, value)}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue />

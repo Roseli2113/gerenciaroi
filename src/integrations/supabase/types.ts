@@ -448,6 +448,12 @@ export type Database = {
           phone: string | null
           plan: string | null
           plan_status: string | null
+          sale_notif_dashboard_name: string | null
+          sale_notif_product_name: string | null
+          sale_notif_sale_value: string | null
+          sale_notif_send_approved: string | null
+          sale_notif_send_pending: string | null
+          sale_notif_utm_campaign: string | null
           updated_at: string
           user_id: string
         }
@@ -466,6 +472,12 @@ export type Database = {
           phone?: string | null
           plan?: string | null
           plan_status?: string | null
+          sale_notif_dashboard_name?: string | null
+          sale_notif_product_name?: string | null
+          sale_notif_sale_value?: string | null
+          sale_notif_send_approved?: string | null
+          sale_notif_send_pending?: string | null
+          sale_notif_utm_campaign?: string | null
           updated_at?: string
           user_id: string
         }
@@ -484,6 +496,12 @@ export type Database = {
           phone?: string | null
           plan?: string | null
           plan_status?: string | null
+          sale_notif_dashboard_name?: string | null
+          sale_notif_product_name?: string | null
+          sale_notif_sale_value?: string | null
+          sale_notif_send_approved?: string | null
+          sale_notif_send_pending?: string | null
+          sale_notif_utm_campaign?: string | null
           updated_at?: string
           user_id?: string
         }
