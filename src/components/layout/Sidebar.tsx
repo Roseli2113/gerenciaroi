@@ -15,6 +15,7 @@ import {
   Shield,
   Menu,
   X,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -31,6 +32,7 @@ const menuItems = [
   { icon: FileText, label: 'Relatórios', path: '/reports' },
   { icon: Bell, label: 'Notificações', path: '/notifications' },
   { icon: CreditCard, label: 'Assinatura', path: '/subscription' },
+  { icon: HelpCircle, label: 'Suporte', path: '/support' },
 ];
 
 export function Sidebar() {

@@ -28,6 +28,7 @@ import OnboardingSetup from "./pages/OnboardingSetup";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import DataDeletion from "./pages/DataDeletion";
+import Support from "./pages/Support";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+              <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
