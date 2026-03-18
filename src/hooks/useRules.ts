@@ -221,17 +221,46 @@
      return updateRule(ruleId, { isActive: !rule.isActive });
    };
  
-   return {
-     rules,
-     executionLogs,
-     loading,
-     createRule,
-     updateRule,
-     deleteRule,
-     toggleRuleActive,
-     refreshRules: fetchRules,
-     refreshLogs: fetchExecutionLogs,
-   };
+  const executeRules = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('execute-rules');
+      
+      if (error) throw error;
+      
+      if (data?.error) {
+        toast.error(data.error);
+        return { executed: 0, results: [] };
+      }
+
+      const executed = data?.executed || 0;
+      if (executed > 0) {
+        toast.success(`${executed} ação(ões) executada(s) com sucesso!`);
+        await fetchRules();
+        await fetchExecutionLogs();
+      } else {
+        toast.info('Nenhuma regra precisou ser executada no momento');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error executing rules:', error);
+      toast.error('Erro ao executar regras');
+      return { executed: 0, results: [] };
+    }
+  };
+
+  return {
+    rules,
+    executionLogs,
+    loading,
+    createRule,
+    updateRule,
+    deleteRule,
+    toggleRuleActive,
+    executeRules,
+    refreshRules: fetchRules,
+    refreshLogs: fetchExecutionLogs,
+  };
  }
  
  function formatTimeAgo(date: Date): string {
