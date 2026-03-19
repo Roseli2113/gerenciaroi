@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -90,6 +90,8 @@ export function useMetaAuth() {
     loadConnection();
   }, [user]);
 
+  const isHandlingCallback = useRef(false);
+
   // Handle OAuth callback
   useEffect(() => {
     const handleCallback = async () => {
@@ -99,82 +101,87 @@ export function useMetaAuth() {
       const code = urlParams.get('code');
       const error = urlParams.get('error');
 
+      // Immediately clean URL and guard against double execution
+      if (code || error) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
       if (error) {
         toast.error('Erro ao conectar com Meta: ' + error);
-        window.history.replaceState({}, '', window.location.pathname);
         return;
       }
 
-      if (code) {
-        setIsLoading(true);
-        try {
-          const redirectUri = `${window.location.origin}/integrations`;
-          
-          const { data, error: fnError } = await supabase.functions.invoke('meta-auth', {
-            body: {
-              action: 'exchange-code',
-              code,
-              redirectUri
-            }
-          });
+      if (!code || isHandlingCallback.current) return;
+      isHandlingCallback.current = true;
 
-          if (fnError || data?.error) {
-            throw new Error(data?.error || data?.message || fnError?.message || 'Erro ao trocar código de autorização');
+      setIsLoading(true);
+      try {
+        const redirectUri = `${window.location.origin}/integrations`;
+        
+        const { data, error: fnError } = await supabase.functions.invoke('meta-auth', {
+          body: {
+            action: 'exchange-code',
+            code,
+            redirectUri
           }
+        });
 
-          // Save to database - default to 60 days if expiresIn is missing
-          const expiresInSeconds = data.expiresIn || (60 * 24 * 60 * 60);
-          const expiresAt = new Date(Date.now() + (expiresInSeconds * 1000));
-
-          // Upsert meta connection
-          const { data: savedConnection, error: saveError } = await supabase
-            .from('meta_connections')
-            .upsert({
-              user_id: user.id,
-              access_token: data.accessToken,
-              expires_at: expiresAt.toISOString(),
-              meta_user_id: data.user.id,
-              meta_user_name: data.user.name,
-              meta_user_email: data.user.email
-            }, { onConflict: 'user_id' })
-            .select()
-            .single();
-
-          if (saveError) throw saveError;
-
-          // Save ad accounts
-          if (data.adAccounts && data.adAccounts.length > 0) {
-            const adAccountsToInsert = data.adAccounts.map((acc: MetaAdAccount) => ({
-              connection_id: savedConnection.id,
-              user_id: user.id,
-              account_id: acc.id,
-              name: acc.name,
-              account_status: acc.account_status,
-              currency: acc.currency,
-              timezone_name: acc.timezone_name,
-              is_active: false
-            }));
-
-            await supabase
-              .from('meta_ad_accounts')
-              .upsert(adAccountsToInsert, { onConflict: 'connection_id,account_id' });
-          }
-
-          setConnection({
-            accessToken: data.accessToken,
-            expiresAt: expiresAt.getTime(),
-            user: data.user,
-            adAccounts: data.adAccounts
-          });
-          setIsConnected(true);
-          toast.success('Conectado ao Meta Ads com sucesso!');
-        } catch (err) {
-          console.error('Meta auth error:', err);
-          toast.error(err instanceof Error ? err.message : 'Erro ao conectar com Meta');
-        } finally {
-          setIsLoading(false);
-          window.history.replaceState({}, '', window.location.pathname);
+        if (fnError || data?.error) {
+          throw new Error(data?.error || data?.message || fnError?.message || 'Erro ao trocar código de autorização');
         }
+
+        // Save to database - default to 60 days if expiresIn is missing
+        const expiresInSeconds = data.expiresIn || (60 * 24 * 60 * 60);
+        const expiresAt = new Date(Date.now() + (expiresInSeconds * 1000));
+
+        // Upsert meta connection
+        const { data: savedConnection, error: saveError } = await supabase
+          .from('meta_connections')
+          .upsert({
+            user_id: user.id,
+            access_token: data.accessToken,
+            expires_at: expiresAt.toISOString(),
+            meta_user_id: data.user.id,
+            meta_user_name: data.user.name,
+            meta_user_email: data.user.email
+          }, { onConflict: 'user_id' })
+          .select()
+          .single();
+
+        if (saveError) throw saveError;
+
+        // Save ad accounts
+        if (data.adAccounts && data.adAccounts.length > 0) {
+          const adAccountsToInsert = data.adAccounts.map((acc: MetaAdAccount) => ({
+            connection_id: savedConnection.id,
+            user_id: user.id,
+            account_id: acc.id,
+            name: acc.name,
+            account_status: acc.account_status,
+            currency: acc.currency,
+            timezone_name: acc.timezone_name,
+            is_active: false
+          }));
+
+          await supabase
+            .from('meta_ad_accounts')
+            .upsert(adAccountsToInsert, { onConflict: 'connection_id,account_id' });
+        }
+
+        setConnection({
+          accessToken: data.accessToken,
+          expiresAt: expiresAt.getTime(),
+          user: data.user,
+          adAccounts: data.adAccounts
+        });
+        setIsConnected(true);
+        toast.success('Conectado ao Meta Ads com sucesso!');
+      } catch (err) {
+        console.error('Meta auth error:', err);
+        toast.error(err instanceof Error ? err.message : 'Erro ao conectar com Meta');
+      } finally {
+        setIsLoading(false);
+        isHandlingCallback.current = false;
       }
     };
 
