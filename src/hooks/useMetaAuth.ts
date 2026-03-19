@@ -90,6 +90,8 @@ export function useMetaAuth() {
     loadConnection();
   }, [user]);
 
+  const isHandlingCallback = useRef(false);
+
   // Handle OAuth callback
   useEffect(() => {
     const handleCallback = async () => {
@@ -98,6 +100,19 @@ export function useMetaAuth() {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const error = urlParams.get('error');
+
+      // Immediately clean URL and guard against double execution
+      if (code || error) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      if (error) {
+        toast.error('Erro ao conectar com Meta: ' + error);
+        return;
+      }
+
+      if (!code || isHandlingCallback.current) return;
+      isHandlingCallback.current = true;
 
       if (error) {
         toast.error('Erro ao conectar com Meta: ' + error);
