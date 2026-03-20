@@ -91,19 +91,30 @@ export function useMetaAuth() {
   }, [user]);
 
   const isHandlingCallback = useRef(false);
+  const handledCallbackCodeRef = useRef<string | null>(null);
 
   // Handle OAuth callback
   useEffect(() => {
     const handleCallback = async () => {
       if (!user) return;
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      const error = urlParams.get('error');
+      const currentUrl = new URL(window.location.href);
+      const code = currentUrl.searchParams.get('code');
+      const error = currentUrl.searchParams.get('error');
+      const storageKey = 'meta-oauth-last-code';
+      const clearOAuthParams = () => {
+        const cleanUrl = new URL(window.location.href);
+        ['code', 'error', 'error_reason', 'error_description', 'state'].forEach(param => {
+          cleanUrl.searchParams.delete(param);
+        });
+        const nextUrl = `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`;
+        window.history.replaceState({}, '', nextUrl || cleanUrl.pathname);
+      };
 
-      // Immediately clean URL and guard against double execution
+      if (!code && !error) return;
+
       if (code || error) {
-        window.history.replaceState({}, '', window.location.pathname);
+        clearOAuthParams();
       }
 
       if (error) {
@@ -111,13 +122,19 @@ export function useMetaAuth() {
         return;
       }
 
-      if (!code || isHandlingCallback.current) return;
+      const lastHandledCode = sessionStorage.getItem(storageKey);
+      if (!code || isHandlingCallback.current || handledCallbackCodeRef.current === code || lastHandledCode === code) {
+        return;
+      }
+
       isHandlingCallback.current = true;
+      handledCallbackCodeRef.current = code;
+      sessionStorage.setItem(storageKey, code);
 
       setIsLoading(true);
       try {
         const redirectUri = `${window.location.origin}/integrations`;
-        
+
         const { data, error: fnError } = await supabase.functions.invoke('meta-auth', {
           body: {
             action: 'exchange-code',
@@ -130,11 +147,9 @@ export function useMetaAuth() {
           throw new Error(data?.error || data?.message || fnError?.message || 'Erro ao trocar código de autorização');
         }
 
-        // Save to database - default to 60 days if expiresIn is missing
         const expiresInSeconds = data.expiresIn || (60 * 24 * 60 * 60);
         const expiresAt = new Date(Date.now() + (expiresInSeconds * 1000));
 
-        // Upsert meta connection
         const { data: savedConnection, error: saveError } = await supabase
           .from('meta_connections')
           .upsert({
@@ -150,7 +165,6 @@ export function useMetaAuth() {
 
         if (saveError) throw saveError;
 
-        // Save ad accounts
         if (data.adAccounts && data.adAccounts.length > 0) {
           const adAccountsToInsert = data.adAccounts.map((acc: MetaAdAccount) => ({
             connection_id: savedConnection.id,
