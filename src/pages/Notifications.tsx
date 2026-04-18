@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSaleNotification, SOUND_OPTIONS, type SoundId } from '@/hooks/useSaleNotification';
+import { BudgetAlertCard } from '@/components/notifications/BudgetAlertCard';
 
 interface Notification {
   id: string;
@@ -323,6 +324,9 @@ const Notifications = () => {
                 </p>
               </CardContent>
             </Card>
+
+            {/* Budget Alert Card */}
+            <BudgetAlertCard />
 
             {/* Sale Notification Options */}
             <Card>
