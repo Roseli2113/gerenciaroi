@@ -118,21 +118,37 @@ const Rules = () => {
     }
   };
 
-  const getActionText = (type: string) => {
-    switch (type) {
+  const formatActionValue = (rule: Rule) => {
+    if (rule.actionValue == null) return '';
+    return rule.actionValueType === 'amount'
+      ? `R$ ${Number(rule.actionValue).toFixed(2)}`
+      : `${rule.actionValue}%`;
+  };
+
+  const getActionText = (rule: Rule) => {
+    switch (rule.actionType) {
       case 'pause': return 'Pausar campanha';
       case 'pause_adset': return 'Pausar conjunto';
       case 'pause_ad': return 'Pausar anúncio';
-      case 'increase_budget': return 'Aumentar orçamento em 20%';
-      case 'decrease_budget': return 'Diminuir orçamento em 20%';
+      case 'increase_budget': return `Aumentar orçamento em ${formatActionValue(rule) || '20%'}`;
+      case 'decrease_budget': return `Diminuir orçamento em ${formatActionValue(rule) || '20%'}`;
       case 'activate': return 'Ativar campanha';
       default: return '';
     }
   };
 
-  const getAppliedToText = (value: string) => {
+  const getAppliedToText = (value: string, targetId?: string | null) => {
     switch (value) {
       case 'all': return 'Todas as campanhas';
+      case 'all_adsets': return 'Todos os conjuntos';
+      case 'specific_campaign': {
+        const c = campaigns.find(x => x.id === targetId);
+        return c ? `Campanha: ${c.name}` : 'Escolher uma campanha';
+      }
+      case 'specific_adset': {
+        const a = adSets.find(x => x.id === targetId);
+        return a ? `Conjunto: ${a.name}` : 'Escolher um conjunto';
+      }
       case 'active_campaigns': return 'Campanhas Ativas';
       case 'active_adsets': return 'Conjuntos Ativos';
       case 'active_ads': return 'Anúncios Ativos';
@@ -162,26 +178,31 @@ const Rules = () => {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
+    if (needsTarget && !formTargetId) {
+      toast.error('Selecione a campanha ou conjunto');
+      return;
+    }
+    if (isBudgetAction && (!formActionValue || Number(formActionValue) <= 0)) {
+      toast.error('Informe o valor da ação');
+      return;
+    }
+
+    const payload = {
+      name: formName,
+      conditionType: formConditionType,
+      conditionValue: formConditionValue,
+      actionType: formActionType,
+      actionValue: isBudgetAction ? Number(formActionValue) : null,
+      actionValueType: isBudgetAction ? formActionValueType : 'percentage',
+      frequency: formFrequency,
+      appliedTo: formAppliedTo,
+      targetId: needsTarget ? formTargetId : null,
+    };
 
     if (editingRuleId) {
-      await updateRule(editingRuleId, {
-        name: formName,
-        conditionType: formConditionType,
-        conditionValue: formConditionValue,
-        actionType: formActionType,
-        frequency: formFrequency,
-        appliedTo: formAppliedTo,
-      });
+      await updateRule(editingRuleId, payload);
     } else {
-      await createRule({
-        name: formName,
-        conditionType: formConditionType,
-        conditionValue: formConditionValue,
-        actionType: formActionType,
-        frequency: formFrequency,
-        isActive: true,
-        appliedTo: formAppliedTo,
-      });
+      await createRule({ ...payload, isActive: true });
     }
 
     setIsDialogOpen(false);
