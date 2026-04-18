@@ -8,8 +8,11 @@ export interface Rule {
   conditionType: string;
   conditionValue: string;
   actionType: string;
+  actionValue?: number | null;
+  actionValueType?: 'percentage' | 'amount' | string;
   frequency: string;
   appliedTo: string;
+  targetId?: string | null;
   isActive: boolean;
   executions: number;
   lastExecution?: string;
@@ -54,20 +57,23 @@ export interface Rule {
  
        if (error) throw error;
  
-        const mappedRules: Rule[] = (data || []).map((r: any) => ({
-          id: r.id,
-          name: r.name,
-          conditionType: r.condition_type,
-          conditionValue: r.condition_value,
-          actionType: r.action_type,
-          frequency: r.frequency,
-          appliedTo: r.applied_to,
-          isActive: r.is_active,
-          executions: r.executions,
-          lastExecution: r.last_execution ? formatTimeAgo(new Date(r.last_execution)) : undefined,
-          lastExecutionResult: r.last_execution_result || null,
-          lastExecutionAffected: r.last_execution_affected || 0,
-        }));
+         const mappedRules: Rule[] = (data || []).map((r: any) => ({
+           id: r.id,
+           name: r.name,
+           conditionType: r.condition_type,
+           conditionValue: r.condition_value,
+           actionType: r.action_type,
+           actionValue: r.action_value ?? null,
+           actionValueType: r.action_value_type ?? 'percentage',
+           frequency: r.frequency,
+           appliedTo: r.applied_to,
+           targetId: r.target_id ?? null,
+           isActive: r.is_active,
+           executions: r.executions,
+           lastExecution: r.last_execution ? formatTimeAgo(new Date(r.last_execution)) : undefined,
+           lastExecutionResult: r.last_execution_result || null,
+           lastExecutionAffected: r.last_execution_affected || 0,
+         }));
  
        setRules(mappedRules);
      } catch (error) {
@@ -120,35 +126,41 @@ export interface Rule {
        return null;
      }
  
-     try {
-       const { data, error } = await supabase
-         .from('automation_rules')
-         .insert({
-           user_id: userId,
-           name: rule.name,
-           condition_type: rule.conditionType,
-           condition_value: rule.conditionValue,
-           action_type: rule.actionType,
-           frequency: rule.frequency,
-           applied_to: rule.appliedTo,
-           is_active: rule.isActive,
-         })
-         .select()
-         .single();
- 
-       if (error) throw error;
- 
-       const newRule: Rule = {
-         id: data.id,
-         name: data.name,
-         conditionType: data.condition_type,
-         conditionValue: data.condition_value,
-         actionType: data.action_type,
-         frequency: data.frequency,
-         appliedTo: data.applied_to,
-         isActive: data.is_active,
-         executions: 0,
-       };
+      try {
+        const { data, error } = await supabase
+          .from('automation_rules')
+          .insert({
+            user_id: userId,
+            name: rule.name,
+            condition_type: rule.conditionType,
+            condition_value: rule.conditionValue,
+            action_type: rule.actionType,
+            action_value: rule.actionValue ?? null,
+            action_value_type: rule.actionValueType ?? 'percentage',
+            frequency: rule.frequency,
+            applied_to: rule.appliedTo,
+            target_id: rule.targetId ?? null,
+            is_active: rule.isActive,
+          } as any)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const newRule: Rule = {
+          id: data.id,
+          name: data.name,
+          conditionType: data.condition_type,
+          conditionValue: data.condition_value,
+          actionType: data.action_type,
+          actionValue: (data as any).action_value ?? null,
+          actionValueType: (data as any).action_value_type ?? 'percentage',
+          frequency: data.frequency,
+          appliedTo: data.applied_to,
+          targetId: (data as any).target_id ?? null,
+          isActive: data.is_active,
+          executions: 0,
+        };
  
        setRules(prev => [newRule, ...prev]);
        toast.success('Regra criada com sucesso!');
@@ -164,14 +176,17 @@ export interface Rule {
      if (!userId) return false;
  
      try {
-       const dbUpdates: any = {};
-       if (updates.name !== undefined) dbUpdates.name = updates.name;
-       if (updates.conditionType !== undefined) dbUpdates.condition_type = updates.conditionType;
-       if (updates.conditionValue !== undefined) dbUpdates.condition_value = updates.conditionValue;
-       if (updates.actionType !== undefined) dbUpdates.action_type = updates.actionType;
-       if (updates.frequency !== undefined) dbUpdates.frequency = updates.frequency;
-       if (updates.appliedTo !== undefined) dbUpdates.applied_to = updates.appliedTo;
-       if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.conditionType !== undefined) dbUpdates.condition_type = updates.conditionType;
+        if (updates.conditionValue !== undefined) dbUpdates.condition_value = updates.conditionValue;
+        if (updates.actionType !== undefined) dbUpdates.action_type = updates.actionType;
+        if (updates.actionValue !== undefined) dbUpdates.action_value = updates.actionValue;
+        if (updates.actionValueType !== undefined) dbUpdates.action_value_type = updates.actionValueType;
+        if (updates.frequency !== undefined) dbUpdates.frequency = updates.frequency;
+        if (updates.appliedTo !== undefined) dbUpdates.applied_to = updates.appliedTo;
+        if (updates.targetId !== undefined) dbUpdates.target_id = updates.targetId;
+        if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
  
        const { error } = await supabase
          .from('automation_rules')
