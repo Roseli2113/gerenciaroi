@@ -47,6 +47,8 @@ export type Database = {
       automation_rules: {
         Row: {
           action_type: string
+          action_value: number | null
+          action_value_type: string | null
           applied_to: string
           condition_type: string
           condition_value: string
@@ -59,11 +61,14 @@ export type Database = {
           last_execution_affected: number | null
           last_execution_result: string | null
           name: string
+          target_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           action_type: string
+          action_value?: number | null
+          action_value_type?: string | null
           applied_to?: string
           condition_type: string
           condition_value: string
@@ -76,11 +81,14 @@ export type Database = {
           last_execution_affected?: number | null
           last_execution_result?: string | null
           name: string
+          target_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           action_type?: string
+          action_value?: number | null
+          action_value_type?: string | null
           applied_to?: string
           condition_type?: string
           condition_value?: string
@@ -93,6 +101,49 @@ export type Database = {
           last_execution_affected?: number | null
           last_execution_result?: string | null
           name?: string
+          target_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      budget_alerts: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          alert_threshold: number
+          budget_amount: number
+          created_at: string
+          id: string
+          is_active: boolean
+          last_alert_sent_at: string | null
+          last_spent: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          alert_threshold?: number
+          budget_amount?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_alert_sent_at?: string | null
+          last_spent?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          alert_threshold?: number
+          budget_amount?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_alert_sent_at?: string | null
+          last_spent?: number | null
           updated_at?: string
           user_id?: string
         }
