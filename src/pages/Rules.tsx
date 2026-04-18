@@ -273,12 +273,15 @@ const Rules = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Aplicar em</Label>
-                  <Select value={formAppliedTo} onValueChange={setFormAppliedTo}>
+                  <Select value={formAppliedTo} onValueChange={(v) => { setFormAppliedTo(v); setFormTargetId(''); }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as campanhas</SelectItem>
+                      <SelectItem value="specific_campaign">Escolher uma campanha</SelectItem>
+                      <SelectItem value="all_adsets">Todos os conjuntos</SelectItem>
+                      <SelectItem value="specific_adset">Escolher um conjunto</SelectItem>
                       <SelectItem value="active_campaigns">Campanhas Ativas</SelectItem>
                       <SelectItem value="active_adsets">Conjuntos Ativos</SelectItem>
                       <SelectItem value="active_ads">Anúncios Ativos</SelectItem>
@@ -288,6 +291,24 @@ const Rules = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                {needsTarget && (
+                  <div className="space-y-2">
+                    <Label>{formAppliedTo === 'specific_campaign' ? 'Campanha' : 'Conjunto'}</Label>
+                    <Select value={formTargetId} onValueChange={setFormTargetId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Selecione ${formAppliedTo === 'specific_campaign' ? 'uma campanha' : 'um conjunto'}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(formAppliedTo === 'specific_campaign' ? campaigns : adSets).map((item) => (
+                          <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                        ))}
+                        {(formAppliedTo === 'specific_campaign' ? campaigns : adSets).length === 0 && (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum item disponível</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Condição</Label>
