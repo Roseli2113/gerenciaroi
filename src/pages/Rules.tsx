@@ -371,6 +371,33 @@ const Rules = () => {
                     </Select>
                   </div>
                 </div>
+                {isBudgetAction && (
+                  <div className="space-y-2">
+                    <Label>Aplicar Ação</Label>
+                    <div className="grid grid-cols-[1fr_140px] gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step={formActionValueType === 'amount' ? '0.01' : '1'}
+                        placeholder={formActionValueType === 'amount' ? '10.00' : '20'}
+                        value={formActionValue}
+                        onChange={(e) => setFormActionValue(e.target.value)}
+                      />
+                      <Select value={formActionValueType} onValueChange={(v) => setFormActionValueType(v as 'percentage' | 'amount')}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">Porcentagem (%)</SelectItem>
+                          <SelectItem value="amount">Valor (R$)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formActionType === 'increase_budget' ? 'Aumentar' : 'Diminuir'} orçamento em {formActionValueType === 'amount' ? `R$ ${formActionValue || '0'}` : `${formActionValue || '0'}%`}
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => {
@@ -423,7 +450,7 @@ const Rules = () => {
                     <div>
                       <CardTitle className="text-base">{rule.name}</CardTitle>
                       <CardDescription className="text-xs mt-1">
-                        {getAppliedToText(rule.appliedTo)}
+                        {getAppliedToText(rule.appliedTo, rule.targetId)}
                       </CardDescription>
                     </div>
                   </div>
@@ -462,7 +489,7 @@ const Rules = () => {
                       ? 'bg-destructive/20 text-destructive border-0' 
                       : 'bg-success/20 text-success border-0'
                   )}>
-                        {getActionText(rule.actionType)}
+                        {getActionText(rule)}
                   </Badge>
                 </div>
 
