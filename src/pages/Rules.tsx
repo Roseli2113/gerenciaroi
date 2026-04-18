@@ -42,6 +42,7 @@ import { Plus, Zap, TrendingUp, Pause, Clock, History, Pencil, Trash2, Loader2, 
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRules, Rule } from '@/hooks/useRules';
+import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 
 const Rules = () => {
   const { 
@@ -54,6 +55,7 @@ const Rules = () => {
     toggleRuleActive,
     executeRules 
   } = useRules();
+  const { campaigns, adSets } = useMetaCampaigns('today');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null);
@@ -62,17 +64,23 @@ const Rules = () => {
   // Form state
   const [formName, setFormName] = useState('');
   const [formAppliedTo, setFormAppliedTo] = useState('all');
+  const [formTargetId, setFormTargetId] = useState<string>('');
   const [formConditionType, setFormConditionType] = useState('cpa_greater');
   const [formConditionValue, setFormConditionValue] = useState('');
   const [formActionType, setFormActionType] = useState('pause');
+  const [formActionValue, setFormActionValue] = useState<string>('20');
+  const [formActionValueType, setFormActionValueType] = useState<'percentage' | 'amount'>('percentage');
   const [formFrequency, setFormFrequency] = useState('30min');
 
   const resetForm = () => {
     setFormName('');
     setFormAppliedTo('all');
+    setFormTargetId('');
     setFormConditionType('cpa_greater');
     setFormConditionValue('');
     setFormActionType('pause');
+    setFormActionValue('20');
+    setFormActionValueType('percentage');
     setFormFrequency('30min');
     setEditingRuleId(null);
   };
@@ -81,9 +89,12 @@ const Rules = () => {
     setEditingRuleId(rule.id);
     setFormName(rule.name);
     setFormAppliedTo(rule.appliedTo);
+    setFormTargetId(rule.targetId || '');
     setFormConditionType(rule.conditionType);
     setFormConditionValue(rule.conditionValue);
     setFormActionType(rule.actionType);
+    setFormActionValue(rule.actionValue != null ? String(rule.actionValue) : '20');
+    setFormActionValueType((rule.actionValueType as 'percentage' | 'amount') || 'percentage');
     setFormFrequency(rule.frequency);
     setIsDialogOpen(true);
   };
@@ -92,6 +103,9 @@ const Rules = () => {
     resetForm();
     setIsDialogOpen(true);
   };
+
+  const isBudgetAction = formActionType === 'increase_budget' || formActionType === 'decrease_budget';
+  const needsTarget = formAppliedTo === 'specific_campaign' || formAppliedTo === 'specific_adset';
 
   const getConditionText = (type: string, value: string) => {
     switch (type) {
