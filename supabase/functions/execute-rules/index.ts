@@ -15,8 +15,11 @@ interface AutomationRule {
   condition_type: string;
   condition_value: string;
   action_type: string;
+  action_value?: number | null;
+  action_value_type?: string | null;
   frequency: string;
   applied_to: string;
+  target_id?: string | null;
   is_active: boolean;
   executions: number;
   last_execution: string | null;
@@ -68,6 +71,9 @@ function getEntityTypeAndStatus(appliedTo: string): { entityType: "campaign" | "
     case "paused_adsets": return { entityType: "adset", statusFilter: "PAUSED" };
     case "active_ads": return { entityType: "ad", statusFilter: "ACTIVE" };
     case "paused_ads": return { entityType: "ad", statusFilter: "PAUSED" };
+    case "all_adsets": return { entityType: "adset", statusFilter: null };
+    case "specific_campaign": return { entityType: "campaign", statusFilter: null };
+    case "specific_adset": return { entityType: "adset", statusFilter: null };
     case "all":
     default:
       return { entityType: "campaign", statusFilter: null };
@@ -171,8 +177,10 @@ function evaluateCondition(
 
 function getActionForEntityType(
   actionType: string,
-  entityType: "campaign" | "adset" | "ad"
-): { metaAction: string; description: string } | null {
+  entityType: "campaign" | "adset" | "ad",
+  actionValue?: number | null,
+  actionValueType?: string | null,
+): { metaAction: string; description: string; value?: number; valueType?: string } | null {
   switch (actionType) {
     case "pause":
     case "pause_adset":
@@ -186,10 +194,16 @@ function getActionForEntityType(
       if (entityType === "adset") return { metaAction: "ACTIVE", description: "Conjunto ativado" };
       if (entityType === "ad") return { metaAction: "ACTIVE", description: "Anúncio ativado" };
       return null;
-    case "increase_budget":
-      return { metaAction: "increase_budget", description: "Orçamento aumentado em 20%" };
-    case "decrease_budget":
-      return { metaAction: "decrease_budget", description: "Orçamento diminuído em 20%" };
+    case "increase_budget": {
+      const v = actionValue ?? 20;
+      const isAmount = actionValueType === 'amount';
+      return { metaAction: "increase_budget", description: `Orçamento aumentado em ${isAmount ? `R$ ${v.toFixed(2)}` : `${v}%`}`, value: v, valueType: actionValueType || 'percentage' };
+    }
+    case "decrease_budget": {
+      const v = actionValue ?? 20;
+      const isAmount = actionValueType === 'amount';
+      return { metaAction: "decrease_budget", description: `Orçamento diminuído em ${isAmount ? `R$ ${v.toFixed(2)}` : `${v}%`}`, value: v, valueType: actionValueType || 'percentage' };
+    }
     default:
       return null;
   }
@@ -198,7 +212,7 @@ function getActionForEntityType(
 async function executeAction(
   accessToken: string,
   entity: MetaEntity,
-  actionInfo: { metaAction: string; description: string }
+  actionInfo: { metaAction: string; description: string; value?: number; valueType?: string }
 ): Promise<boolean> {
   try {
     if (actionInfo.metaAction === "PAUSED" || actionInfo.metaAction === "ACTIVE") {
@@ -221,8 +235,16 @@ async function executeAction(
 
       if (!currentBudget) return false;
 
-      const multiplier = actionInfo.metaAction === "increase_budget" ? 1.2 : 0.8;
-      const newBudget = Math.round(currentBudget * multiplier);
+      const sign = actionInfo.metaAction === "increase_budget" ? 1 : -1;
+      const v = actionInfo.value ?? 20;
+      let newBudget: number;
+      if (actionInfo.valueType === 'amount') {
+        // Meta budgets are in cents
+        newBudget = Math.max(1, Math.round(currentBudget + sign * v * 100));
+      } else {
+        const multiplier = 1 + sign * (v / 100);
+        newBudget = Math.max(1, Math.round(currentBudget * multiplier));
+      }
       const budgetField = entity.daily_budget ? "daily_budget" : "lifetime_budget";
 
       const url = `${BASE_URL}/${entity.id}?access_token=${accessToken}`;
@@ -274,7 +296,7 @@ async function processRulesForUser(
     if (!forceExecute && !shouldExecuteRule(rule)) continue;
 
     const { entityType, statusFilter } = getEntityTypeAndStatus(rule.applied_to);
-    const actionInfo = getActionForEntityType(rule.action_type, entityType);
+    const actionInfo = getActionForEntityType(rule.action_type, entityType, rule.action_value, rule.action_value_type);
     if (!actionInfo) continue;
 
     let ruleAffected = 0;
@@ -290,6 +312,10 @@ async function processRulesForUser(
         );
 
         for (const { entity, spent, cpa, roi } of entities) {
+          // Filter by specific target if applicable
+          if ((rule.applied_to === 'specific_campaign' || rule.applied_to === 'specific_adset') && rule.target_id && entity.id !== rule.target_id) {
+            continue;
+          }
           if (!evaluateCondition(rule.condition_type, rule.condition_value, spent, cpa, roi)) {
             continue;
           }

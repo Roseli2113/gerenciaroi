@@ -42,6 +42,7 @@ import { Plus, Zap, TrendingUp, Pause, Clock, History, Pencil, Trash2, Loader2, 
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRules, Rule } from '@/hooks/useRules';
+import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 
 const Rules = () => {
   const { 
@@ -54,6 +55,7 @@ const Rules = () => {
     toggleRuleActive,
     executeRules 
   } = useRules();
+  const { campaigns, adSets } = useMetaCampaigns('today');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null);
@@ -62,17 +64,23 @@ const Rules = () => {
   // Form state
   const [formName, setFormName] = useState('');
   const [formAppliedTo, setFormAppliedTo] = useState('all');
+  const [formTargetId, setFormTargetId] = useState<string>('');
   const [formConditionType, setFormConditionType] = useState('cpa_greater');
   const [formConditionValue, setFormConditionValue] = useState('');
   const [formActionType, setFormActionType] = useState('pause');
+  const [formActionValue, setFormActionValue] = useState<string>('20');
+  const [formActionValueType, setFormActionValueType] = useState<'percentage' | 'amount'>('percentage');
   const [formFrequency, setFormFrequency] = useState('30min');
 
   const resetForm = () => {
     setFormName('');
     setFormAppliedTo('all');
+    setFormTargetId('');
     setFormConditionType('cpa_greater');
     setFormConditionValue('');
     setFormActionType('pause');
+    setFormActionValue('20');
+    setFormActionValueType('percentage');
     setFormFrequency('30min');
     setEditingRuleId(null);
   };
@@ -81,9 +89,12 @@ const Rules = () => {
     setEditingRuleId(rule.id);
     setFormName(rule.name);
     setFormAppliedTo(rule.appliedTo);
+    setFormTargetId(rule.targetId || '');
     setFormConditionType(rule.conditionType);
     setFormConditionValue(rule.conditionValue);
     setFormActionType(rule.actionType);
+    setFormActionValue(rule.actionValue != null ? String(rule.actionValue) : '20');
+    setFormActionValueType((rule.actionValueType as 'percentage' | 'amount') || 'percentage');
     setFormFrequency(rule.frequency);
     setIsDialogOpen(true);
   };
@@ -92,6 +103,9 @@ const Rules = () => {
     resetForm();
     setIsDialogOpen(true);
   };
+
+  const isBudgetAction = formActionType === 'increase_budget' || formActionType === 'decrease_budget';
+  const needsTarget = formAppliedTo === 'specific_campaign' || formAppliedTo === 'specific_adset';
 
   const getConditionText = (type: string, value: string) => {
     switch (type) {
@@ -104,21 +118,37 @@ const Rules = () => {
     }
   };
 
-  const getActionText = (type: string) => {
-    switch (type) {
+  const formatActionValue = (rule: Rule) => {
+    if (rule.actionValue == null) return '';
+    return rule.actionValueType === 'amount'
+      ? `R$ ${Number(rule.actionValue).toFixed(2)}`
+      : `${rule.actionValue}%`;
+  };
+
+  const getActionText = (rule: Rule) => {
+    switch (rule.actionType) {
       case 'pause': return 'Pausar campanha';
       case 'pause_adset': return 'Pausar conjunto';
       case 'pause_ad': return 'Pausar anúncio';
-      case 'increase_budget': return 'Aumentar orçamento em 20%';
-      case 'decrease_budget': return 'Diminuir orçamento em 20%';
+      case 'increase_budget': return `Aumentar orçamento em ${formatActionValue(rule) || '20%'}`;
+      case 'decrease_budget': return `Diminuir orçamento em ${formatActionValue(rule) || '20%'}`;
       case 'activate': return 'Ativar campanha';
       default: return '';
     }
   };
 
-  const getAppliedToText = (value: string) => {
+  const getAppliedToText = (value: string, targetId?: string | null) => {
     switch (value) {
       case 'all': return 'Todas as campanhas';
+      case 'all_adsets': return 'Todos os conjuntos';
+      case 'specific_campaign': {
+        const c = campaigns.find(x => x.id === targetId);
+        return c ? `Campanha: ${c.name}` : 'Escolher uma campanha';
+      }
+      case 'specific_adset': {
+        const a = adSets.find(x => x.id === targetId);
+        return a ? `Conjunto: ${a.name}` : 'Escolher um conjunto';
+      }
       case 'active_campaigns': return 'Campanhas Ativas';
       case 'active_adsets': return 'Conjuntos Ativos';
       case 'active_ads': return 'Anúncios Ativos';
@@ -148,26 +178,31 @@ const Rules = () => {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
+    if (needsTarget && !formTargetId) {
+      toast.error('Selecione a campanha ou conjunto');
+      return;
+    }
+    if (isBudgetAction && (!formActionValue || Number(formActionValue) <= 0)) {
+      toast.error('Informe o valor da ação');
+      return;
+    }
+
+    const payload = {
+      name: formName,
+      conditionType: formConditionType,
+      conditionValue: formConditionValue,
+      actionType: formActionType,
+      actionValue: isBudgetAction ? Number(formActionValue) : null,
+      actionValueType: isBudgetAction ? formActionValueType : 'percentage',
+      frequency: formFrequency,
+      appliedTo: formAppliedTo,
+      targetId: needsTarget ? formTargetId : null,
+    };
 
     if (editingRuleId) {
-      await updateRule(editingRuleId, {
-        name: formName,
-        conditionType: formConditionType,
-        conditionValue: formConditionValue,
-        actionType: formActionType,
-        frequency: formFrequency,
-        appliedTo: formAppliedTo,
-      });
+      await updateRule(editingRuleId, payload);
     } else {
-      await createRule({
-        name: formName,
-        conditionType: formConditionType,
-        conditionValue: formConditionValue,
-        actionType: formActionType,
-        frequency: formFrequency,
-        isActive: true,
-        appliedTo: formAppliedTo,
-      });
+      await createRule({ ...payload, isActive: true });
     }
 
     setIsDialogOpen(false);
@@ -238,12 +273,15 @@ const Rules = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Aplicar em</Label>
-                  <Select value={formAppliedTo} onValueChange={setFormAppliedTo}>
+                  <Select value={formAppliedTo} onValueChange={(v) => { setFormAppliedTo(v); setFormTargetId(''); }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as campanhas</SelectItem>
+                      <SelectItem value="specific_campaign">Escolher uma campanha</SelectItem>
+                      <SelectItem value="all_adsets">Todos os conjuntos</SelectItem>
+                      <SelectItem value="specific_adset">Escolher um conjunto</SelectItem>
                       <SelectItem value="active_campaigns">Campanhas Ativas</SelectItem>
                       <SelectItem value="active_adsets">Conjuntos Ativos</SelectItem>
                       <SelectItem value="active_ads">Anúncios Ativos</SelectItem>
@@ -253,6 +291,24 @@ const Rules = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                {needsTarget && (
+                  <div className="space-y-2">
+                    <Label>{formAppliedTo === 'specific_campaign' ? 'Campanha' : 'Conjunto'}</Label>
+                    <Select value={formTargetId} onValueChange={setFormTargetId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Selecione ${formAppliedTo === 'specific_campaign' ? 'uma campanha' : 'um conjunto'}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(formAppliedTo === 'specific_campaign' ? campaigns : adSets).map((item) => (
+                          <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                        ))}
+                        {(formAppliedTo === 'specific_campaign' ? campaigns : adSets).length === 0 && (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum item disponível</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Condição</Label>
@@ -315,6 +371,33 @@ const Rules = () => {
                     </Select>
                   </div>
                 </div>
+                {isBudgetAction && (
+                  <div className="space-y-2">
+                    <Label>Aplicar Ação</Label>
+                    <div className="grid grid-cols-[1fr_140px] gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step={formActionValueType === 'amount' ? '0.01' : '1'}
+                        placeholder={formActionValueType === 'amount' ? '10.00' : '20'}
+                        value={formActionValue}
+                        onChange={(e) => setFormActionValue(e.target.value)}
+                      />
+                      <Select value={formActionValueType} onValueChange={(v) => setFormActionValueType(v as 'percentage' | 'amount')}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">Porcentagem (%)</SelectItem>
+                          <SelectItem value="amount">Valor (R$)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formActionType === 'increase_budget' ? 'Aumentar' : 'Diminuir'} orçamento em {formActionValueType === 'amount' ? `R$ ${formActionValue || '0'}` : `${formActionValue || '0'}%`}
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => {
@@ -367,7 +450,7 @@ const Rules = () => {
                     <div>
                       <CardTitle className="text-base">{rule.name}</CardTitle>
                       <CardDescription className="text-xs mt-1">
-                        {getAppliedToText(rule.appliedTo)}
+                        {getAppliedToText(rule.appliedTo, rule.targetId)}
                       </CardDescription>
                     </div>
                   </div>
@@ -406,7 +489,7 @@ const Rules = () => {
                       ? 'bg-destructive/20 text-destructive border-0' 
                       : 'bg-success/20 text-success border-0'
                   )}>
-                        {getActionText(rule.actionType)}
+                        {getActionText(rule)}
                   </Badge>
                 </div>
 
