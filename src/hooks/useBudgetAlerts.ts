@@ -10,6 +10,7 @@ export interface BudgetAlert {
   is_active: boolean;
   last_spent: number | null;
   account_name: string | null;
+  account_id: string | null;
 }
 
 export function useBudgetAlerts() {
@@ -22,7 +23,7 @@ export function useBudgetAlerts() {
     setLoading(true);
     const { data, error } = await (supabase as any)
       .from('budget_alerts')
-      .select('id, budget_amount, alert_threshold, is_active, last_spent, account_name')
+      .select('id, budget_amount, alert_threshold, is_active, last_spent, account_name, account_id')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
     if (!error && data) setAlerts(data as BudgetAlert[]);
@@ -33,13 +34,19 @@ export function useBudgetAlerts() {
     fetchAlerts();
   }, [fetchAlerts]);
 
-  const createAlert = async (budget: number, threshold: number, accountName?: string) => {
+  const createAlert = async (
+    budget: number,
+    threshold: number,
+    accountName?: string,
+    accountId?: string,
+  ) => {
     if (!user) return false;
     const { error } = await (supabase as any).from('budget_alerts').insert({
       user_id: user.id,
       budget_amount: budget,
       alert_threshold: threshold,
       account_name: accountName || null,
+      account_id: accountId || null,
       is_active: true,
     });
     if (error) {

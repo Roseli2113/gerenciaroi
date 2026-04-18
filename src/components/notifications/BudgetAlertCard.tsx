@@ -4,15 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Wallet, Plus, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { useBudgetAlerts } from '@/hooks/useBudgetAlerts';
+import { useMetaAdAccounts } from '@/hooks/useMetaAdAccounts';
 import { cn } from '@/lib/utils';
 
 export function BudgetAlertCard() {
   const { alerts, loading, createAlert, updateAlert, deleteAlert } = useBudgetAlerts();
+  const { accounts, loading: loadingAccounts } = useMetaAdAccounts();
   const [budget, setBudget] = useState('');
   const [threshold, setThreshold] = useState('90');
-  const [name, setName] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
@@ -20,13 +23,15 @@ export function BudgetAlertCard() {
     const t = Number(threshold);
     if (!b || b <= 0) return;
     if (!t || t < 1 || t > 100) return;
+    if (!selectedAccountId) return;
+    const account = accounts.find((a) => a.account_id === selectedAccountId);
     setSubmitting(true);
-    const ok = await createAlert(b, t, name.trim() || undefined);
+    const ok = await createAlert(b, t, account?.name, selectedAccountId);
     setSubmitting(false);
     if (ok) {
       setBudget('');
       setThreshold('90');
-      setName('');
+      setSelectedAccountId('');
     }
   };
 
@@ -38,20 +43,32 @@ export function BudgetAlertCard() {
           Alerta de Saldo de Anúncios
         </CardTitle>
         <CardDescription>
-          Defina um valor de orçamento. Quando o gasto se aproximar, você receberá uma notificação.
+          Defina um valor de orçamento por conta. Quando o gasto se aproximar, você receberá uma notificação automática.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Create form */}
         <div className="space-y-3 p-3 rounded-xl bg-muted/30 border border-border/50">
           <div className="space-y-1.5">
-            <Label className="text-xs">Apelido (opcional)</Label>
-            <Input
-              placeholder="Ex: Conta Principal"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={60}
-            />
+            <Label className="text-xs">Conta de Anúncios</Label>
+            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <SelectTrigger>
+                <SelectValue placeholder={loadingAccounts ? 'Carregando...' : 'Selecione uma conta'} />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.length === 0 ? (
+                  <div className="px-2 py-3 text-xs text-muted-foreground">
+                    Nenhuma conta Meta conectada
+                  </div>
+                ) : (
+                  accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.account_id}>
+                      {acc.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
@@ -80,7 +97,7 @@ export function BudgetAlertCard() {
           <Button
             className="w-full gap-2"
             onClick={handleCreate}
-            disabled={submitting || !budget || !threshold}
+            disabled={submitting || !budget || !threshold || !selectedAccountId}
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Adicionar Alerta
