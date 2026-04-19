@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Eye, EyeOff, ArrowLeft, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { buildWebhookUrl, platformRequiresWebhookUrl } from '@/lib/webhooks';
 
 interface CreateWebhookDialogProps {
   open: boolean;
@@ -162,9 +163,9 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
   const eventOptions = selectedPlatform ? (PLATFORMS_WITH_EVENTS[selectedPlatform] || []) : [];
 
   // Generate webhook URL for platforms that need it (include platform, token, and event params)
-  const webhookUrl = selectedPlatform 
-    ? `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver?platform=${selectedPlatform.toLowerCase()}&token=${preGeneratedToken}${formData.event ? `&event=${encodeURIComponent(formData.event)}` : ''}`
-    : `https://zwylxoajyyjflvvcwpvz.supabase.co/functions/v1/webhook-receiver`;
+  const webhookUrl = selectedPlatform
+    ? buildWebhookUrl(selectedPlatform, preGeneratedToken, formData.event)
+    : buildWebhookUrl('hotmart', preGeneratedToken);
 
   const filteredPlatforms = PLATFORMS.filter(platform =>
     platform.toLowerCase().includes(searchTerm.toLowerCase())
@@ -242,7 +243,7 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
   };
 
   const platformFields = selectedPlatform ? getPlatformFields(selectedPlatform) : [];
-  const isUrlPlatform = selectedPlatform && PLATFORMS_WITH_WEBHOOK_URL.includes(selectedPlatform);
+  const isUrlPlatform = selectedPlatform ? platformRequiresWebhookUrl(selectedPlatform) : false;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
