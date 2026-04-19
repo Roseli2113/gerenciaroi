@@ -251,6 +251,7 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
           <DialogTitle className="flex items-center gap-2">
             {selectedPlatform && (
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
@@ -285,6 +286,7 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
               <div className="flex flex-wrap gap-2 py-2">
                 {filteredPlatforms.map((platform) => (
                   <Button
+                    type="button"
                     key={platform}
                     variant="outline"
                     size="sm"
@@ -392,6 +394,7 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
             )}
 
             <Button
+              type="button"
               className="w-full"
               onClick={handleCreateWebhook}
               disabled={!formData.name || isSubmitting}
