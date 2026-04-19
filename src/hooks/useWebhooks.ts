@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { buildWebhookUrl, platformRequiresWebhookUrl } from '@/lib/webhooks';
 
 export interface Webhook {
   id: string;
@@ -41,8 +42,11 @@ export function useWebhooks() {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setWebhooks(data || []);
+       if (error) throw error;
+       setWebhooks((data || []).map((webhook) => ({
+         ...webhook,
+         webhook_url: webhook.webhook_url || (webhook.token ? buildWebhookUrl(webhook.platform, webhook.token) : null),
+       })));
     } catch (error) {
       console.error('Error fetching webhooks:', error);
       toast.error('Erro ao carregar webhooks');
@@ -78,14 +82,21 @@ export function useWebhooks() {
     }
 
     try {
+      const resolvedToken = webhookData.token || generateToken();
+      const resolvedWebhookUrl = webhookData.webhookUrl || (
+        platformRequiresWebhookUrl(webhookData.platform)
+          ? buildWebhookUrl(webhookData.platform, resolvedToken)
+          : null
+      );
+
       const newWebhook = {
         user_id: userId,
         platform: webhookData.platform.toLowerCase(),
         name: webhookData.name,
         client_id: webhookData.clientId || null,
         client_secret: webhookData.clientSecret || null,
-        webhook_url: webhookData.webhookUrl || null,
-        token: webhookData.token || generateToken(),
+        webhook_url: resolvedWebhookUrl,
+        token: resolvedToken,
         pixel_id: webhookData.pixelId || null,
         status: 'active',
       };
@@ -98,7 +109,10 @@ export function useWebhooks() {
 
       if (error) throw error;
 
-      setWebhooks(prev => [data, ...prev]);
+      setWebhooks(prev => [{
+        ...data,
+        webhook_url: data.webhook_url || (data.token ? buildWebhookUrl(data.platform, data.token) : null),
+      }, ...prev]);
       toast.success('Webhook criado com sucesso!');
       return data;
     } catch (error) {
