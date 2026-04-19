@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Eye, EyeOff, ArrowLeft, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { buildWebhookUrl, platformRequiresWebhookUrl } from '@/lib/webhooks';
+import { buildWebhookUrl, PLATFORMS_WITH_WEBHOOK_URL, platformRequiresWebhookUrl } from '@/lib/webhooks';
 
 interface CreateWebhookDialogProps {
   open: boolean;
@@ -47,30 +47,6 @@ const PLATFORMS = [
   'Sinix', 'Voomp', 'Ombrelone', 'PushinPay', 'Genesys', 'OnProfit', 'SacaPay', 'Cloudfy',
   'Kuenha', 'NinjaPay', 'Xgrow', 'ggCheckout', 'PanteraCheckout', 'NublaPay', 'Cartly',
   'Pagah', 'Pagsafe', 'Nomadfy', 'Sync', 'LPQV', 'Lowify'
-];
-
-// Platforms that need a webhook URL to be provided to them (URL de conexão)
-const PLATFORMS_WITH_WEBHOOK_URL = [
-  'Lowify', 'AdsRoi', 'Logzz', 'BuyGoods',
-  'Hotmart', 'Kiwify', 'Eduzz', 'Braip', 'Monetizze', 'PerfectPay', 'Ticto', 'Hubla',
-  'Shopify', 'Woocommerce', 'NuvemShop', 'Yampi',
-  'Clickbank', 'Digistore', 'Maxweb',
-  'Cartpanda', 'Vega 1', 'Kirvano', 'Lastlink', 'Payt', 'Adoorei', 'TriboPay', 'Paradise',
-  'Pepper', 'MundPay', 'Disrupty', 'Greenn', 'Guru', 'Doppus', 'Frendz', 'InvictusPay',
-  'Appmax', 'NitroPagamentos', 'GoatPay', 'Hebreus', 'IExperience', 'PagTrust',
-  'FortPay', 'Systeme', 'IronPay', 'CinqPay', 'SharkPays', 'Zouti', 'Pantherfy',
-  'StrivPay', 'AtomoPay', 'AllPay', 'BullPay', 'OctusPay', 'Zippify', 'Masterfy', 'InovaPag',
-  'SoutPay', 'WolfPay', 'SigmaPagamentos', 'Nexopayt', 'WeGate', 'Unicornify', 'Allpes',
-  'VittaPay', 'FluxionPay', 'NezzyPay', 'PMHMPay', 'TrivexPay', 'GatPay', 'BearPay',
-  'AmandisPay', 'DigiPag', 'AlphaPay', 'AssetPay', 'BrGateway', 'Creedx', 'Hotfy',
-  'KlivoPay', 'Plumify', 'PrimeGate', 'Wise2Pay', 'VisionPay', 'SharkBytePay', 'SigmaPay',
-  'ZeroOnePay', 'Traxon', 'Bloo', 'KitePay', 'B4you', 'Risepay', 'Urus', 'Cakto',
-  'Flashpay', 'DigitalMart', 'Exattus', 'LunarCash', 'YouShop', 'BlackPay', 'VenuzPay',
-  'LunaCheckout', 'FullSale', 'BullsPay', 'Moodi', 'NikaPay', 'GhostsPay', 'KeedPay',
-  'Salduu', 'ViperPay', 'Sunize', 'Assiny', 'Wiapy', 'UnicoPag', 'ImperialPay', 'Zedy',
-  'Sinix', 'Voomp', 'Ombrelone', 'PushinPay', 'Genesys', 'OnProfit', 'SacaPay', 'Cloudfy',
-  'Kuenha', 'NinjaPay', 'Xgrow', 'ggCheckout', 'PanteraCheckout', 'NublaPay', 'Cartly',
-  'Pagah', 'Pagsafe', 'Nomadfy', 'Sync', 'LPQV',
 ];
 
 // Platforms that support event type selection
