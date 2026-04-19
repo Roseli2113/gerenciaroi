@@ -100,17 +100,15 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
     'Clickbank', 'BuyGoods', 'Digistore', 'Maxweb'
   ];
 
-  // Platforms that only need name + webhook URL to copy
+  // Build base fields starting with the webhook URL (when applicable)
+  const baseFields = [...commonFields];
   if (PLATFORMS_WITH_WEBHOOK_URL.includes(platform)) {
-    return [
-      ...commonFields,
-      { id: 'webhookUrl', label: 'URL do Webhook', type: 'readonly' },
-    ];
+    baseFields.push({ id: 'webhookUrl', label: 'URL do Webhook', type: 'readonly' });
   }
 
   if (platformsWithClientCredentials.includes(platform)) {
     return [
-      ...commonFields,
+      ...baseFields,
       { id: 'clientId', label: 'Client ID', type: 'text' },
       { id: 'clientSecret', label: 'Client Secret', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
@@ -119,7 +117,7 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
 
   if (platformsWithApiKey.includes(platform)) {
     return [
-      ...commonFields,
+      ...baseFields,
       { id: 'apiKey', label: 'API Key', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
     ];
@@ -127,15 +125,20 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
 
   if (platformsWithSecretKey.includes(platform)) {
     return [
-      ...commonFields,
+      ...baseFields,
       { id: 'secretKey', label: 'Secret Key', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
     ];
   }
 
+  // For platforms that ONLY need the webhook URL (no credentials)
+  if (PLATFORMS_WITH_WEBHOOK_URL.includes(platform)) {
+    return baseFields;
+  }
+
   // Default fields for other platforms
   return [
-    ...commonFields,
+    ...baseFields,
     { id: 'token', label: 'Token', type: 'password' },
     { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
   ];
