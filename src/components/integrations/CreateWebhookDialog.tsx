@@ -49,7 +49,28 @@ const PLATFORMS = [
 ];
 
 // Platforms that need a webhook URL to be provided to them (URL de conexão)
-const PLATFORMS_WITH_WEBHOOK_URL = ['Lowify', 'AdsRoi', 'Logzz', 'BuyGoods'];
+const PLATFORMS_WITH_WEBHOOK_URL = [
+  'Lowify', 'AdsRoi', 'Logzz', 'BuyGoods',
+  'Hotmart', 'Kiwify', 'Eduzz', 'Braip', 'Monetizze', 'PerfectPay', 'Ticto', 'Hubla',
+  'Shopify', 'Woocommerce', 'NuvemShop', 'Yampi',
+  'Clickbank', 'Digistore', 'Maxweb',
+  'Cartpanda', 'Vega 1', 'Kirvano', 'Lastlink', 'Payt', 'Adoorei', 'TriboPay', 'Paradise',
+  'Pepper', 'MundPay', 'Disrupty', 'Greenn', 'Guru', 'Doppus', 'Frendz', 'InvictusPay',
+  'Appmax', 'NitroPagamentos', 'GoatPay', 'Hebreus', 'IExperience', 'PagTrust',
+  'FortPay', 'Systeme', 'IronPay', 'CinqPay', 'SharkPays', 'Zouti', 'Pantherfy',
+  'StrivPay', 'AtomoPay', 'AllPay', 'BullPay', 'OctusPay', 'Zippify', 'Masterfy', 'InovaPag',
+  'SoutPay', 'WolfPay', 'SigmaPagamentos', 'Nexopayt', 'WeGate', 'Unicornify', 'Allpes',
+  'VittaPay', 'FluxionPay', 'NezzyPay', 'PMHMPay', 'TrivexPay', 'GatPay', 'BearPay',
+  'AmandisPay', 'DigiPag', 'AlphaPay', 'AssetPay', 'BrGateway', 'Creedx', 'Hotfy',
+  'KlivoPay', 'Plumify', 'PrimeGate', 'Wise2Pay', 'VisionPay', 'SharkBytePay', 'SigmaPay',
+  'ZeroOnePay', 'Traxon', 'Bloo', 'KitePay', 'B4you', 'Risepay', 'Urus', 'Cakto',
+  'Flashpay', 'DigitalMart', 'Exattus', 'LunarCash', 'YouShop', 'BlackPay', 'VenuzPay',
+  'LunaCheckout', 'FullSale', 'BullsPay', 'Moodi', 'NikaPay', 'GhostsPay', 'KeedPay',
+  'Salduu', 'ViperPay', 'Sunize', 'Assiny', 'Wiapy', 'UnicoPag', 'ImperialPay', 'Zedy',
+  'Sinix', 'Voomp', 'Ombrelone', 'PushinPay', 'Genesys', 'OnProfit', 'SacaPay', 'Cloudfy',
+  'Kuenha', 'NinjaPay', 'Xgrow', 'ggCheckout', 'PanteraCheckout', 'NublaPay', 'Cartly',
+  'Pagah', 'Pagsafe', 'Nomadfy', 'Sync', 'LPQV',
+];
 
 // Platforms that support event type selection
 const PLATFORMS_WITH_EVENTS: Record<string, string[]> = {
@@ -79,17 +100,15 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
     'Clickbank', 'BuyGoods', 'Digistore', 'Maxweb'
   ];
 
-  // Platforms that only need name + webhook URL to copy
+  // Build base fields starting with the webhook URL (when applicable)
+  const baseFields: { id: string; label: string; type: 'text' | 'password' | 'readonly' }[] = [...commonFields];
   if (PLATFORMS_WITH_WEBHOOK_URL.includes(platform)) {
-    return [
-      ...commonFields,
-      { id: 'webhookUrl', label: 'URL do Webhook', type: 'readonly' },
-    ];
+    baseFields.push({ id: 'webhookUrl', label: 'URL do Webhook', type: 'readonly' });
   }
 
   if (platformsWithClientCredentials.includes(platform)) {
     return [
-      ...commonFields,
+      ...baseFields,
       { id: 'clientId', label: 'Client ID', type: 'text' },
       { id: 'clientSecret', label: 'Client Secret', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
@@ -98,7 +117,7 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
 
   if (platformsWithApiKey.includes(platform)) {
     return [
-      ...commonFields,
+      ...baseFields,
       { id: 'apiKey', label: 'API Key', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
     ];
@@ -106,15 +125,20 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
 
   if (platformsWithSecretKey.includes(platform)) {
     return [
-      ...commonFields,
+      ...baseFields,
       { id: 'secretKey', label: 'Secret Key', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
     ];
   }
 
+  // For platforms that ONLY need the webhook URL (no credentials)
+  if (PLATFORMS_WITH_WEBHOOK_URL.includes(platform)) {
+    return baseFields;
+  }
+
   // Default fields for other platforms
   return [
-    ...commonFields,
+    ...baseFields,
     { id: 'token', label: 'Token', type: 'password' },
     { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
   ];
