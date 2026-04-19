@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
 import { useWebhooks } from '@/hooks/useWebhooks';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +52,6 @@ import { IntegrationTestTab } from '@/components/integrations/IntegrationTestTab
 import { LiveTrackingScriptCard } from '@/components/integrations/LiveTrackingScriptCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 interface PixelRecord {
@@ -552,11 +552,11 @@ export default function Integrations() {
                   ) : webhooks.length > 0 ? (
                     <div className="space-y-2">
                       {webhooks.map((webhook) => (
-                        <div 
+                      <div 
                           key={webhook.id} 
-                          className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                          className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-lg"
                         >
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-foreground">{webhook.name}</p>
                               <Badge variant="outline" className="text-xs capitalize">
@@ -566,6 +566,24 @@ export default function Integrations() {
                             <p className={`text-xs ${webhook.status === 'active' ? 'text-success' : 'text-muted-foreground'}`}>
                               Status: {webhook.status === 'active' ? 'Ativado' : 'Inativo'}
                             </p>
+                            {webhook.webhook_url && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <code className="flex-1 rounded bg-muted px-2 py-1 text-xs text-muted-foreground break-all">
+                                  {webhook.webhook_url}
+                                </code>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(webhook.webhook_url ?? '');
+                                    toast.success('URL copiada com sucesso!');
+                                  }}
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
