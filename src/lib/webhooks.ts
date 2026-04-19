@@ -1,5 +1,7 @@
 const FALLBACK_SUPABASE_URL = 'https://zwylxoajyyjflvvcwpvz.supabase.co';
 
+const normalizePlatformName = (platform: string) => platform.trim().toLowerCase();
+
 export const PLATFORMS_WITH_WEBHOOK_URL = [
   'Lowify', 'AdsRoi', 'Logzz', 'BuyGoods',
   'Hotmart', 'Kiwify', 'Eduzz', 'Braip', 'Monetizze', 'PerfectPay', 'Ticto', 'Hubla',
@@ -24,12 +26,12 @@ export const PLATFORMS_WITH_WEBHOOK_URL = [
 ];
 
 export const platformRequiresWebhookUrl = (platform: string) =>
-  PLATFORMS_WITH_WEBHOOK_URL.includes(platform);
+  PLATFORMS_WITH_WEBHOOK_URL.some((item) => normalizePlatformName(item) === normalizePlatformName(platform));
 
 export const buildWebhookUrl = (platform: string, token: string, event?: string) => {
   const baseUrl = import.meta.env.VITE_SUPABASE_URL ?? FALLBACK_SUPABASE_URL;
   const params = new URLSearchParams({
-    platform: platform.toLowerCase(),
+    platform: normalizePlatformName(platform),
     token,
   });
 
