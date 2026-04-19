@@ -101,7 +101,7 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
   ];
 
   // Build base fields starting with the webhook URL (when applicable)
-  const baseFields = [...commonFields];
+  const baseFields: { id: string; label: string; type: 'text' | 'password' | 'readonly' }[] = [...commonFields];
   if (PLATFORMS_WITH_WEBHOOK_URL.includes(platform)) {
     baseFields.push({ id: 'webhookUrl', label: 'URL do Webhook', type: 'readonly' });
   }
