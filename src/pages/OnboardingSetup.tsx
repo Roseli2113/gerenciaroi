@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Check, Facebook, Wifi, Cloud, Code2, Eye, Copy, Download, List } from 'lucide-react';
+import { Check, Facebook, Wifi, Cloud, Code2, Eye, Copy, Download, List, CheckCircle2 } from 'lucide-react';
 import { UtmCodesDialog } from '@/components/integrations/UtmCodesDialog';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
 import { useWebhooks } from '@/hooks/useWebhooks';
@@ -239,7 +239,11 @@ export default function OnboardingSetup() {
               <p className="text-muted-foreground text-sm flex-1">
                 Adicione webhooks para se conectar com as plataformas de venda:
               </p>
+              <div className="space-y-2">
+                {/** fallback visual: últimas URLs geradas ficam acessíveis na lista */}
+              </div>
               <button
+                type="button"
                 onClick={() => setIsWebhookDialogOpen(true)}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-5 py-2.5 rounded-lg text-sm font-semibold w-fit"
               >
