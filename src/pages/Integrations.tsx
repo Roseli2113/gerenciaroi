@@ -52,7 +52,6 @@ import { IntegrationTestTab } from '@/components/integrations/IntegrationTestTab
 import { LiveTrackingScriptCard } from '@/components/integrations/LiveTrackingScriptCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 interface PixelRecord {
