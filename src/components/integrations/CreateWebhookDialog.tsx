@@ -77,6 +77,14 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
     'Clickbank', 'BuyGoods', 'Digistore', 'Maxweb'
   ];
 
+  if (platform === 'Hotmart') {
+    return [
+      ...commonFields,
+      { id: 'clientId', label: 'Client ID', type: 'text' },
+      { id: 'clientSecret', label: 'Client Secret', type: 'password' },
+    ];
+  }
+
   if (platformsWithClientCredentials.includes(platform)) {
     return [
       ...commonFields,
@@ -277,17 +285,9 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
             </ScrollArea>
           </>
         ) : (
-          <div className="space-y-4 overflow-y-auto pr-1">
-            <a
-              href="#"
-              className="text-sm text-primary hover:underline"
-              onClick={(e) => e.preventDefault()}
-            >
-              Clique aqui para ver como integrar com a {selectedPlatform}
-            </a>
-
+          <>
             {isUrlPlatform && (
-              <div className="sticky top-0 z-10 space-y-2 bg-background pb-2">
+              <div className="space-y-2 border-b border-border pb-4">
                 <Label htmlFor="webhook-url">URL do Webhook</Label>
                 <div className="flex gap-2">
                   <Input
@@ -313,6 +313,15 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
                 </div>
               </div>
             )}
+
+            <div className="space-y-4 overflow-y-auto pr-1">
+            <a
+              href="#"
+              className="text-sm text-primary hover:underline"
+              onClick={(e) => e.preventDefault()}
+            >
+              Clique aqui para ver como integrar com a {selectedPlatform}
+            </a>
 
             {platformFields.map((field) => (
               <div key={field.id} className="space-y-2">
@@ -384,7 +393,8 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
               ) : null}
               {isUrlPlatform ? 'Salvar Webhook' : 'Criar Webhook'}
             </Button>
-          </div>
+            </div>
+          </>
         )}
       </DialogContent>
     </Dialog>
