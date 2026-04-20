@@ -220,7 +220,10 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+      <DialogContent
+        className="sm:max-w-md max-h-[85vh] flex flex-col"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {selectedPlatform && (
@@ -274,7 +277,7 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
             </ScrollArea>
           </>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto pr-1">
             <a
               href="#"
               className="text-sm text-primary hover:underline"
@@ -284,7 +287,7 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
             </a>
 
             {isUrlPlatform && (
-              <div className="space-y-2">
+              <div className="sticky top-0 z-10 space-y-2 bg-background pb-2">
                 <Label htmlFor="webhook-url">URL do Webhook</Label>
                 <div className="flex gap-2">
                   <Input
