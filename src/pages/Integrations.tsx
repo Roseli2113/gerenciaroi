@@ -27,7 +27,8 @@ import {
   FileCode,
   Download,
   Play,
-  Trash2
+  Trash2,
+  Copy
 } from 'lucide-react';
 import { useMetaAuth } from '@/hooks/useMetaAuth';
 import { useWebhooks } from '@/hooks/useWebhooks';
@@ -574,13 +575,15 @@ export default function Integrations() {
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  size="icon"
+                                  size="sm"
+                                  className="shrink-0 gap-2"
                                   onClick={() => {
                                     navigator.clipboard.writeText(webhook.webhook_url ?? '');
                                     toast.success('URL copiada com sucesso!');
                                   }}
                                 >
-                                  <CheckCircle2 className="w-4 h-4" />
+                                  <Copy className="w-4 h-4" />
+                                  Copiar
                                 </Button>
                               </div>
                             )}
