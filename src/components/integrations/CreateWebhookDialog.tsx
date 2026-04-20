@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Eye, EyeOff, ArrowLeft, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { buildWebhookUrl, PLATFORMS_WITH_WEBHOOK_URL, platformRequiresWebhookUrl } from '@/lib/webhooks';
+import { buildWebhookUrl, platformRequiresWebhookUrl } from '@/lib/webhooks';
 
 interface CreateWebhookDialogProps {
   open: boolean;
@@ -77,15 +77,9 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
     'Clickbank', 'BuyGoods', 'Digistore', 'Maxweb'
   ];
 
-  // Build base fields starting with the webhook URL (when applicable)
-  const baseFields: { id: string; label: string; type: 'text' | 'password' | 'readonly' }[] = [...commonFields];
-  if (PLATFORMS_WITH_WEBHOOK_URL.includes(platform)) {
-    baseFields.push({ id: 'webhookUrl', label: 'URL do Webhook', type: 'readonly' });
-  }
-
   if (platformsWithClientCredentials.includes(platform)) {
     return [
-      ...baseFields,
+      ...commonFields,
       { id: 'clientId', label: 'Client ID', type: 'text' },
       { id: 'clientSecret', label: 'Client Secret', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
@@ -94,7 +88,7 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
 
   if (platformsWithApiKey.includes(platform)) {
     return [
-      ...baseFields,
+      ...commonFields,
       { id: 'apiKey', label: 'API Key', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
     ];
@@ -102,20 +96,20 @@ const getPlatformFields = (platform: string): { id: string; label: string; type:
 
   if (platformsWithSecretKey.includes(platform)) {
     return [
-      ...baseFields,
+      ...commonFields,
       { id: 'secretKey', label: 'Secret Key', type: 'password' },
       { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
     ];
   }
 
   // For platforms that ONLY need the webhook URL (no credentials)
-  if (PLATFORMS_WITH_WEBHOOK_URL.includes(platform)) {
-    return baseFields;
+  if (platformRequiresWebhookUrl(platform)) {
+    return commonFields;
   }
 
   // Default fields for other platforms
   return [
-    ...baseFields,
+    ...commonFields,
     { id: 'token', label: 'Token', type: 'password' },
     { id: 'webhookToken', label: 'Token do Webhook', type: 'password' },
   ];
@@ -286,59 +280,62 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
               Clique aqui para ver como integrar com a {selectedPlatform}
             </a>
 
+            {isUrlPlatform && (
+              <div className="space-y-2">
+                <Label htmlFor="webhook-url">URL do Webhook</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="webhook-url"
+                    type="text"
+                    value={webhookUrl}
+                    readOnly
+                    className="flex-1 bg-muted text-muted-foreground cursor-text"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopyWebhookUrl}
+                    className="shrink-0"
+                  >
+                    {copiedUrl ? (
+                      <Check className="h-4 w-4 text-success" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {platformFields.map((field) => (
               <div key={field.id} className="space-y-2">
                 <Label htmlFor={field.id}>{field.label}</Label>
                 <div className="relative">
-                  {field.type === 'readonly' ? (
-                    <div className="flex gap-2">
-                      <Input
-                        id={field.id}
-                        type="text"
-                        value={webhookUrl}
-                        readOnly
-                        className="flex-1 bg-muted text-muted-foreground cursor-text"
-                      />
+                  <>
+                    <Input
+                      id={field.id}
+                      type={field.type === 'password' && !showPasswords[field.id] ? 'password' : 'text'}
+                      placeholder={field.type === 'text' ? `Nome do Webhook` : field.label}
+                      value={formData[field.id] || ''}
+                      onChange={(e) => handleInputChange(field.id, e.target.value)}
+                    />
+                    {field.type === 'password' && (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        onClick={handleCopyWebhookUrl}
-                        className="shrink-0"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                        onClick={() => togglePasswordVisibility(field.id)}
                       >
-                        {copiedUrl ? (
-                          <Check className="h-4 w-4 text-success" />
+                        {showPasswords[field.id] ? (
+                          <EyeOff className="h-4 w-4" />
                         ) : (
-                          <Copy className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         )}
                       </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <Input
-                        id={field.id}
-                        type={field.type === 'password' && !showPasswords[field.id] ? 'password' : 'text'}
-                        placeholder={field.type === 'text' ? `Nome do Webhook` : field.label}
-                        value={formData[field.id] || ''}
-                        onChange={(e) => handleInputChange(field.id, e.target.value)}
-                      />
-                      {field.type === 'password' && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                          onClick={() => togglePasswordVisibility(field.id)}
-                        >
-                          {showPasswords[field.id] ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
-                    </>
-                  )}
+                    )}
+                  </>
                 </div>
               </div>
             ))}
