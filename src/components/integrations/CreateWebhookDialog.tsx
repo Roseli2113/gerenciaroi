@@ -131,6 +131,9 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
   });
 
   const eventOptions = selectedPlatform ? (PLATFORMS_WITH_EVENTS[selectedPlatform] || []) : [];
+  const shouldShowWebhookUrl = selectedPlatform
+    ? platformRequiresWebhookUrl(selectedPlatform) || selectedPlatform.trim().toLowerCase() === 'hotmart'
+    : false;
 
   // Generate webhook URL for platforms that need it (include platform, token, and event params)
   const webhookUrl = selectedPlatform
@@ -184,8 +187,8 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
         name: formData.name,
         clientId: formData.clientId,
         clientSecret: formData.clientSecret,
-        webhookUrl: isUrlPlatform ? webhookUrl : formData.webhookUrl,
-        token: isUrlPlatform ? preGeneratedToken : (formData.token || formData.webhookToken || formData.apiKey || formData.secretKey),
+        webhookUrl: shouldShowWebhookUrl ? webhookUrl : formData.webhookUrl,
+        token: shouldShowWebhookUrl ? preGeneratedToken : (formData.token || formData.webhookToken || formData.apiKey || formData.secretKey),
         pixelId: formData.pixelId,
       });
       
@@ -213,7 +216,7 @@ export function CreateWebhookDialog({ open, onOpenChange, onCreateWebhook }: Cre
   };
 
   const platformFields = selectedPlatform ? getPlatformFields(selectedPlatform) : [];
-  const isUrlPlatform = selectedPlatform ? platformRequiresWebhookUrl(selectedPlatform) : false;
+  const isUrlPlatform = shouldShowWebhookUrl;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
