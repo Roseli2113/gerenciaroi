@@ -50,6 +50,8 @@ import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
 import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
 import { AddPixelDrawer } from '@/components/integrations/AddPixelDrawer';
 import { IntegrationTestTab } from '@/components/integrations/IntegrationTestTab';
+import { CapiEventsMonitor } from '@/components/integrations/CapiEventsMonitor';
+import { Send } from 'lucide-react';
 import { LiveTrackingScriptCard } from '@/components/integrations/LiveTrackingScriptCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -294,6 +296,10 @@ export default function Integrations() {
             <TabsTrigger value="testes" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <TestTube className="w-4 h-4" />
               Testes
+            </TabsTrigger>
+            <TabsTrigger value="capi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Send className="w-4 h-4" />
+              Eventos CAPI
             </TabsTrigger>
           </TabsList>
 
@@ -834,6 +840,11 @@ export default function Integrations() {
           {/* Testes Tab */}
           <TabsContent value="testes" className="space-y-6">
             <IntegrationTestTab />
+          </TabsContent>
+
+          {/* Eventos CAPI Tab */}
+          <TabsContent value="capi" className="space-y-6">
+            <CapiEventsMonitor />
           </TabsContent>
         </Tabs>
 
