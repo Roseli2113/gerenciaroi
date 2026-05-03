@@ -149,6 +149,63 @@ export type Database = {
         }
         Relationships: []
       }
+      capi_event_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_name: string
+          event_payload: Json
+          id: string
+          last_error: string | null
+          last_response: Json | null
+          max_attempts: number
+          meta_pixel_id: string
+          next_attempt_at: string
+          pixel_meta_id_ref: string | null
+          sale_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_name: string
+          event_payload: Json
+          id?: string
+          last_error?: string | null
+          last_response?: Json | null
+          max_attempts?: number
+          meta_pixel_id: string
+          next_attempt_at?: string
+          pixel_meta_id_ref?: string | null
+          sale_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_name?: string
+          event_payload?: Json
+          id?: string
+          last_error?: string | null
+          last_response?: Json | null
+          max_attempts?: number
+          meta_pixel_id?: string
+          next_attempt_at?: string
+          pixel_meta_id_ref?: string | null
+          sale_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       checkout_tracking: {
         Row: {
           created_at: string
