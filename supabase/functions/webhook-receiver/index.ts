@@ -270,6 +270,7 @@ Deno.serve(async (req) => {
         email: saleData.customer_email,
         phone: saleData.customer_phone,
         transactionId: saleData.transaction_id,
+        saleId: sale.id,
       })
     }
 
