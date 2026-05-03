@@ -839,6 +839,11 @@ export default function Integrations() {
           <TabsContent value="testes" className="space-y-6">
             <IntegrationTestTab />
           </TabsContent>
+
+          {/* Eventos CAPI Tab */}
+          <TabsContent value="capi" className="space-y-6">
+            <CapiEventsMonitor />
+          </TabsContent>
         </Tabs>
 
         {/* Dialogs */}
