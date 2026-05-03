@@ -304,10 +304,9 @@ async function sendCapiEvent(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   eventName: string,
-  data: { value: number; currency: string; email?: string | null; phone?: string | null; transactionId?: string | null }
+  data: { value: number; currency: string; email?: string | null; phone?: string | null; transactionId?: string | null; saleId?: string | null }
 ) {
   try {
-    // Get user's pixel configurations with tokens
     const { data: pixels, error: pixelError } = await supabase
       .from('pixels')
       .select('id')
@@ -319,54 +318,66 @@ async function sendCapiEvent(
       return
     }
 
+    const queueRows: Record<string, unknown>[] = []
+
     for (const pixel of pixels) {
-      const { data: metaPixels, error: metaError } = await supabase
+      const { data: metaPixels } = await supabase
         .from('pixel_meta_ids')
-        .select('meta_pixel_id, token')
+        .select('id, meta_pixel_id, token')
         .eq('pixel_id', pixel.id)
 
-      if (metaError || !metaPixels?.length) continue
+      if (!metaPixels?.length) continue
 
       for (const mp of metaPixels) {
-        if (!mp.token || !mp.meta_pixel_id) continue
+        if (!mp.meta_pixel_id) continue
 
-        const eventData: Record<string, unknown> = {
-          event_name: eventName,
-          event_time: Math.floor(Date.now() / 1000),
-          action_source: 'website',
-          event_id: data.transactionId || `${eventName}_${Date.now()}`,
-          user_data: {},
-          custom_data: {
-            value: data.value,
-            currency: data.currency,
-          },
-        }
-
-        // Hash user data for CAPI (SHA-256)
         const userData: Record<string, string> = {}
-        if (data.email) {
-          userData.em = await hashSha256(data.email.toLowerCase().trim())
-        }
+        if (data.email) userData.em = await hashSha256(data.email.toLowerCase().trim())
         if (data.phone) {
           const cleanPhone = data.phone.replace(/\D/g, '')
           if (cleanPhone) userData.ph = await hashSha256(cleanPhone)
         }
-        eventData.user_data = userData
 
-        try {
-          const response = await fetch(
-            `https://graph.facebook.com/v21.0/${mp.meta_pixel_id}/events?access_token=${mp.token}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ data: [eventData] }),
-            }
-          )
-          const result = await response.json()
-          console.log(`CAPI ${eventName} sent to pixel ${mp.meta_pixel_id}:`, result)
-        } catch (fetchErr) {
-          console.error(`CAPI ${eventName} failed for pixel ${mp.meta_pixel_id}:`, fetchErr)
+        const eventPayload = {
+          event_name: eventName,
+          event_time: Math.floor(Date.now() / 1000),
+          action_source: 'website',
+          event_id: data.transactionId || `${eventName}_${Date.now()}_${mp.meta_pixel_id}`,
+          user_data: userData,
+          custom_data: { value: data.value, currency: data.currency },
         }
+
+        queueRows.push({
+          user_id: userId,
+          sale_id: data.saleId ?? null,
+          pixel_meta_id_ref: mp.id,
+          meta_pixel_id: mp.meta_pixel_id,
+          event_name: eventName,
+          event_payload: eventPayload,
+          status: 'pending',
+          next_attempt_at: new Date().toISOString(),
+        })
+      }
+    }
+
+    if (queueRows.length) {
+      const { error: insErr } = await supabase.from('capi_event_queue').insert(queueRows)
+      if (insErr) console.error('Failed to enqueue CAPI events:', insErr)
+      else console.log(`Enqueued ${queueRows.length} CAPI ${eventName} events`)
+
+      // Dispara worker imediatamente (fire-and-forget)
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        fetch(`${supabaseUrl}/functions/v1/capi-queue-worker`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${serviceKey}`,
+          },
+        }).catch((e) => console.error('Worker trigger failed:', e))
+      } catch (e) {
+        console.error('Worker trigger error:', e)
       }
     }
   } catch (err) {
