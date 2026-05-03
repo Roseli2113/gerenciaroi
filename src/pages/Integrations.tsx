@@ -295,6 +295,10 @@ export default function Integrations() {
               <TestTube className="w-4 h-4" />
               Testes
             </TabsTrigger>
+            <TabsTrigger value="capi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Send className="w-4 h-4" />
+              Eventos CAPI
+            </TabsTrigger>
           </TabsList>
 
           {/* Anúncios Tab */}
