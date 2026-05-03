@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.check-budget-alerts]
 verify_jwt = false
+
+[functions.capi-queue-worker]
+verify_jwt = false
