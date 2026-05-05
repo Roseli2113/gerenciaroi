@@ -372,29 +372,83 @@ const Rules = () => {
                   </div>
                 </div>
                 {isBudgetAction && (
-                  <div className="space-y-2">
-                    <Label>Aplicar Ação</Label>
-                    <div className="grid grid-cols-[1fr_140px] gap-2">
+                  <div className="space-y-3 p-4 rounded-lg border border-primary/30 bg-primary/5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-semibold">
+                        {formActionType === 'increase_budget' ? '📈 Aumentar Orçamento' : '📉 Diminuir Orçamento'}
+                      </Label>
+                      <div className="inline-flex rounded-md border border-border bg-background p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setFormActionValueType('percentage')}
+                          className={cn(
+                            'px-3 py-1 text-xs font-medium rounded transition-colors',
+                            formActionValueType === 'percentage'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          %
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormActionValueType('amount')}
+                          className={cn(
+                            'px-3 py-1 text-xs font-medium rounded transition-colors',
+                            formActionValueType === 'amount'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          R$
+                        </button>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                        {formActionValueType === 'amount' ? 'R$' : ''}
+                      </span>
                       <Input
                         type="number"
                         min="0"
                         step={formActionValueType === 'amount' ? '0.01' : '1'}
-                        placeholder={formActionValueType === 'amount' ? '10.00' : '20'}
+                        placeholder={formActionValueType === 'amount' ? '20,00' : '20'}
                         value={formActionValue}
                         onChange={(e) => setFormActionValue(e.target.value)}
+                        className={cn(
+                          'pr-10 text-lg font-semibold',
+                          formActionValueType === 'amount' && 'pl-10'
+                        )}
                       />
-                      <Select value={formActionValueType} onValueChange={(v) => setFormActionValueType(v as 'percentage' | 'amount')}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percentage">Porcentagem (%)</SelectItem>
-                          <SelectItem value="amount">Valor (R$)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {formActionValueType === 'percentage' && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                          %
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formActionType === 'increase_budget' ? 'Aumentar' : 'Diminuir'} orçamento em {formActionValueType === 'amount' ? `R$ ${formActionValue || '0'}` : `${formActionValue || '0'}%`}
+                    <div className="flex flex-wrap gap-2">
+                      {(formActionValueType === 'percentage' ? ['10', '20', '30', '50'] : ['10', '20', '50', '100']).map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setFormActionValue(preset)}
+                          className={cn(
+                            'px-3 py-1 text-xs rounded-md border transition-colors',
+                            formActionValue === preset
+                              ? 'border-primary bg-primary/20 text-primary font-semibold'
+                              : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                          )}
+                        >
+                          {formActionValueType === 'amount' ? `R$ ${preset}` : `${preset}%`}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground bg-background/50 p-2 rounded border border-border/50">
+                      💡 {formActionType === 'increase_budget' ? 'Aumentará' : 'Diminuirá'} o orçamento em{' '}
+                      <strong className="text-foreground">
+                        {formActionValueType === 'amount' ? `R$ ${formActionValue || '0'}` : `${formActionValue || '0'}%`}
+                      </strong>{' '}
+                      sempre que a condição for atendida.
                     </p>
                   </div>
                 )}
