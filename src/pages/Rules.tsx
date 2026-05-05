@@ -254,7 +254,7 @@ const Rules = () => {
                   Nova Regra
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingRuleId ? 'Editar Regra' : 'Criar Nova Regra'}</DialogTitle>
                 <DialogDescription>
