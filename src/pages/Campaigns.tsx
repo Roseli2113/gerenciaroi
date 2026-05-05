@@ -501,6 +501,16 @@ const Campaigns = () => {
         const pendingCount2 = pendingForItem2.length;
         return pendingCount2 > 0 ? formatCurrency(item.spent / pendingCount2) : 'N/A';
       }
+      case 'conversao': {
+        const rate = item.pageViews > 0 ? (item.sales / item.pageViews) * 100 : null;
+        return formatPercent(rate);
+      }
+      case 'convCliques': {
+        const rate = item.clicks > 0 ? (item.sales / item.clicks) * 100 : null;
+        return formatPercent(rate);
+      }
+      case 'conversaoBody':
+        return formatPercent(null);
       case 'vendasTotais':
         return item.sales + item.declinedSales + item.refundedSales;
       case 'cpt': {
