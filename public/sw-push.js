@@ -44,9 +44,12 @@ self.addEventListener('push', (event) => {
         icon: '/pwa-192.png',
         badge: '/pwa-192.png',
         vibrate: [200, 100, 200],
-        tag: data.tag || 'sale-notification',
+        tag: data.tag || `sale-${Date.now()}`,
         renotify: true,
         silent: true,
+        requireInteraction: true,
+        persistent: true,
+        sticky: true,
         data: {
           url: data.url || '/',
         },
