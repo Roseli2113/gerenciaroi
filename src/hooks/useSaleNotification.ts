@@ -113,8 +113,16 @@ export function useSaleNotification() {
         });
       }
 
-      // Get VAPID public key from env
-      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      // Get VAPID public key from edge function (env fallback)
+      let vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+      if (!vapidPublicKey) {
+        try {
+          const { data } = await supabase.functions.invoke('get-vapid-key');
+          vapidPublicKey = (data as any)?.publicKey;
+        } catch (e) {
+          console.error('Failed to fetch VAPID key', e);
+        }
+      }
       if (!vapidPublicKey) {
         console.error('VAPID_PUBLIC_KEY not configured');
         return false;
