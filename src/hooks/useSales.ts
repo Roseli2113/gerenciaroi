@@ -123,19 +123,19 @@ export function useSales(filters?: SalesFilters) {
     const totalPending = pendingSales.reduce((sum, s) => sum + Number(s.amount), 0);
     const totalRefunds = refundedSales.reduce((sum, s) => sum + Number(s.amount), 0);
     
-    const uniqueCustomers = new Set(sales.filter(s => s.customer_email).map(s => s.customer_email)).size;
+    const uniqueCustomers = new Set(realSales.filter(s => s.customer_email).map(s => s.customer_email)).size;
     const arpu = uniqueCustomers > 0 ? totalRevenue / uniqueCustomers : 0;
     const avgTicket = approvedSales.length > 0 ? totalRevenue / approvedSales.length : 0;
-    
-    const approvalRate = sales.length > 0 
-      ? (approvedSales.length / sales.length) * 100 
+
+    const approvalRate = realSales.length > 0
+      ? (approvedSales.length / realSales.length) * 100
       : 0;
 
     return {
       totalRevenue,
       totalPending,
       totalRefunds,
-      totalSales: sales.length,
+      totalSales: realSales.length,
       approvedSales: approvedSales.length,
       approvalRate,
       arpu,
