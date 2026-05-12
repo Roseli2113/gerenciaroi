@@ -113,9 +113,11 @@ export function useSales(filters?: SalesFilters) {
   };
 
   const calculateMetrics = useCallback((): SalesMetrics => {
-    const approvedSales = sales.filter(s => s.status === 'approved' || s.status === 'paid');
-    const pendingSales = sales.filter(s => s.status === 'pending');
-    const refundedSales = sales.filter(s => s.status === 'refunded' || s.status === 'chargedback');
+    // Exclude test/zero-amount sales from metrics to keep dashboard aligned with Campaigns
+    const realSales = sales.filter(s => Number(s.amount) > 0);
+    const approvedSales = realSales.filter(s => s.status === 'approved' || s.status === 'paid');
+    const pendingSales = realSales.filter(s => s.status === 'pending');
+    const refundedSales = realSales.filter(s => s.status === 'refunded' || s.status === 'chargedback');
 
     const totalRevenue = approvedSales.reduce((sum, s) => sum + Number(s.amount), 0);
     const totalPending = pendingSales.reduce((sum, s) => sum + Number(s.amount), 0);
