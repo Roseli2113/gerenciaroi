@@ -823,8 +823,8 @@ const Rules = () => {
                   <History className="mx-auto mb-2 h-8 w-8 opacity-50" />
                   <p>Nenhuma execução registrada</p>
                 </div>
-              ) : executionLogs.map((log) => (
-                <div key={log.id} className="flex items-center gap-4 rounded-lg bg-muted/30 p-3">
+              ) : paginatedExecutionLogs.map((log) => (
+                <div key={log.id} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
                   <div className={cn(
                     'rounded-lg p-2',
                     log.actionType === 'increase_budget' || log.actionType === 'activate' ? 'bg-success/15 text-success' : 'bg-destructive/15 text-destructive'
@@ -839,10 +839,45 @@ const Rules = () => {
                     <p className="truncate text-sm font-medium text-foreground">{log.actionDescription}</p>
                     <p className="truncate text-xs text-muted-foreground">{log.ruleName} • {log.campaignName}</p>
                   </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">{log.executedAt}</span>
+                  <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{log.executedAt}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDeleteLogId(log.id)}
+                    aria-label="Excluir execução"
+                    title="Excluir execução"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
+            {executionLogs.length > executionLogsPerPage && (
+              <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Página {currentExecutionPage} de {executionTotalPages} • {executionLogs.length} execuções
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentExecutionPage === 1}
+                    onClick={() => setExecutionPage((page) => Math.max(1, page - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentExecutionPage === executionTotalPages}
+                    onClick={() => setExecutionPage((page) => Math.min(executionTotalPages, page + 1))}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
