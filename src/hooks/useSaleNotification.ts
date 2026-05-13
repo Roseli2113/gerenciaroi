@@ -45,7 +45,7 @@ export function useSaleNotification() {
       }
       // Check if we have an active push subscription on our SW
       try {
-        const reg = await navigator.serviceWorker.getRegistration('/push-handler');
+          const reg = await navigator.serviceWorker.getRegistration('/');
         if (reg) {
           const sub = await reg.pushManager.getSubscription();
           setPushEnabled(!!sub);
@@ -217,7 +217,7 @@ export function useSaleNotification() {
   const disablePush = useCallback(async () => {
     setPushLoading(true);
     try {
-      const reg = await navigator.serviceWorker.getRegistration('/push-handler');
+      const reg = await navigator.serviceWorker.getRegistration('/');
       if (reg) {
         const sub = await reg.pushManager.getSubscription();
         if (sub) {
@@ -272,7 +272,7 @@ export function useSaleNotification() {
   const showBrowserNotification = useCallback((title: string, body: string) => {
     if (Notification.permission !== 'granted') return;
     try {
-      new Notification(title, { body, icon: logoImg, badge: logoImg });
+      new Notification(title, { body, icon: logoImg, badge: logoImg, requireInteraction: true, tag: `sale-${Date.now()}` });
     } catch { /* mobile Safari may not support */ }
   }, []);
 
