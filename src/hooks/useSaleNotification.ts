@@ -99,8 +99,12 @@ export function useSaleNotification() {
     if (!user || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
     
     try {
-      // Register the push service worker separately (won't conflict with PWA SW)
-      const registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/push-handler' });
+      // Register the push service worker at root scope so Android/iOS PWAs can receive background pushes reliably
+      const registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' });
+      await navigator.serviceWorker.ready;
+      if (registration.update) {
+        registration.update().catch(() => {});
+      }
       
       // Wait for it to be active
       const sw = registration.installing || registration.waiting || registration.active;
@@ -178,9 +182,9 @@ export function useSaleNotification() {
     
     try {
       if (Notification.permission === 'granted') {
-        setPushEnabled(true);
-        await registerPushSubscription();
-        return true;
+        const registered = await registerPushSubscription();
+        setPushEnabled(registered);
+        return registered;
       }
       if (Notification.permission === 'denied') {
         setPushLoading(false);
@@ -192,7 +196,8 @@ export function useSaleNotification() {
       setPushEnabled(granted);
       
       if (granted) {
-        await registerPushSubscription();
+        const registered = await registerPushSubscription();
+        setPushEnabled(registered);
       }
       
       return granted;
