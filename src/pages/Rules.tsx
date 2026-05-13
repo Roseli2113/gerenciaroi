@@ -140,6 +140,7 @@ const frequencyOptions = [
 
 const percentagePresets = ['10', '20', '30', '50'];
 const amountPresets = ['10', '20', '50', '100'];
+const executionLogsPerPage = 5;
 
 const Rules = () => {
   const {
@@ -149,6 +150,7 @@ const Rules = () => {
     createRule,
     updateRule,
     deleteRule,
+    deleteExecutionLog,
     toggleRuleActive,
     executeRules,
   } = useRules();
@@ -156,6 +158,8 @@ const Rules = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null);
+  const [deleteLogId, setDeleteLogId] = useState<string | null>(null);
+  const [executionPage, setExecutionPage] = useState(1);
   const [isExecuting, setIsExecuting] = useState(false);
 
   const [formName, setFormName] = useState('');
@@ -176,6 +180,12 @@ const Rules = () => {
   const selectedCondition = conditionOptions.find((condition) => condition.value === formConditionType) || conditionOptions[0];
   const selectedAction = actionOptions.find((action) => action.value === formActionType) || actionOptions[0];
   const targetItems = formAppliedTo === 'specific_campaign' ? campaigns : adSets;
+  const executionTotalPages = Math.max(1, Math.ceil(executionLogs.length / executionLogsPerPage));
+  const currentExecutionPage = Math.min(executionPage, executionTotalPages);
+  const paginatedExecutionLogs = useMemo(() => {
+    const start = (currentExecutionPage - 1) * executionLogsPerPage;
+    return executionLogs.slice(start, start + executionLogsPerPage);
+  }, [currentExecutionPage, executionLogs]);
 
   const actionPreview = useMemo(() => {
     const value = formActionValue || '0';
@@ -320,6 +330,16 @@ const Rules = () => {
       await deleteRule(deleteRuleId);
       setDeleteRuleId(null);
     }
+  };
+
+  const handleDeleteLog = async () => {
+    if (!deleteLogId) return;
+
+    const deleted = await deleteExecutionLog(deleteLogId);
+    if (deleted && paginatedExecutionLogs.length === 1 && currentExecutionPage > 1) {
+      setExecutionPage((page) => page - 1);
+    }
+    setDeleteLogId(null);
   };
 
   const handleExecuteNow = async () => {
