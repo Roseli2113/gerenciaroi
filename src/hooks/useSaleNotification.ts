@@ -206,6 +206,13 @@ export function useSaleNotification() {
     }
   }, [registerPushSubscription]);
 
+  // If permission was already granted before this update, create/refresh the mobile subscription automatically
+  useEffect(() => {
+    if (!user || !('Notification' in window) || Notification.permission !== 'granted') return;
+
+    registerPushSubscription().then(setPushEnabled).catch(() => setPushEnabled(false));
+  }, [user, registerPushSubscription]);
+
   // Auto-register subscription when push is already granted
   useEffect(() => {
     if (pushEnabled && user) {
