@@ -302,7 +302,7 @@ export function useSaleNotification() {
         }
         const sale = event.data.sale;
         if (sale?.body) {
-          toast.success(sale.title || '💰 Nova venda!', { description: sale.body, duration: 6000 });
+          toast.success(sale.title || '💰 Nova venda!', { description: sale.body, duration: Infinity });
         }
       }
     };
@@ -349,7 +349,7 @@ export function useSaleNotification() {
           const amount = Number(newSale.amount || 0);
           const title = `💰 Nova venda: R$ ${amount.toFixed(2)}`;
           const body = newSale.customer_name || newSale.platform || 'Venda recebida!';
-          toast.success(title, { description: body, duration: 6000 });
+          toast.success(title, { description: body, duration: Infinity });
           showBrowserNotification(title, body);
         }
       )
