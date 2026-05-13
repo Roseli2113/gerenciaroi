@@ -93,7 +93,7 @@ export interface Rule {
          .select('*')
          .eq('user_id', userId)
          .order('executed_at', { ascending: false })
-         .limit(10);
+         .limit(100);
  
        if (error) throw error;
  
@@ -232,6 +232,28 @@ export interface Rule {
        return false;
      }
    };
+
+   const deleteExecutionLog = async (logId: string) => {
+     if (!userId) return false;
+
+     try {
+       const { error } = await supabase
+         .from('rule_execution_logs')
+         .delete()
+         .eq('id', logId)
+         .eq('user_id', userId);
+
+       if (error) throw error;
+
+       setExecutionLogs(prev => prev.filter(log => log.id !== logId));
+       toast.success('Execução excluída com sucesso!');
+       return true;
+     } catch (error) {
+       console.error('Error deleting execution log:', error);
+       toast.error('Erro ao excluir execução');
+       return false;
+     }
+   };
  
    const toggleRuleActive = async (ruleId: string) => {
      const rule = rules.find(r => r.id === ruleId);
@@ -275,6 +297,7 @@ export interface Rule {
     createRule,
     updateRule,
     deleteRule,
+    deleteExecutionLog,
     toggleRuleActive,
     executeRules,
     refreshRules: fetchRules,

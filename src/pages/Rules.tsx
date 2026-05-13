@@ -140,6 +140,7 @@ const frequencyOptions = [
 
 const percentagePresets = ['10', '20', '30', '50'];
 const amountPresets = ['10', '20', '50', '100'];
+const executionLogsPerPage = 5;
 
 const Rules = () => {
   const {
@@ -149,6 +150,7 @@ const Rules = () => {
     createRule,
     updateRule,
     deleteRule,
+    deleteExecutionLog,
     toggleRuleActive,
     executeRules,
   } = useRules();
@@ -156,6 +158,8 @@ const Rules = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null);
+  const [deleteLogId, setDeleteLogId] = useState<string | null>(null);
+  const [executionPage, setExecutionPage] = useState(1);
   const [isExecuting, setIsExecuting] = useState(false);
 
   const [formName, setFormName] = useState('');
@@ -176,6 +180,12 @@ const Rules = () => {
   const selectedCondition = conditionOptions.find((condition) => condition.value === formConditionType) || conditionOptions[0];
   const selectedAction = actionOptions.find((action) => action.value === formActionType) || actionOptions[0];
   const targetItems = formAppliedTo === 'specific_campaign' ? campaigns : adSets;
+  const executionTotalPages = Math.max(1, Math.ceil(executionLogs.length / executionLogsPerPage));
+  const currentExecutionPage = Math.min(executionPage, executionTotalPages);
+  const paginatedExecutionLogs = useMemo(() => {
+    const start = (currentExecutionPage - 1) * executionLogsPerPage;
+    return executionLogs.slice(start, start + executionLogsPerPage);
+  }, [currentExecutionPage, executionLogs]);
 
   const actionPreview = useMemo(() => {
     const value = formActionValue || '0';
@@ -320,6 +330,16 @@ const Rules = () => {
       await deleteRule(deleteRuleId);
       setDeleteRuleId(null);
     }
+  };
+
+  const handleDeleteLog = async () => {
+    if (!deleteLogId) return;
+
+    const deleted = await deleteExecutionLog(deleteLogId);
+    if (deleted && paginatedExecutionLogs.length === 1 && currentExecutionPage > 1) {
+      setExecutionPage((page) => page - 1);
+    }
+    setDeleteLogId(null);
   };
 
   const handleExecuteNow = async () => {
@@ -803,8 +823,8 @@ const Rules = () => {
                   <History className="mx-auto mb-2 h-8 w-8 opacity-50" />
                   <p>Nenhuma execução registrada</p>
                 </div>
-              ) : executionLogs.map((log) => (
-                <div key={log.id} className="flex items-center gap-4 rounded-lg bg-muted/30 p-3">
+              ) : paginatedExecutionLogs.map((log) => (
+                <div key={log.id} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
                   <div className={cn(
                     'rounded-lg p-2',
                     log.actionType === 'increase_budget' || log.actionType === 'activate' ? 'bg-success/15 text-success' : 'bg-destructive/15 text-destructive'
@@ -819,10 +839,45 @@ const Rules = () => {
                     <p className="truncate text-sm font-medium text-foreground">{log.actionDescription}</p>
                     <p className="truncate text-xs text-muted-foreground">{log.ruleName} • {log.campaignName}</p>
                   </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">{log.executedAt}</span>
+                  <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{log.executedAt}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDeleteLogId(log.id)}
+                    aria-label="Excluir execução"
+                    title="Excluir execução"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
+            {executionLogs.length > executionLogsPerPage && (
+              <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Página {currentExecutionPage} de {executionTotalPages} • {executionLogs.length} execuções
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentExecutionPage === 1}
+                    onClick={() => setExecutionPage((page) => Math.max(1, page - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentExecutionPage === executionTotalPages}
+                    onClick={() => setExecutionPage((page) => Math.min(executionTotalPages, page + 1))}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -839,6 +894,26 @@ const Rules = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteRule}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteLogId} onOpenChange={(open) => !open && setDeleteLogId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir execução</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este item do histórico? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLog}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir

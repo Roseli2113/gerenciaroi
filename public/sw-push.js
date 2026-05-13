@@ -31,13 +31,10 @@ self.addEventListener('push', (event) => {
       bc.close();
 
       if (hasVisibleClient) {
-        // App is open and visible — DON'T show system notification
-        // The BroadcastChannel message above will trigger the MP3 + toast
-        console.log('[SW-Push] App is visible, skipping system notification');
-        return;
+        console.log('[SW-Push] App is visible, showing persistent system notification too');
       }
 
-      // App is in background — show a silent system notification
+      // Always show a silent system notification so it remains until manual dismissal
       const title = data.title || '💰 Nova Venda!';
       const options = {
         body: data.body || 'Você recebeu uma nova venda!',

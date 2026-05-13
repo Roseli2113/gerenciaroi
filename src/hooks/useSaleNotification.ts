@@ -45,7 +45,7 @@ export function useSaleNotification() {
       }
       // Check if we have an active push subscription on our SW
       try {
-        const reg = await navigator.serviceWorker.getRegistration('/push-handler');
+          const reg = await navigator.serviceWorker.getRegistration('/');
         if (reg) {
           const sub = await reg.pushManager.getSubscription();
           setPushEnabled(!!sub);
@@ -99,8 +99,12 @@ export function useSaleNotification() {
     if (!user || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
     
     try {
-      // Register the push service worker separately (won't conflict with PWA SW)
-      const registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/push-handler' });
+      // Register the push service worker at root scope so Android/iOS PWAs can receive background pushes reliably
+      const registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' });
+      await navigator.serviceWorker.ready;
+      if (registration.update) {
+        registration.update().catch(() => {});
+      }
       
       // Wait for it to be active
       const sw = registration.installing || registration.waiting || registration.active;
@@ -178,9 +182,9 @@ export function useSaleNotification() {
     
     try {
       if (Notification.permission === 'granted') {
-        setPushEnabled(true);
-        await registerPushSubscription();
-        return true;
+        const registered = await registerPushSubscription();
+        setPushEnabled(registered);
+        return registered;
       }
       if (Notification.permission === 'denied') {
         setPushLoading(false);
@@ -192,7 +196,8 @@ export function useSaleNotification() {
       setPushEnabled(granted);
       
       if (granted) {
-        await registerPushSubscription();
+        const registered = await registerPushSubscription();
+        setPushEnabled(registered);
       }
       
       return granted;
@@ -200,6 +205,13 @@ export function useSaleNotification() {
       setPushLoading(false);
     }
   }, [registerPushSubscription]);
+
+  // If permission was already granted before this update, create/refresh the mobile subscription automatically
+  useEffect(() => {
+    if (!user || !('Notification' in window) || Notification.permission !== 'granted') return;
+
+    registerPushSubscription().then(setPushEnabled).catch(() => setPushEnabled(false));
+  }, [user, registerPushSubscription]);
 
   // Auto-register subscription when push is already granted
   useEffect(() => {
@@ -212,7 +224,7 @@ export function useSaleNotification() {
   const disablePush = useCallback(async () => {
     setPushLoading(true);
     try {
-      const reg = await navigator.serviceWorker.getRegistration('/push-handler');
+      const reg = await navigator.serviceWorker.getRegistration('/');
       if (reg) {
         const sub = await reg.pushManager.getSubscription();
         if (sub) {
@@ -267,7 +279,7 @@ export function useSaleNotification() {
   const showBrowserNotification = useCallback((title: string, body: string) => {
     if (Notification.permission !== 'granted') return;
     try {
-      new Notification(title, { body, icon: logoImg, badge: logoImg });
+      new Notification(title, { body, icon: logoImg, badge: logoImg, requireInteraction: true, tag: `sale-${Date.now()}` });
     } catch { /* mobile Safari may not support */ }
   }, []);
 
@@ -297,7 +309,7 @@ export function useSaleNotification() {
         }
         const sale = event.data.sale;
         if (sale?.body) {
-          toast.success(sale.title || '💰 Nova venda!', { description: sale.body, duration: 6000 });
+          toast.success(sale.title || '💰 Nova venda!', { description: sale.body, duration: Infinity });
         }
       }
     };
@@ -344,7 +356,7 @@ export function useSaleNotification() {
           const amount = Number(newSale.amount || 0);
           const title = `💰 Nova venda: R$ ${amount.toFixed(2)}`;
           const body = newSale.customer_name || newSale.platform || 'Venda recebida!';
-          toast.success(title, { description: body, duration: 6000 });
+          toast.success(title, { description: body, duration: Infinity });
           showBrowserNotification(title, body);
         }
       )

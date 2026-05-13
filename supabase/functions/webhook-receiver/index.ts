@@ -132,22 +132,26 @@ Deno.serve(async (req) => {
     let sale = null
     let saleError = null
     let existingId: string | null = null
+    let existingStatus: string | null = null
 
     if (saleData.transaction_id) {
       const { data: existing } = await supabase
         .from('sales')
-        .select('id')
+        .select('id, status')
         .eq('user_id', userId)
         .eq('transaction_id', saleData.transaction_id)
         .maybeSingle()
-      if (existing) existingId = existing.id
+      if (existing) {
+        existingId = existing.id
+        existingStatus = existing.status
+      }
     }
 
     if (!existingId && saleData.customer_email && saleData.product_id) {
       const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
       const { data: existing } = await supabase
         .from('sales')
-        .select('id')
+        .select('id, status')
         .eq('user_id', userId)
         .eq('customer_email', saleData.customer_email)
         .eq('product_id', saleData.product_id)
@@ -155,7 +159,10 @@ Deno.serve(async (req) => {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-      if (existing) existingId = existing.id
+      if (existing) {
+        existingId = existing.id
+        existingStatus = existing.status
+      }
     }
 
     if (existingId) {
@@ -209,7 +216,8 @@ Deno.serve(async (req) => {
 
       const shouldNotify =
         (!existingId && saleData.status === 'approved' && prefs.sendApproved === 'enabled') ||
-        (!existingId && saleData.status === 'pending' && prefs.sendPending === 'enabled')
+        (!existingId && saleData.status === 'pending' && prefs.sendPending === 'enabled') ||
+        (!!existingId && existingStatus !== 'approved' && saleData.status === 'approved' && prefs.sendApproved === 'enabled')
 
       if (shouldNotify) {
         const amount = Number(saleData.amount || 0)
