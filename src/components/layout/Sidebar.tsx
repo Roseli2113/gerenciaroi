@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   HelpCircle,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -26,6 +27,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: ShoppingCart, label: 'Vendas', path: '/sales' },
   { icon: Target, label: 'Campanhas', path: '/campaigns' },
+  { icon: Sparkles, label: 'IA Insights', path: '/ai-insights' },
   { icon: Plug, label: 'Integrações', path: '/integrations' },
   { icon: Settings2, label: 'Regras', path: '/rules' },
   { icon: Link2, label: 'UTMs', path: '/utms' },
