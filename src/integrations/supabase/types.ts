@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights: {
+        Row: {
+          applied_at: string | null
+          category: string
+          context: Json | null
+          created_at: string
+          description: string
+          id: string
+          recommendation: string | null
+          severity: string
+          status: string
+          suggested_action: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          category: string
+          context?: Json | null
+          created_at?: string
+          description: string
+          id?: string
+          recommendation?: string | null
+          severity?: string
+          status?: string
+          suggested_action?: Json | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          category?: string
+          context?: Json | null
+          created_at?: string
+          description?: string
+          id?: string
+          recommendation?: string | null
+          severity?: string
+          status?: string
+          suggested_action?: Json | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_insights_runs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          insights_generated: number
+          status: string
+          trigger: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          insights_generated?: number
+          status?: string
+          trigger?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          insights_generated?: number
+          status?: string
+          trigger?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       api_credentials: {
         Row: {
           created_at: string
