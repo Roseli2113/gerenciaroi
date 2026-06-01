@@ -1320,6 +1320,7 @@ const Campaigns = () => {
                   <SelectItem value="yesterday">Ontem</SelectItem>
                   <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
                   <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
+                  <SelectItem value="this_month">Este mês</SelectItem>
                   <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
