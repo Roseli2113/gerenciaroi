@@ -160,7 +160,7 @@ const Campaigns = () => {
       if (filterPeriod === 'custom' && customDateFrom && customDateTo) {
         return { startDate: startOfDay(customDateFrom), endDate: endOfDay(customDateTo) };
       }
-      return getDateRange(filterPeriod as PeriodKey);
+      return getDateRange(toPeriodKey(filterPeriod));
     })();
 
     return sales.filter(s => {
