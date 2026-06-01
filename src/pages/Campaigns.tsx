@@ -59,11 +59,22 @@ const Campaigns = () => {
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
 
+  // Map Meta-style preset keys (used by API + UI) to internal PeriodKey of getDateRange
+  const toPeriodKey = (p: string): PeriodKey => {
+    switch (p) {
+      case 'last_7d': return '7days';
+      case 'last_30d': return '30days';
+      case 'this_month': return 'thisMonth';
+      case 'last_month': return 'lastMonth';
+      default: return p as PeriodKey;
+    }
+  };
+
   const periodRange = useMemo(() => {
     if (filterPeriod === 'custom' && customDateFrom && customDateTo) {
       return { startDate: startOfDay(customDateFrom), endDate: endOfDay(customDateTo) };
     }
-    return getDateRange(filterPeriod as PeriodKey);
+    return getDateRange(toPeriodKey(filterPeriod));
   }, [filterPeriod, customDateFrom, customDateTo]);
 
   const { sales } = useSales({
