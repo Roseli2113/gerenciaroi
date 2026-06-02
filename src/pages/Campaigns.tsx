@@ -294,16 +294,62 @@ const Campaigns = () => {
     return filtered.filter(ad => ad.spent > 0);
   };
 
-  // Merge webhook sales attribution with Meta Ads data
+  // Merge webhook sales attribution with Meta Ads data.
+  // Rollup: campaign totals = max(direct campaign attribution, sum of child adsets);
+  // adset totals = max(direct adset attribution, sum of child ads).
+  // This guarantees Campaign >= sum(AdSets) even when some sales have utm_medium
+  // (adset ID) but no utm_campaign ID set in their UTMs.
   const mergeAttribution = (items: (Campaign | AdSet | Ad)[], tab: TabType) => {
     const map = tab === 'campanhas' ? attribution.byCampaignId 
               : tab === 'conjuntos' ? attribution.byAdSetId 
               : attribution.byAdId;
-    
+
+    const emptyAttr = { sales: 0, revenue: 0, refundedSales: 0, declinedSales: 0 };
+
+    const rollupFromAdSets = (campaignId: string) => {
+      const children = adSets.filter(as => as.campaignId === campaignId);
+      return children.reduce((acc, as) => {
+        const a = attribution.byAdSetId.get(as.id);
+        if (!a) return acc;
+        return {
+          sales: acc.sales + a.sales,
+          revenue: acc.revenue + a.revenue,
+          refundedSales: acc.refundedSales + a.refundedSales,
+          declinedSales: acc.declinedSales + a.declinedSales,
+        };
+      }, { ...emptyAttr });
+    };
+
+    const rollupFromAds = (adSetId: string) => {
+      const children = ads.filter(ad => ad.adsetId === adSetId);
+      return children.reduce((acc, ad) => {
+        const a = attribution.byAdId.get(ad.id);
+        if (!a) return acc;
+        return {
+          sales: acc.sales + a.sales,
+          revenue: acc.revenue + a.revenue,
+          refundedSales: acc.refundedSales + a.refundedSales,
+          declinedSales: acc.declinedSales + a.declinedSales,
+        };
+      }, { ...emptyAttr });
+    };
+
     return items.map(item => {
-      const attr = map.get(item.id);
-      if (!attr) return item;
-      
+      const direct = map.get(item.id) ?? { ...emptyAttr };
+      let attr = direct;
+
+      if (tab === 'campanhas') {
+        const rolled = rollupFromAdSets(item.id);
+        if (rolled.sales > attr.sales || rolled.revenue > attr.revenue) attr = rolled;
+      } else if (tab === 'conjuntos') {
+        const rolled = rollupFromAds(item.id);
+        if (rolled.sales > attr.sales || rolled.revenue > attr.revenue) attr = rolled;
+      }
+
+      if (attr.sales === 0 && attr.revenue === 0 && attr.refundedSales === 0 && attr.declinedSales === 0) {
+        return item;
+      }
+
       const sales = attr.sales;
       const revenue = attr.revenue;
       const spent = item.spent;
@@ -312,7 +358,7 @@ const Campaigns = () => {
       const roi = spent > 0 ? revenue / spent : null;
       const roas = spent > 0 ? revenue / spent : null;
       const margin = revenue > 0 ? ((revenue - spent) / revenue) * 100 : null;
-      
+
       return {
         ...item,
         sales,
