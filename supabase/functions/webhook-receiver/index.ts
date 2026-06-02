@@ -270,17 +270,9 @@ Deno.serve(async (req) => {
       console.error('Push notification error:', pushErr)
     }
 
-    // Fire Meta CAPI Purchase event if sale is approved
-    if (saleData.status === 'approved') {
-      await sendCapiEvent(supabase, userId, 'Purchase', {
-        value: saleData.amount,
-        currency: saleData.currency || 'BRL',
-        email: saleData.customer_email,
-        phone: saleData.customer_phone,
-        transactionId: saleData.transaction_id,
-        saleId: sale.id,
-      })
-    }
+    // NOTE: Purchase CAPI event is NOT sent from here to avoid duplicates.
+    // The sales platform (e.g. Lowify) already sends its own Purchase event to Meta.
+    // Sending again from our webhook caused Facebook to count 2 purchases per sale.
 
     // Fire Meta CAPI InitiateCheckout for pending payments (checkout started)
     if (saleData.status === 'pending') {
