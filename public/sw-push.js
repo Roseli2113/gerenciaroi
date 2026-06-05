@@ -43,7 +43,7 @@ self.addEventListener('push', (event) => {
         vibrate: [200, 100, 200],
         tag: data.tag || `sale-${Date.now()}`,
         renotify: true,
-        silent: true,
+        silent: false,
         requireInteraction: true,
         persistent: true,
         sticky: true,
