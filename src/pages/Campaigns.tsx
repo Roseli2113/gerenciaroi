@@ -295,56 +295,92 @@ const Campaigns = () => {
   };
 
   // Merge webhook sales attribution with Meta Ads data.
-  // Rollup: campaign totals = max(direct campaign attribution, sum of child adsets);
-  // adset totals = max(direct adset attribution, sum of child ads).
-  // This guarantees Campaign >= sum(AdSets) even when some sales have utm_medium
-  // (adset ID) but no utm_campaign ID set in their UTMs.
+  // Rollup up: campaign totals = max(direct, sum of child adsets); adset = max(direct, sum of child ads).
+  // Rollup down: when campaign has more direct sales than its adsets sum, distribute the leftover
+  // to the adset with highest spend (and same for adset -> ads), so Campaign totals == sum(AdSets).
   const mergeAttribution = (items: (Campaign | AdSet | Ad)[], tab: TabType) => {
-    const map = tab === 'campanhas' ? attribution.byCampaignId 
-              : tab === 'conjuntos' ? attribution.byAdSetId 
-              : attribution.byAdId;
+    const emptyAttr = () => ({ sales: 0, revenue: 0, refundedSales: 0, declinedSales: 0 });
 
-    const emptyAttr = { sales: 0, revenue: 0, refundedSales: 0, declinedSales: 0 };
+    const sumAttr = (a: ReturnType<typeof emptyAttr>, b: ReturnType<typeof emptyAttr>) => ({
+      sales: a.sales + b.sales,
+      revenue: a.revenue + b.revenue,
+      refundedSales: a.refundedSales + b.refundedSales,
+      declinedSales: a.declinedSales + b.declinedSales,
+    });
 
-    const rollupFromAdSets = (campaignId: string) => {
-      const children = adSets.filter(as => as.campaignId === campaignId);
-      return children.reduce((acc, as) => {
-        const a = attribution.byAdSetId.get(as.id);
-        if (!a) return acc;
-        return {
-          sales: acc.sales + a.sales,
-          revenue: acc.revenue + a.revenue,
-          refundedSales: acc.refundedSales + a.refundedSales,
-          declinedSales: acc.declinedSales + a.declinedSales,
-        };
-      }, { ...emptyAttr });
-    };
+    // Build effective adset attribution: direct + any leftover from parent campaign
+    const effectiveAdSetAttr = new Map<string, ReturnType<typeof emptyAttr>>();
+    for (const as of adSets) {
+      effectiveAdSetAttr.set(as.id, { ...(attribution.byAdSetId.get(as.id) ?? emptyAttr()) });
+    }
+    // Distribute campaign leftovers to top-spend adset
+    const campaignIds = new Set(campaigns.map(c => c.id));
+    for (const cid of campaignIds) {
+      const direct = attribution.byCampaignId.get(cid);
+      if (!direct) continue;
+      const children = adSets.filter(as => as.campaignId === cid);
+      if (children.length === 0) continue;
+      const childSum = children.reduce((acc, as) => sumAttr(acc, effectiveAdSetAttr.get(as.id) ?? emptyAttr()), emptyAttr());
+      const leftover = {
+        sales: Math.max(0, direct.sales - childSum.sales),
+        revenue: Math.max(0, direct.revenue - childSum.revenue),
+        refundedSales: Math.max(0, direct.refundedSales - childSum.refundedSales),
+        declinedSales: Math.max(0, direct.declinedSales - childSum.declinedSales),
+      };
+      if (leftover.sales === 0 && leftover.revenue === 0 && leftover.refundedSales === 0 && leftover.declinedSales === 0) continue;
+      const target = [...children].sort((a, b) => b.spent - a.spent)[0];
+      effectiveAdSetAttr.set(target.id, sumAttr(effectiveAdSetAttr.get(target.id) ?? emptyAttr(), leftover));
+    }
 
-    const rollupFromAds = (adSetId: string) => {
-      const children = ads.filter(ad => ad.adsetId === adSetId);
-      return children.reduce((acc, ad) => {
-        const a = attribution.byAdId.get(ad.id);
-        if (!a) return acc;
-        return {
-          sales: acc.sales + a.sales,
-          revenue: acc.revenue + a.revenue,
-          refundedSales: acc.refundedSales + a.refundedSales,
-          declinedSales: acc.declinedSales + a.declinedSales,
-        };
-      }, { ...emptyAttr });
+    // Build effective ad attribution similarly (direct + leftover from parent adset)
+    const effectiveAdAttr = new Map<string, ReturnType<typeof emptyAttr>>();
+    for (const ad of ads) {
+      effectiveAdAttr.set(ad.id, { ...(attribution.byAdId.get(ad.id) ?? emptyAttr()) });
+    }
+    for (const as of adSets) {
+      const direct = effectiveAdSetAttr.get(as.id);
+      if (!direct) continue;
+      const children = ads.filter(ad => ad.adsetId === as.id);
+      if (children.length === 0) continue;
+      const childSum = children.reduce((acc, ad) => sumAttr(acc, effectiveAdAttr.get(ad.id) ?? emptyAttr()), emptyAttr());
+      const leftover = {
+        sales: Math.max(0, direct.sales - childSum.sales),
+        revenue: Math.max(0, direct.revenue - childSum.revenue),
+        refundedSales: Math.max(0, direct.refundedSales - childSum.refundedSales),
+        declinedSales: Math.max(0, direct.declinedSales - childSum.declinedSales),
+      };
+      if (leftover.sales === 0 && leftover.revenue === 0 && leftover.refundedSales === 0 && leftover.declinedSales === 0) continue;
+      const target = [...children].sort((a, b) => b.spent - a.spent)[0];
+      effectiveAdAttr.set(target.id, sumAttr(effectiveAdAttr.get(target.id) ?? emptyAttr(), leftover));
+    }
+
+    // Effective campaign attribution: sum of its (effective) adsets, or direct if no adsets
+    const effectiveCampaignAttr = new Map<string, ReturnType<typeof emptyAttr>>();
+    for (const c of campaigns) {
+      const children = adSets.filter(as => as.campaignId === c.id);
+      if (children.length === 0) {
+        effectiveCampaignAttr.set(c.id, { ...(attribution.byCampaignId.get(c.id) ?? emptyAttr()) });
+      } else {
+        const sum = children.reduce((acc, as) => sumAttr(acc, effectiveAdSetAttr.get(as.id) ?? emptyAttr()), emptyAttr());
+        const direct = attribution.byCampaignId.get(c.id) ?? emptyAttr();
+        // Take max per field to be safe
+        effectiveCampaignAttr.set(c.id, {
+          sales: Math.max(sum.sales, direct.sales),
+          revenue: Math.max(sum.revenue, direct.revenue),
+          refundedSales: Math.max(sum.refundedSales, direct.refundedSales),
+          declinedSales: Math.max(sum.declinedSales, direct.declinedSales),
+        });
+      }
+    }
+
+    const pickAttr = (id: string) => {
+      if (tab === 'campanhas') return effectiveCampaignAttr.get(id) ?? emptyAttr();
+      if (tab === 'conjuntos') return effectiveAdSetAttr.get(id) ?? emptyAttr();
+      return effectiveAdAttr.get(id) ?? emptyAttr();
     };
 
     return items.map(item => {
-      const direct = map.get(item.id) ?? { ...emptyAttr };
-      let attr = direct;
-
-      if (tab === 'campanhas') {
-        const rolled = rollupFromAdSets(item.id);
-        if (rolled.sales > attr.sales || rolled.revenue > attr.revenue) attr = rolled;
-      } else if (tab === 'conjuntos') {
-        const rolled = rollupFromAds(item.id);
-        if (rolled.sales > attr.sales || rolled.revenue > attr.revenue) attr = rolled;
-      }
+      const attr = pickAttr(item.id);
 
       if (attr.sales === 0 && attr.revenue === 0 && attr.refundedSales === 0 && attr.declinedSales === 0) {
         return item;
