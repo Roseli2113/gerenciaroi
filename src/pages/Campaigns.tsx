@@ -634,9 +634,12 @@ const Campaigns = () => {
       );
     }
 
+    // Use merged campaigns (real DB attribution) instead of Meta pixel data
+    const mergedCampaigns = mergeAttribution(campaigns, 'campanhas') as typeof campaigns;
+
     // Helper to calculate metrics for a specific account
     const getAccountMetrics = (accountId: string) => {
-      const acctCampaigns = campaigns.filter(c => c.accountId === accountId);
+      const acctCampaigns = mergedCampaigns.filter(c => c.accountId === accountId);
       const spent = acctCampaigns.reduce((sum, c) => sum + c.spent, 0);
       const sales = acctCampaigns.reduce((sum, c) => sum + c.sales, 0);
       const revenue = acctCampaigns.reduce((sum, c) => sum + c.revenue, 0);
@@ -664,22 +667,23 @@ const Campaigns = () => {
       return { spent, sales, revenue, profit, impressions, clicks, pageViews, ic, cpa, roi, cpm, cpc, ctr, frequency, cpv, cpi, convCheck, conRate, icrRate, margin, roas };
     };
 
-    // Calculate totals from ALL campaigns for summary row
-    const totalSpent = campaigns.reduce((sum, c) => sum + c.spent, 0);
-    const totalSales = campaigns.reduce((sum, c) => sum + c.sales, 0);
-    const totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0);
+    // Calculate totals from ALL merged campaigns for summary row
+    const totalSpent = mergedCampaigns.reduce((sum, c) => sum + c.spent, 0);
+    const totalSales = mergedCampaigns.reduce((sum, c) => sum + c.sales, 0);
+    const totalRevenue = mergedCampaigns.reduce((sum, c) => sum + c.revenue, 0);
     const totalProfit = totalRevenue - totalSpent;
-    const totalImpressions = campaigns.reduce((sum, c) => sum + c.impressions, 0);
-    const totalClicks = campaigns.reduce((sum, c) => sum + c.clicks, 0);
-    const totalPageViews = campaigns.reduce((sum, c) => sum + c.pageViews, 0);
-    const totalIC = campaigns.reduce((sum, c) => sum + c.initiatedCheckout, 0);
+    const totalImpressions = mergedCampaigns.reduce((sum, c) => sum + c.impressions, 0);
+    const totalClicks = mergedCampaigns.reduce((sum, c) => sum + c.clicks, 0);
+    const totalPageViews = mergedCampaigns.reduce((sum, c) => sum + c.pageViews, 0);
+    const totalIC = mergedCampaigns.reduce((sum, c) => sum + c.initiatedCheckout, 0);
     const avgCPA = totalSales > 0 ? totalSpent / totalSales : null;
     const avgROI = totalSpent > 0 ? totalRevenue / totalSpent : null;
     const avgCPM = totalImpressions > 0 ? (totalSpent / totalImpressions) * 1000 : null;
     const avgCPC = totalClicks > 0 ? totalSpent / totalClicks : null;
     const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null;
-    const avgFrequency = campaigns.length > 0 
-      ? campaigns.reduce((sum, c) => sum + (c.frequency || 0), 0) / campaigns.filter(c => c.frequency !== null).length 
+    const freqCount = mergedCampaigns.filter(c => c.frequency !== null).length;
+    const avgFrequency = freqCount > 0
+      ? mergedCampaigns.reduce((sum, c) => sum + (c.frequency || 0), 0) / freqCount
       : null;
     const avgCPV = totalPageViews > 0 ? totalSpent / totalPageViews : null;
     const avgCPI = totalIC > 0 ? totalSpent / totalIC : null;
