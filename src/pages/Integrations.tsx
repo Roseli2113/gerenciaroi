@@ -45,6 +45,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { ApiCredentialsCard } from '@/components/integrations/ApiCredentialsCard';
+import { PlatformFeesCard } from '@/components/integrations/PlatformFeesCard';
 import { UtmCodesDialog } from '@/components/integrations/UtmCodesDialog';
 import { UtmScriptsDialog } from '@/components/integrations/UtmScriptsDialog';
 import { CreateWebhookDialog } from '@/components/integrations/CreateWebhookDialog';
@@ -634,6 +635,7 @@ export default function Integrations() {
               </Card>
 
               <ApiCredentialsCard />
+              <PlatformFeesCard />
             </div>
           </TabsContent>
 
