@@ -7,6 +7,7 @@ export interface PlatformFee {
   platform: string;
   fee_per_sale: number;
   fee_per_withdrawal: number;
+  fee_per_orderbump: number;
 }
 
 export function normalizePlatform(p: string | null | undefined): string {
