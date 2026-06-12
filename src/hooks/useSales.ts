@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import { usePlatformFees, normalizePlatform } from '@/hooks/usePlatformFees';
 
 export type Sale = Tables<'sales'>;
 
@@ -27,6 +28,7 @@ export function useSales(filters?: SalesFilters) {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const { feeMap } = usePlatformFees();
 
   // Keep latest filters in a ref so refreshSales() always uses current filters
   const filtersRef = useRef(filters);
@@ -119,7 +121,11 @@ export function useSales(filters?: SalesFilters) {
     const pendingSales = realSales.filter(s => s.status === 'pending');
     const refundedSales = realSales.filter(s => s.status === 'refunded' || s.status === 'chargedback');
 
-    const totalRevenue = approvedSales.reduce((sum, s) => sum + Number(s.amount), 0);
+    const netAmount = (s: Sale) => {
+      const fee = feeMap.get(normalizePlatform(s.platform))?.fee_per_sale || 0;
+      return Math.max(0, Number(s.amount) - fee);
+    };
+    const totalRevenue = approvedSales.reduce((sum, s) => sum + netAmount(s), 0);
     const totalPending = pendingSales.reduce((sum, s) => sum + Number(s.amount), 0);
     const totalRefunds = refundedSales.reduce((sum, s) => sum + Number(s.amount), 0);
     
@@ -141,7 +147,7 @@ export function useSales(filters?: SalesFilters) {
       arpu,
       avgTicket,
     };
-  }, [sales]);
+  }, [sales, feeMap]);
 
   return {
     sales,

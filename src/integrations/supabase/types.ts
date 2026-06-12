@@ -624,6 +624,36 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_fees: {
+        Row: {
+          created_at: string
+          fee_per_sale: number
+          fee_per_withdrawal: number
+          id: string
+          platform: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fee_per_sale?: number
+          fee_per_withdrawal?: number
+          id?: string
+          platform: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fee_per_sale?: number
+          fee_per_withdrawal?: number
+          id?: string
+          platform?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

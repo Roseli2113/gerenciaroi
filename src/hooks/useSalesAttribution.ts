@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePlatformFees, normalizePlatform } from '@/hooks/usePlatformFees';
 
 interface TrackingData {
   utm_source?: string;
@@ -65,6 +66,7 @@ function getTracking(raw: RawData): TrackingData {
 
 export function useSalesAttribution(startDate?: Date, endDate?: Date) {
   const { user } = useAuth();
+  const { feeMap } = usePlatformFees();
   const [attribution, setAttribution] = useState<SalesAttribution>({
     byCampaignId: new Map(),
     byAdSetId: new Map(),
@@ -84,7 +86,7 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
 
       let query = supabase
         .from('sales')
-        .select('amount, status, raw_data, campaign_id')
+        .select('amount, status, raw_data, campaign_id, platform')
         .eq('user_id', user.id)
         .gte('created_at', fromDate.toISOString());
 
@@ -120,7 +122,10 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
           campaignId = String((sale as Record<string, unknown>).campaign_id);
         }
 
-        const amount = Number(sale.amount) || 0;
+        const rawAmount = Number(sale.amount) || 0;
+        const platformKey = normalizePlatform((sale as Record<string, unknown>).platform as string | null);
+        const feePerSale = feeMap.get(platformKey)?.fee_per_sale || 0;
+        const amount = Math.max(0, rawAmount - feePerSale);
         const isApproved = sale.status === 'approved' || sale.status === 'paid';
         const isRefunded = sale.status === 'refunded' || sale.status === 'chargedback';
         const isDeclined = sale.status === 'cancelled' || sale.status === 'declined';
@@ -150,7 +155,7 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
     } finally {
       setLoading(false);
     }
-  }, [user, startDate, endDate]);
+  }, [user, startDate, endDate, feeMap]);
 
   useEffect(() => {
     fetchAttribution();
