@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePlatformFees, normalizePlatform } from '@/hooks/usePlatformFees';
 
 interface TrackingData {
   utm_source?: string;
