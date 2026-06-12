@@ -28,6 +28,7 @@ export function useSales(filters?: SalesFilters) {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const { feeMap } = usePlatformFees();
 
   // Keep latest filters in a ref so refreshSales() always uses current filters
   const filtersRef = useRef(filters);
