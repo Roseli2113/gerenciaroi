@@ -71,11 +71,11 @@ export function PlatformFeesCard() {
         ) : (
           <div className="space-y-3">
             {platforms.map(p => {
-              const d = draft[p] || { sale: '0', withdrawal: '0' };
+              const d = draft[p] || { sale: '0', withdrawal: '0', orderbump: '0' };
               return (
                 <div key={p} className="p-3 bg-muted/30 rounded-lg space-y-3">
                   <Badge variant="outline" className="capitalize">{p}</Badge>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs">Taxa por Venda (R$)</Label>
                       <Input
@@ -84,6 +84,16 @@ export function PlatformFeesCard() {
                         min="0"
                         value={d.sale}
                         onChange={e => setDraft({ ...draft, [p]: { ...d, sale: e.target.value } })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Taxa por Order Bump (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={d.orderbump}
+                        onChange={e => setDraft({ ...draft, [p]: { ...d, orderbump: e.target.value } })}
                       />
                     </div>
                     <div className="space-y-1">
