@@ -20,7 +20,7 @@ export function PlatformFeesCard() {
     return Array.from(set).filter(Boolean).sort();
   }, [webhooks, feeMap]);
 
-  const [draft, setDraft] = useState<Record<string, { sale: string; withdrawal: string }>>({});
+  const [draft, setDraft] = useState<Record<string, { sale: string; withdrawal: string; orderbump: string }>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,6 +32,7 @@ export function PlatformFeesCard() {
           next[p] = {
             sale: f ? String(f.fee_per_sale) : '0',
             withdrawal: f ? String(f.fee_per_withdrawal) : '0',
+            orderbump: f ? String(f.fee_per_orderbump) : '0',
           };
         }
       });
@@ -41,8 +42,8 @@ export function PlatformFeesCard() {
 
   const handleSave = async (p: string) => {
     setSavingId(p);
-    const d = draft[p] || { sale: '0', withdrawal: '0' };
-    await upsertFee(p, parseFloat(d.sale) || 0, parseFloat(d.withdrawal) || 0);
+    const d = draft[p] || { sale: '0', withdrawal: '0', orderbump: '0' };
+    await upsertFee(p, parseFloat(d.sale) || 0, parseFloat(d.withdrawal) || 0, parseFloat(d.orderbump) || 0);
     setSavingId(null);
   };
 
