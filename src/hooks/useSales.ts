@@ -122,7 +122,12 @@ export function useSales(filters?: SalesFilters) {
     const refundedSales = realSales.filter(s => s.status === 'refunded' || s.status === 'chargedback');
 
     const netAmount = (s: Sale) => {
-      const fee = feeMap.get(normalizePlatform(s.platform))?.fee_per_sale || 0;
+      const fees = feeMap.get(normalizePlatform(s.platform));
+      const raw = (s.raw_data ?? {}) as { product?: { type?: string } };
+      const isBump = String(raw?.product?.type || '').toLowerCase() === 'bump';
+      const fee = isBump
+        ? (fees?.fee_per_orderbump || 0)
+        : (fees?.fee_per_sale || 0);
       return Math.max(0, Number(s.amount) - fee);
     };
     const totalRevenue = approvedSales.reduce((sum, s) => sum + netAmount(s), 0);

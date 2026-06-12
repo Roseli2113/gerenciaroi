@@ -124,7 +124,10 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
 
         const rawAmount = Number(sale.amount) || 0;
         const platformKey = normalizePlatform((sale as Record<string, unknown>).platform as string | null);
-        const feePerSale = feeMap.get(platformKey)?.fee_per_sale || 0;
+        const fees = feeMap.get(platformKey);
+        const productType = String(((raw as { product?: { type?: string } })?.product?.type) || '').toLowerCase();
+        const isBump = productType === 'bump';
+        const feePerSale = isBump ? (fees?.fee_per_orderbump || 0) : (fees?.fee_per_sale || 0);
         const amount = Math.max(0, rawAmount - feePerSale);
         const isApproved = sale.status === 'approved' || sale.status === 'paid';
         const isRefunded = sale.status === 'refunded' || sale.status === 'chargedback';

@@ -627,6 +627,7 @@ export type Database = {
       platform_fees: {
         Row: {
           created_at: string
+          fee_per_orderbump: number
           fee_per_sale: number
           fee_per_withdrawal: number
           id: string
@@ -636,6 +637,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          fee_per_orderbump?: number
           fee_per_sale?: number
           fee_per_withdrawal?: number
           id?: string
@@ -645,6 +647,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          fee_per_orderbump?: number
           fee_per_sale?: number
           fee_per_withdrawal?: number
           id?: string

@@ -7,6 +7,7 @@ export interface PlatformFee {
   platform: string;
   fee_per_sale: number;
   fee_per_withdrawal: number;
+  fee_per_orderbump: number;
 }
 
 export function normalizePlatform(p: string | null | undefined): string {
@@ -28,14 +29,15 @@ export function usePlatformFees() {
     try {
       const { data, error } = await supabase
         .from('platform_fees')
-        .select('id, platform, fee_per_sale, fee_per_withdrawal')
+        .select('id, platform, fee_per_sale, fee_per_withdrawal, fee_per_orderbump')
         .eq('user_id', userId);
       if (error) throw error;
-      setFees((data || []).map(f => ({
+      setFees((data || []).map((f: { id: string; platform: string; fee_per_sale: number | string; fee_per_withdrawal: number | string; fee_per_orderbump?: number | string | null }) => ({
         id: f.id,
         platform: normalizePlatform(f.platform),
         fee_per_sale: Number(f.fee_per_sale) || 0,
         fee_per_withdrawal: Number(f.fee_per_withdrawal) || 0,
+        fee_per_orderbump: Number(f.fee_per_orderbump) || 0,
       })));
     } catch (e) {
       console.error('Error loading platform_fees', e);
@@ -46,13 +48,13 @@ export function usePlatformFees() {
 
   useEffect(() => { fetchFees(); }, [fetchFees]);
 
-  const upsertFee = async (platform: string, fee_per_sale: number, fee_per_withdrawal: number) => {
+  const upsertFee = async (platform: string, fee_per_sale: number, fee_per_withdrawal: number, fee_per_orderbump: number = 0) => {
     if (!userId) return;
     const p = normalizePlatform(platform);
     try {
       const { error } = await supabase
         .from('platform_fees')
-        .upsert({ user_id: userId, platform: p, fee_per_sale, fee_per_withdrawal }, { onConflict: 'user_id,platform' });
+        .upsert({ user_id: userId, platform: p, fee_per_sale, fee_per_withdrawal, fee_per_orderbump }, { onConflict: 'user_id,platform' });
       if (error) throw error;
       toast.success('Taxas salvas');
       await fetchFees();
