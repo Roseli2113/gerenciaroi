@@ -1,0 +1,1 @@
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.platform_fees TO authenticated; GRANT ALL ON public.platform_fees TO service_role;
