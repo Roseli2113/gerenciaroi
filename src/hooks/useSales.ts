@@ -123,11 +123,18 @@ export function useSales(filters?: SalesFilters) {
 
     const netAmount = (s: Sale) => {
       const fees = feeMap.get(normalizePlatform(s.platform));
-      const raw = (s.raw_data ?? {}) as { product?: { type?: string } };
+      const raw = (s.raw_data ?? {}) as { product?: { type?: string; price?: number } };
       const isBump = String(raw?.product?.type || '').toLowerCase() === 'bump';
-      const fee = isBump
-        ? (fees?.fee_per_orderbump || 0)
-        : (fees?.fee_per_sale || 0);
+      const bumpPrice = Number(raw?.product?.price) || 0;
+      // Bump sales in Lowify ride along with a main product in the same order,
+      // so the platform charges both the per-sale fee AND the order bump fee.
+      let fee = 0;
+      if (isBump) {
+        fee = (fees?.fee_per_orderbump || 0);
+        if (Number(s.amount) > bumpPrice) fee += (fees?.fee_per_sale || 0);
+      } else {
+        fee = (fees?.fee_per_sale || 0);
+      }
       return Math.max(0, Number(s.amount) - fee);
     };
     const totalRevenue = approvedSales.reduce((sum, s) => sum + netAmount(s), 0);
