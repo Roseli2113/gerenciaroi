@@ -54,6 +54,7 @@ import { IntegrationTestTab } from '@/components/integrations/IntegrationTestTab
 import { CapiEventsMonitor } from '@/components/integrations/CapiEventsMonitor';
 import { Send } from 'lucide-react';
 import { LiveTrackingScriptCard } from '@/components/integrations/LiveTrackingScriptCard';
+import { InitiateCheckoutSnippetCard } from '@/components/integrations/InitiateCheckoutSnippetCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
@@ -759,6 +760,9 @@ export default function Integrations() {
 
             {/* Live Tracking Script */}
             <LiveTrackingScriptCard />
+
+            {/* InitiateCheckout by button click */}
+            <InitiateCheckoutSnippetCard />
           </TabsContent>
 
           {/* Pixel Tab */}
