@@ -760,6 +760,9 @@ export default function Integrations() {
 
             {/* Live Tracking Script */}
             <LiveTrackingScriptCard />
+
+            {/* InitiateCheckout by button click */}
+            <InitiateCheckoutSnippetCard />
           </TabsContent>
 
           {/* Pixel Tab */}
