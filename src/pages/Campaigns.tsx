@@ -186,15 +186,13 @@ const Campaigns = () => {
     setSelectedItems([]);
   }, [activeTab]);
 
-  // When switching to conjuntos tab, fetch adsets; when switching to anuncios, fetch ads
+  // Keep the full hierarchy loaded because campaign totals depend on child adsets/ads rollups.
   useEffect(() => {
-    if (activeTab === 'conjuntos' && hasActiveAccount) {
+    if (hasActiveAccount) {
       fetchAdSets();
-    }
-    if (activeTab === 'anuncios' && hasActiveAccount) {
       fetchAds();
     }
-  }, [activeTab, hasActiveAccount, fetchAdSets, fetchAds]);
+  }, [hasActiveAccount, fetchAdSets, fetchAds]);
 
   const handleToggleStatus = async (id: string, currentStatus: boolean, type: 'campaign' | 'adset' | 'ad') => {
     setTogglingIds(prev => new Set(prev).add(id));
