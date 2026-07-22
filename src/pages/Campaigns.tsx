@@ -37,7 +37,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useSales } from '@/hooks/useSales';
-import { useSalesAttribution } from '@/hooks/useSalesAttribution';
+import { normalizeAttributionName, useSalesAttribution } from '@/hooks/useSalesAttribution';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
@@ -186,15 +186,13 @@ const Campaigns = () => {
     setSelectedItems([]);
   }, [activeTab]);
 
-  // When switching to conjuntos tab, fetch adsets; when switching to anuncios, fetch ads
+  // Keep the full hierarchy loaded because campaign totals depend on child adsets/ads rollups.
   useEffect(() => {
-    if (activeTab === 'conjuntos' && hasActiveAccount) {
+    if (hasActiveAccount) {
       fetchAdSets();
-    }
-    if (activeTab === 'anuncios' && hasActiveAccount) {
       fetchAds();
     }
-  }, [activeTab, hasActiveAccount, fetchAdSets, fetchAds]);
+  }, [hasActiveAccount, fetchAdSets, fetchAds]);
 
   const handleToggleStatus = async (id: string, currentStatus: boolean, type: 'campaign' | 'adset' | 'ad') => {
     setTogglingIds(prev => new Set(prev).add(id));
@@ -295,6 +293,7 @@ const Campaigns = () => {
   };
 
   // Merge webhook sales attribution with Meta Ads data.
+  // Uses ID first and falls back to normalized UTM names when duplicated Meta entities changed IDs.
   // Rollup up: campaign totals = max(direct, sum of child adsets); adset = max(direct, sum of child ads).
   // Rollup down: when campaign has more direct sales than its adsets sum, distribute the leftover
   // to the adset with highest spend (and same for adset -> ads), so Campaign totals == sum(AdSets).
@@ -308,24 +307,48 @@ const Campaigns = () => {
       declinedSales: a.declinedSales + b.declinedSales,
     });
 
+    const maxAttr = (a: ReturnType<typeof emptyAttr>, b: ReturnType<typeof emptyAttr>) => ({
+      sales: Math.max(a.sales, b.sales),
+      revenue: Math.max(a.revenue, b.revenue),
+      refundedSales: Math.max(a.refundedSales, b.refundedSales),
+      declinedSales: Math.max(a.declinedSales, b.declinedSales),
+    });
+
+    const getCampaignDirectAttr = (campaign: Campaign) => {
+      const idAttr = attribution.byCampaignId.get(campaign.id) ?? emptyAttr();
+      const nameKey = normalizeAttributionName(campaign.name);
+      const nameAttr = nameKey ? attribution.byCampaignName.get(nameKey) ?? emptyAttr() : emptyAttr();
+      return maxAttr(idAttr, nameAttr);
+    };
+
+    const getAdSetDirectAttr = (adSet: AdSet) => {
+      const idAttr = attribution.byAdSetId.get(adSet.id) ?? emptyAttr();
+      const nameKey = normalizeAttributionName(adSet.name);
+      const nameAttr = nameKey ? attribution.byAdSetName.get(nameKey) ?? emptyAttr() : emptyAttr();
+      return maxAttr(idAttr, nameAttr);
+    };
+
+    const getAdDirectAttr = (ad: Ad) => {
+      const idAttr = attribution.byAdId.get(ad.id) ?? emptyAttr();
+      const nameKey = normalizeAttributionName(ad.name);
+      const nameAttr = nameKey ? attribution.byAdName.get(nameKey) ?? emptyAttr() : emptyAttr();
+      return maxAttr(idAttr, nameAttr);
+    };
+
     // Build effective adset attribution: max(direct, sum of children ads) — rollup UP from ads
     const effectiveAdSetAttr = new Map<string, ReturnType<typeof emptyAttr>>();
     for (const as of adSets) {
-      const direct = attribution.byAdSetId.get(as.id) ?? emptyAttr();
+      const direct = getAdSetDirectAttr(as);
       const childAds = ads.filter(ad => ad.adsetId === as.id);
-      const adSum = childAds.reduce((acc, ad) => sumAttr(acc, attribution.byAdId.get(ad.id) ?? emptyAttr()), emptyAttr());
-      effectiveAdSetAttr.set(as.id, {
-        sales: Math.max(direct.sales, adSum.sales),
-        revenue: Math.max(direct.revenue, adSum.revenue),
-        refundedSales: Math.max(direct.refundedSales, adSum.refundedSales),
-        declinedSales: Math.max(direct.declinedSales, adSum.declinedSales),
-      });
+      const adSum = childAds.reduce((acc, ad) => sumAttr(acc, getAdDirectAttr(ad)), emptyAttr());
+      effectiveAdSetAttr.set(as.id, maxAttr(direct, adSum));
     }
     // Distribute campaign leftovers to top-spend adset
     const campaignIds = new Set(campaigns.map(c => c.id));
     for (const cid of campaignIds) {
-      const direct = attribution.byCampaignId.get(cid);
-      if (!direct) continue;
+      const campaign = campaigns.find(c => c.id === cid);
+      if (!campaign) continue;
+      const direct = getCampaignDirectAttr(campaign);
       const children = adSets.filter(as => as.campaignId === cid);
       if (children.length === 0) continue;
       const childSum = children.reduce((acc, as) => sumAttr(acc, effectiveAdSetAttr.get(as.id) ?? emptyAttr()), emptyAttr());
@@ -343,7 +366,7 @@ const Campaigns = () => {
     // Build effective ad attribution similarly (direct + leftover from parent adset)
     const effectiveAdAttr = new Map<string, ReturnType<typeof emptyAttr>>();
     for (const ad of ads) {
-      effectiveAdAttr.set(ad.id, { ...(attribution.byAdId.get(ad.id) ?? emptyAttr()) });
+      effectiveAdAttr.set(ad.id, { ...getAdDirectAttr(ad) });
     }
     for (const as of adSets) {
       const direct = effectiveAdSetAttr.get(as.id);
@@ -367,17 +390,11 @@ const Campaigns = () => {
     for (const c of campaigns) {
       const children = adSets.filter(as => as.campaignId === c.id);
       if (children.length === 0) {
-        effectiveCampaignAttr.set(c.id, { ...(attribution.byCampaignId.get(c.id) ?? emptyAttr()) });
+        effectiveCampaignAttr.set(c.id, { ...getCampaignDirectAttr(c) });
       } else {
         const sum = children.reduce((acc, as) => sumAttr(acc, effectiveAdSetAttr.get(as.id) ?? emptyAttr()), emptyAttr());
-        const direct = attribution.byCampaignId.get(c.id) ?? emptyAttr();
-        // Take max per field to be safe
-        effectiveCampaignAttr.set(c.id, {
-          sales: Math.max(sum.sales, direct.sales),
-          revenue: Math.max(sum.revenue, direct.revenue),
-          refundedSales: Math.max(sum.refundedSales, direct.refundedSales),
-          declinedSales: Math.max(sum.declinedSales, direct.declinedSales),
-        });
+        const direct = getCampaignDirectAttr(c);
+        effectiveCampaignAttr.set(c.id, maxAttr(sum, direct));
       }
     }
 

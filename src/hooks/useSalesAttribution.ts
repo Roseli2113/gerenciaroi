@@ -33,6 +33,9 @@ export interface SalesAttribution {
   byCampaignId: Map<string, AttributionMetrics>;
   byAdSetId: Map<string, AttributionMetrics>;
   byAdId: Map<string, AttributionMetrics>;
+  byCampaignName: Map<string, AttributionMetrics>;
+  byAdSetName: Map<string, AttributionMetrics>;
+  byAdName: Map<string, AttributionMetrics>;
 }
 
 const emptyMetrics = (): AttributionMetrics => ({
@@ -56,6 +59,19 @@ function extractIdFromUtm(utmValue: string | null | undefined): string | null {
   return null;
 }
 
+export function normalizeAttributionName(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  const rawName = value.split('|')[0]?.replace(/\+/g, ' ').trim();
+  if (!rawName) return null;
+
+  try {
+    return decodeURIComponent(rawName).trim().replace(/\s+/g, ' ').toLowerCase() || null;
+  } catch {
+    return rawName.trim().replace(/\s+/g, ' ').toLowerCase() || null;
+  }
+}
+
 function getTracking(raw: RawData): TrackingData {
   // Check nested tracking object first, then top-level
   if (raw.tracking && typeof raw.tracking === 'object') {
@@ -71,6 +87,9 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
     byCampaignId: new Map(),
     byAdSetId: new Map(),
     byAdId: new Map(),
+    byCampaignName: new Map(),
+    byAdSetName: new Map(),
+    byAdName: new Map(),
   });
   const [loading, setLoading] = useState(false);
 
@@ -101,6 +120,9 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
       const byCampaignId = new Map<string, AttributionMetrics>();
       const byAdSetId = new Map<string, AttributionMetrics>();
       const byAdId = new Map<string, AttributionMetrics>();
+      const byCampaignName = new Map<string, AttributionMetrics>();
+      const byAdSetName = new Map<string, AttributionMetrics>();
+      const byAdName = new Map<string, AttributionMetrics>();
 
       for (const sale of sales || []) {
         const raw = sale.raw_data as RawData | null;
@@ -110,6 +132,9 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
         let campaignId = extractIdFromUtm(tracking.utm_campaign);
         const adSetId = extractIdFromUtm(tracking.utm_medium);
         const adId = extractIdFromUtm(tracking.utm_content);
+        const campaignName = normalizeAttributionName(tracking.utm_campaign);
+        const adSetName = normalizeAttributionName(tracking.utm_medium);
+        const adName = normalizeAttributionName(tracking.utm_content);
 
         // Fallback: try tracking.campaign_id if it looks like a Meta ID (10+ digits)
         if (!campaignId && tracking.campaign_id) {
@@ -158,9 +183,12 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
         addToMap(byCampaignId, campaignId);
         addToMap(byAdSetId, adSetId);
         addToMap(byAdId, adId);
+        addToMap(byCampaignName, campaignName);
+        addToMap(byAdSetName, adSetName);
+        addToMap(byAdName, adName);
       }
 
-      setAttribution({ byCampaignId, byAdSetId, byAdId });
+      setAttribution({ byCampaignId, byAdSetId, byAdId, byCampaignName, byAdSetName, byAdName });
     } catch (err) {
       console.error('Error fetching sales attribution:', err);
     } finally {
