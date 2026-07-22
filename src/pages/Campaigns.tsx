@@ -308,10 +308,18 @@ const Campaigns = () => {
       declinedSales: a.declinedSales + b.declinedSales,
     });
 
-    // Build effective adset attribution: direct + any leftover from parent campaign
+    // Build effective adset attribution: max(direct, sum of children ads) — rollup UP from ads
     const effectiveAdSetAttr = new Map<string, ReturnType<typeof emptyAttr>>();
     for (const as of adSets) {
-      effectiveAdSetAttr.set(as.id, { ...(attribution.byAdSetId.get(as.id) ?? emptyAttr()) });
+      const direct = attribution.byAdSetId.get(as.id) ?? emptyAttr();
+      const childAds = ads.filter(ad => ad.adsetId === as.id);
+      const adSum = childAds.reduce((acc, ad) => sumAttr(acc, attribution.byAdId.get(ad.id) ?? emptyAttr()), emptyAttr());
+      effectiveAdSetAttr.set(as.id, {
+        sales: Math.max(direct.sales, adSum.sales),
+        revenue: Math.max(direct.revenue, adSum.revenue),
+        refundedSales: Math.max(direct.refundedSales, adSum.refundedSales),
+        declinedSales: Math.max(direct.declinedSales, adSum.declinedSales),
+      });
     }
     // Distribute campaign leftovers to top-spend adset
     const campaignIds = new Set(campaigns.map(c => c.id));
