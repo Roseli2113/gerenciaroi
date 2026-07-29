@@ -165,6 +165,8 @@ const Campaigns = () => {
 
     return sales.filter(s => {
       if (s.status !== 'approved' && s.status !== 'paid') return false;
+      // Ignore internal SaaS subscription payments (AdsROI) — not customer sales from Meta Ads
+      if (String(s.platform || '').toLowerCase() === 'adsroi') return false;
       const saleDate = new Date(s.created_at);
       if (saleDate < periodRange.startDate || saleDate > periodRange.endDate) return false;
       // If sale already has a campaign_id, it's tracked
