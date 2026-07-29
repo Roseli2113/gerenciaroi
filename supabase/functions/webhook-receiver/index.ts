@@ -520,6 +520,45 @@ async function parseSaleData(platform: string, payload: LowifyPayload, userId: s
       }
       break
 
+    case 'adsroi': {
+      // AdsROI envia o comprador em `buyer` e pode enviar UTMs em `tracking`/`utm_params`/`metadata`
+      // ou como campos top-level (utm_source, utm_campaign, ...). Normalizamos para `raw_data.tracking`
+      // para que useSalesAttribution consiga atribuir.
+      const rawPayload = payload as Record<string, unknown>
+      const tracking = getTrackingObject(payload)
+      const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+      const collected: Record<string, unknown> = {}
+      for (const k of utmKeys) {
+        const val = (tracking as Record<string, unknown>)[k] ?? rawPayload[k]
+        if (val) collected[k] = val
+      }
+      if (Object.keys(collected).length > 0) {
+        (baseData.raw_data as Record<string, unknown>).tracking = {
+          ...(typeof (baseData.raw_data as Record<string, unknown>).tracking === 'object'
+            ? (baseData.raw_data as Record<string, unknown>).tracking as Record<string, unknown>
+            : {}),
+          ...collected,
+        }
+      }
+
+      rawAmount = payload.payment?.amount || payload.amount || payload.value || payload.price || 0
+      saleData = {
+        ...baseData,
+        transaction_id: payload.transaction_id || payload.sale_id?.toString() || payload.order_id || payload.id?.toString() || null,
+        status: mapStatus(payload.status || payload.event || 'unknown'),
+        customer_name: payload.buyer?.name || payload.customer?.name || null,
+        customer_email: payload.buyer?.email || payload.customer?.email || null,
+        customer_phone: payload.buyer?.phone || payload.customer?.phone || null,
+        product_name: payload.product?.name || payload.offer?.name || null,
+        product_id: payload.product?.id?.toString() || payload.offer?.id?.toString() || null,
+        amount: rawAmount,
+        currency: originalCurrency,
+        payment_method: payload.payment?.method || payload.payment_type || null,
+        commission: payload.commission || 0,
+      }
+      break
+    }
+
     default:
       rawAmount = payload.payment?.amount || payload.amount || payload.value || 0
       saleData = {
