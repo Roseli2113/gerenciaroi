@@ -158,7 +158,7 @@ export function UtmScriptsDialog({ open, onOpenChange }: UtmScriptsDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Selecione a sua plataforma de vendas para obter o script apropriado:</DialogTitle>
         </DialogHeader>
