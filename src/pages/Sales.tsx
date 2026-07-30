@@ -107,6 +107,58 @@ function getStatusBadge(status: string) {
   );
 }
 
+// Helper to extract campaign/UTM tracking data received via webhook
+function getSaleTracking(sale: Sale): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (!sale.raw_data || typeof sale.raw_data !== 'object') return result;
+  const raw = sale.raw_data as Record<string, unknown>;
+
+  const sources: Record<string, unknown>[] = [raw];
+  for (const key of ['tracking', 'utm_params', 'utms', 'metadata']) {
+    const val = raw[key];
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      sources.push(val as Record<string, unknown>);
+    }
+  }
+
+  const keys = [
+    'campaign_name',
+    'ad_platform',
+    'utm_source',
+    'utm_medium',
+    'utm_campaign',
+    'utm_content',
+    'utm_term',
+  ];
+
+  for (const src of sources) {
+    for (const k of keys) {
+      const v = src[k];
+      if (v !== undefined && v !== null && String(v).trim() !== '' && !result[k]) {
+        result[k] = String(v);
+      }
+    }
+  }
+
+  // Fallback: build campaign_name from the UTM chain
+  if (!result.campaign_name) {
+    const parts = [result.utm_source, result.utm_medium, result.utm_campaign].filter(Boolean);
+    if (parts.length) result.campaign_name = parts.join(' / ');
+  }
+
+  return result;
+}
+
+const TRACKING_LABELS: { key: string; label: string }[] = [
+  { key: 'campaign_name', label: 'Campaign Name' },
+  { key: 'ad_platform', label: 'Ad Platform' },
+  { key: 'utm_source', label: 'UTM Source' },
+  { key: 'utm_medium', label: 'UTM Medium' },
+  { key: 'utm_campaign', label: 'UTM Campaign' },
+  { key: 'utm_content', label: 'UTM Content' },
+  { key: 'utm_term', label: 'UTM Term' },
+];
+
 // Helper to extract amount from sale (checks raw_data for actual value)
 function getSaleAmount(sale: Sale): number {
   // First try the amount field
@@ -589,6 +641,32 @@ const Sales = () => {
                   </div>
                 </div>
               </div>
+
+              {(() => {
+                const tracking = getSaleTracking(selectedSale);
+                const hasTracking = TRACKING_LABELS.some((t) => tracking[t.key]);
+                return (
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-2">Métricas da Campanha</h4>
+                    {hasTracking ? (
+                      <div className="space-y-3">
+                        {TRACKING_LABELS.map(({ key, label }) => (
+                          <div key={key}>
+                            <label className="text-sm font-medium text-muted-foreground">{label}</label>
+                            <p className="font-mono text-sm break-all">{tracking[key] || '-'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum dado de campanha recebido no webhook desta venda.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+
 
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-2">Datas</h4>
