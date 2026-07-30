@@ -642,6 +642,32 @@ const Sales = () => {
                 </div>
               </div>
 
+              {(() => {
+                const tracking = getSaleTracking(selectedSale);
+                const hasTracking = TRACKING_LABELS.some((t) => tracking[t.key]);
+                return (
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-2">Métricas da Campanha</h4>
+                    {hasTracking ? (
+                      <div className="space-y-3">
+                        {TRACKING_LABELS.map(({ key, label }) => (
+                          <div key={key}>
+                            <label className="text-sm font-medium text-muted-foreground">{label}</label>
+                            <p className="font-mono text-sm break-all">{tracking[key] || '-'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum dado de campanha recebido no webhook desta venda.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+
+
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-2">Datas</h4>
                 <div className="grid grid-cols-2 gap-4">
