@@ -316,26 +316,47 @@ const Campaigns = () => {
       declinedSales: Math.max(a.declinedSales, b.declinedSales),
     });
 
+    // Count how many entities share each normalized name. The name fallback can only be used
+    // when the name is unique — otherwise the same sales get duplicated across every entity.
+    const countNames = (names: (string | null)[]) => {
+      const m = new Map<string, number>();
+      for (const n of names) {
+        if (!n) continue;
+        m.set(n, (m.get(n) ?? 0) + 1);
+      }
+      return m;
+    };
+    const campaignNameCounts = countNames(campaigns.map(c => normalizeAttributionName(c.name)));
+    const adSetNameCounts = countNames(adSets.map(a => normalizeAttributionName(a.name)));
+    const adNameCounts = countNames(ads.map(a => normalizeAttributionName(a.name)));
+
+    const isEmptyAttr = (a: ReturnType<typeof emptyAttr>) =>
+      a.sales === 0 && a.revenue === 0 && a.refundedSales === 0 && a.declinedSales === 0;
+
     const getCampaignDirectAttr = (campaign: Campaign) => {
       const idAttr = attribution.byCampaignId.get(campaign.id) ?? emptyAttr();
+      if (!isEmptyAttr(idAttr)) return idAttr;
       const nameKey = normalizeAttributionName(campaign.name);
-      const nameAttr = nameKey ? attribution.byCampaignName.get(nameKey) ?? emptyAttr() : emptyAttr();
-      return maxAttr(idAttr, nameAttr);
+      if (!nameKey || (campaignNameCounts.get(nameKey) ?? 0) !== 1) return idAttr;
+      return attribution.byCampaignName.get(nameKey) ?? idAttr;
     };
 
     const getAdSetDirectAttr = (adSet: AdSet) => {
       const idAttr = attribution.byAdSetId.get(adSet.id) ?? emptyAttr();
+      if (!isEmptyAttr(idAttr)) return idAttr;
       const nameKey = normalizeAttributionName(adSet.name);
-      const nameAttr = nameKey ? attribution.byAdSetName.get(nameKey) ?? emptyAttr() : emptyAttr();
-      return maxAttr(idAttr, nameAttr);
+      if (!nameKey || (adSetNameCounts.get(nameKey) ?? 0) !== 1) return idAttr;
+      return attribution.byAdSetName.get(nameKey) ?? idAttr;
     };
 
     const getAdDirectAttr = (ad: Ad) => {
       const idAttr = attribution.byAdId.get(ad.id) ?? emptyAttr();
+      if (!isEmptyAttr(idAttr)) return idAttr;
       const nameKey = normalizeAttributionName(ad.name);
-      const nameAttr = nameKey ? attribution.byAdName.get(nameKey) ?? emptyAttr() : emptyAttr();
-      return maxAttr(idAttr, nameAttr);
+      if (!nameKey || (adNameCounts.get(nameKey) ?? 0) !== 1) return idAttr;
+      return attribution.byAdName.get(nameKey) ?? idAttr;
     };
+
 
     // Build effective adset attribution: max(direct, sum of children ads) — rollup UP from ads
     const effectiveAdSetAttr = new Map<string, ReturnType<typeof emptyAttr>>();
