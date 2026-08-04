@@ -450,11 +450,19 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Webhook error:', error)
+    await logWebhookEvent(supabase, {
+      platform: 'unknown',
+      status: 'error',
+      http_status: 500,
+      message: `Erro interno: ${error instanceof Error ? error.message : String(error)}`,
+      headers: safeHeaders,
+    })
     return new Response(
       JSON.stringify({ success: false, error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
+
 })
 
 // ---- Meta Conversions API (CAPI) ----
