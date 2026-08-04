@@ -317,6 +317,15 @@ Deno.serve(async (req) => {
 
     if (saleError) {
       console.error('Error inserting sale:', saleError)
+      await logWebhookEvent(supabase, {
+        user_id: userId,
+        platform,
+        status: 'error',
+        http_status: 500,
+        message: `Erro ao salvar venda: ${saleError.message}`,
+        payload,
+        headers: safeHeaders,
+      })
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to save sale data' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -324,6 +333,18 @@ Deno.serve(async (req) => {
     }
 
     console.log('Sale recorded:', sale)
+
+    await logWebhookEvent(supabase, {
+      user_id: userId,
+      platform,
+      status: 'processed',
+      http_status: 200,
+      message: existingId ? 'Venda atualizada' : 'Venda registrada',
+      sale_id: sale.id,
+      payload,
+      headers: safeHeaders,
+    })
+
 
     // Send push notification based on user preferences
     try {
