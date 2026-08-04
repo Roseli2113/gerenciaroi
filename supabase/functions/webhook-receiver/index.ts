@@ -74,18 +74,39 @@ Deno.serve(async (req) => {
         .select('*')
         .eq('token', webhookToken)
         .eq('status', 'active')
-        .single()
+        .maybeSingle()
 
       if (webhookError) {
         console.error('Webhook lookup error:', webhookError)
-      } else {
+      }
+
+      if (webhook) {
         webhookConfig = webhook
         userId = webhook.user_id
         if (!url.searchParams.get('platform')) {
           platform = webhook.platform
         }
+      } else {
+        // Fallback: token may be an API credential (e.g. AdsROI "Chave da API")
+        const { data: credential, error: credError } = await supabase
+          .from('api_credentials')
+          .select('id, user_id')
+          .eq('token', webhookToken)
+          .eq('status', 'active')
+          .maybeSingle()
+
+        if (credError) console.error('API credential lookup error:', credError)
+
+        if (credential) {
+          userId = credential.user_id
+          if (!url.searchParams.get('platform')) {
+            platform = 'adsroi'
+          }
+          console.log('Authenticated via api_credentials:', credential.id)
+        }
       }
     }
+
 
     if (!userId) {
       console.error('No valid webhook configuration found')
