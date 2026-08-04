@@ -58,12 +58,28 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const url = new URL(req.url)
-    const webhookToken = url.searchParams.get('token') || req.headers.get('x-webhook-token')
+    const authHeader = req.headers.get('authorization') || ''
+    const bearerToken = authHeader.toLowerCase().startsWith('bearer ')
+      ? authHeader.slice(7).trim()
+      : null
     let platform = url.searchParams.get('platform') || 'unknown'
 
     const payload: LowifyPayload = await req.json()
 
-    console.log('Received webhook:', { platform, payload })
+    const webhookToken =
+      url.searchParams.get('token') ||
+      req.headers.get('x-webhook-token') ||
+      req.headers.get('x-api-key') ||
+      (typeof (payload as Record<string, unknown>).api_key === 'string'
+        ? (payload as Record<string, unknown>).api_key as string
+        : null) ||
+      (typeof (payload as Record<string, unknown>).token === 'string'
+        ? (payload as Record<string, unknown>).token as string
+        : null) ||
+      (bearerToken && !bearerToken.includes('.') ? bearerToken : null)
+
+    console.log('Received webhook:', { platform, hasToken: !!webhookToken, payload })
+
 
     let webhookConfig = null
     let userId = null
