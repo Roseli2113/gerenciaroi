@@ -46,17 +46,55 @@ interface LowifyPayload {
   [key: string]: unknown;
 }
 
+async function logWebhookEvent(
+  supabase: ReturnType<typeof createClient>,
+  entry: {
+    user_id?: string | null;
+    platform?: string | null;
+    token_hint?: string | null;
+    status: string;
+    http_status?: number | null;
+    message?: string | null;
+    sale_id?: string | null;
+    payload?: unknown;
+    headers?: Record<string, string> | null;
+  }
+) {
+  try {
+    await supabase.from('webhook_logs').insert({
+      user_id: entry.user_id ?? null,
+      platform: entry.platform ?? null,
+      token_hint: entry.token_hint ?? null,
+      status: entry.status,
+      http_status: entry.http_status ?? null,
+      message: entry.message ?? null,
+      sale_id: entry.sale_id ?? null,
+      payload: entry.payload ?? null,
+      headers: entry.headers ?? null,
+    })
+  } catch (err) {
+    console.error('Failed to write webhook log:', err)
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+  const safeHeaders: Record<string, string> = {}
+  req.headers.forEach((value, key) => {
+    const k = key.toLowerCase()
+    safeHeaders[k] = (k === 'authorization' || k === 'x-api-key' || k === 'x-webhook-token')
+      ? `${value.slice(0, 8)}…`
+      : value
+  })
+
+  try {
     const url = new URL(req.url)
     const authHeader = req.headers.get('authorization') || ''
     const bearerToken = authHeader.toLowerCase().startsWith('bearer ')
@@ -64,7 +102,25 @@ Deno.serve(async (req) => {
       : null
     let platform = url.searchParams.get('platform') || 'unknown'
 
-    const payload: LowifyPayload = await req.json()
+    const rawBody = await req.text()
+    let payload: LowifyPayload
+    try {
+      payload = JSON.parse(rawBody || '{}')
+    } catch {
+      await logWebhookEvent(supabase, {
+        platform,
+        status: 'error',
+        http_status: 400,
+        message: 'Payload inválido (não é JSON)',
+        payload: { raw: rawBody.slice(0, 5000) },
+        headers: safeHeaders,
+      })
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid JSON payload' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
 
     const webhookToken =
       url.searchParams.get('token') ||
