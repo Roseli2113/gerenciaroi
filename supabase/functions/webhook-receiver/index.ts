@@ -182,11 +182,46 @@ Deno.serve(async (req) => {
 
     if (!userId) {
       console.error('No valid webhook configuration found')
+      // Try to resolve an owner (even if inactive) so the log is visible to the user
+      let fallbackUser: string | null = null
+      if (webhookToken) {
+        const { data: anyWebhook } = await supabase
+          .from('webhooks').select('user_id').eq('token', webhookToken).maybeSingle()
+        fallbackUser = anyWebhook?.user_id ?? null
+        if (!fallbackUser) {
+          const { data: anyCred } = await supabase
+            .from('api_credentials').select('user_id').eq('token', webhookToken).maybeSingle()
+          fallbackUser = anyCred?.user_id ?? null
+        }
+      }
+      await logWebhookEvent(supabase, {
+        user_id: fallbackUser,
+        platform,
+        token_hint: webhookToken ? `${webhookToken.slice(0, 8)}…` : null,
+        status: 'error',
+        http_status: 400,
+        message: webhookToken
+          ? 'Token/chave não encontrado ou inativo'
+          : 'Nenhum token/chave enviado na requisição',
+        payload,
+        headers: safeHeaders,
+      })
       return new Response(
         JSON.stringify({ success: false, error: 'Webhook configuration not found' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    await logWebhookEvent(supabase, {
+      user_id: userId,
+      platform,
+      token_hint: webhookToken ? `${webhookToken.slice(0, 8)}…` : null,
+      status: 'received',
+      message: 'Evento recebido',
+      payload,
+      headers: safeHeaders,
+    })
+
 
     const saleData = await parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
 
