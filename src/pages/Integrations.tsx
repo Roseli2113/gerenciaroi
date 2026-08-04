@@ -638,7 +638,10 @@ export default function Integrations() {
               <ApiCredentialsCard />
               <PlatformFeesCard />
             </div>
+
+            <WebhookLogsPanel />
           </TabsContent>
+
 
           {/* UTMs Tab */}
           <TabsContent value="utms" className="space-y-6">
