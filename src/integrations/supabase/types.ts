@@ -895,6 +895,48 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          headers: Json | null
+          http_status: number | null
+          id: string
+          message: string | null
+          payload: Json | null
+          platform: string | null
+          sale_id: string | null
+          status: string
+          token_hint: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          headers?: Json | null
+          http_status?: number | null
+          id?: string
+          message?: string | null
+          payload?: Json | null
+          platform?: string | null
+          sale_id?: string | null
+          status?: string
+          token_hint?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          headers?: Json | null
+          http_status?: number | null
+          id?: string
+          message?: string | null
+          payload?: Json | null
+          platform?: string | null
+          sale_id?: string | null
+          status?: string
+          token_hint?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       webhooks: {
         Row: {
           client_id: string | null

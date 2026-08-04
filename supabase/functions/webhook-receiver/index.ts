@@ -46,17 +46,55 @@ interface LowifyPayload {
   [key: string]: unknown;
 }
 
+async function logWebhookEvent(
+  supabase: ReturnType<typeof createClient>,
+  entry: {
+    user_id?: string | null;
+    platform?: string | null;
+    token_hint?: string | null;
+    status: string;
+    http_status?: number | null;
+    message?: string | null;
+    sale_id?: string | null;
+    payload?: unknown;
+    headers?: Record<string, string> | null;
+  }
+) {
+  try {
+    await supabase.from('webhook_logs').insert({
+      user_id: entry.user_id ?? null,
+      platform: entry.platform ?? null,
+      token_hint: entry.token_hint ?? null,
+      status: entry.status,
+      http_status: entry.http_status ?? null,
+      message: entry.message ?? null,
+      sale_id: entry.sale_id ?? null,
+      payload: entry.payload ?? null,
+      headers: entry.headers ?? null,
+    })
+  } catch (err) {
+    console.error('Failed to write webhook log:', err)
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+  const safeHeaders: Record<string, string> = {}
+  req.headers.forEach((value, key) => {
+    const k = key.toLowerCase()
+    safeHeaders[k] = (k === 'authorization' || k === 'x-api-key' || k === 'x-webhook-token')
+      ? `${value.slice(0, 8)}…`
+      : value
+  })
+
+  try {
     const url = new URL(req.url)
     const authHeader = req.headers.get('authorization') || ''
     const bearerToken = authHeader.toLowerCase().startsWith('bearer ')
@@ -64,7 +102,25 @@ Deno.serve(async (req) => {
       : null
     let platform = url.searchParams.get('platform') || 'unknown'
 
-    const payload: LowifyPayload = await req.json()
+    const rawBody = await req.text()
+    let payload: LowifyPayload
+    try {
+      payload = JSON.parse(rawBody || '{}')
+    } catch {
+      await logWebhookEvent(supabase, {
+        platform,
+        status: 'error',
+        http_status: 400,
+        message: 'Payload inválido (não é JSON)',
+        payload: { raw: rawBody.slice(0, 5000) },
+        headers: safeHeaders,
+      })
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid JSON payload' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
 
     const webhookToken =
       url.searchParams.get('token') ||
@@ -126,11 +182,46 @@ Deno.serve(async (req) => {
 
     if (!userId) {
       console.error('No valid webhook configuration found')
+      // Try to resolve an owner (even if inactive) so the log is visible to the user
+      let fallbackUser: string | null = null
+      if (webhookToken) {
+        const { data: anyWebhook } = await supabase
+          .from('webhooks').select('user_id').eq('token', webhookToken).maybeSingle()
+        fallbackUser = anyWebhook?.user_id ?? null
+        if (!fallbackUser) {
+          const { data: anyCred } = await supabase
+            .from('api_credentials').select('user_id').eq('token', webhookToken).maybeSingle()
+          fallbackUser = anyCred?.user_id ?? null
+        }
+      }
+      await logWebhookEvent(supabase, {
+        user_id: fallbackUser,
+        platform,
+        token_hint: webhookToken ? `${webhookToken.slice(0, 8)}…` : null,
+        status: 'error',
+        http_status: 400,
+        message: webhookToken
+          ? 'Token/chave não encontrado ou inativo'
+          : 'Nenhum token/chave enviado na requisição',
+        payload,
+        headers: safeHeaders,
+      })
       return new Response(
         JSON.stringify({ success: false, error: 'Webhook configuration not found' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    await logWebhookEvent(supabase, {
+      user_id: userId,
+      platform,
+      token_hint: webhookToken ? `${webhookToken.slice(0, 8)}…` : null,
+      status: 'received',
+      message: 'Evento recebido',
+      payload,
+      headers: safeHeaders,
+    })
+
 
     const saleData = await parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
 
@@ -226,6 +317,15 @@ Deno.serve(async (req) => {
 
     if (saleError) {
       console.error('Error inserting sale:', saleError)
+      await logWebhookEvent(supabase, {
+        user_id: userId,
+        platform,
+        status: 'error',
+        http_status: 500,
+        message: `Erro ao salvar venda: ${saleError.message}`,
+        payload,
+        headers: safeHeaders,
+      })
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to save sale data' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -233,6 +333,18 @@ Deno.serve(async (req) => {
     }
 
     console.log('Sale recorded:', sale)
+
+    await logWebhookEvent(supabase, {
+      user_id: userId,
+      platform,
+      status: 'processed',
+      http_status: 200,
+      message: existingId ? 'Venda atualizada' : 'Venda registrada',
+      sale_id: sale.id,
+      payload,
+      headers: safeHeaders,
+    })
+
 
     // Send push notification based on user preferences
     try {
@@ -338,11 +450,19 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Webhook error:', error)
+    await logWebhookEvent(supabase, {
+      platform: 'unknown',
+      status: 'error',
+      http_status: 500,
+      message: `Erro interno: ${error instanceof Error ? error.message : String(error)}`,
+      headers: safeHeaders,
+    })
     return new Response(
       JSON.stringify({ success: false, error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
+
 })
 
 // ---- Meta Conversions API (CAPI) ----
