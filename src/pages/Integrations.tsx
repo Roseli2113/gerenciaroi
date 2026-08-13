@@ -768,6 +768,10 @@ export default function Integrations() {
 
             {/* InitiateCheckout by button click */}
             <InitiateCheckoutSnippetCard />
+
+            {/* UTM bridge for external sales pages */}
+            <UtmBridgeScriptCard />
+
           </TabsContent>
 
           {/* Pixel Tab */}
