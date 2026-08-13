@@ -55,6 +55,8 @@ import { CapiEventsMonitor } from '@/components/integrations/CapiEventsMonitor';
 import { Send } from 'lucide-react';
 import { LiveTrackingScriptCard } from '@/components/integrations/LiveTrackingScriptCard';
 import { InitiateCheckoutSnippetCard } from '@/components/integrations/InitiateCheckoutSnippetCard';
+import { UtmBridgeScriptCard } from '@/components/integrations/UtmBridgeScriptCard';
+
 import { WebhookLogsPanel } from '@/components/integrations/WebhookLogsPanel';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -768,6 +770,10 @@ export default function Integrations() {
 
             {/* InitiateCheckout by button click */}
             <InitiateCheckoutSnippetCard />
+
+            {/* UTM bridge for external sales pages */}
+            <UtmBridgeScriptCard />
+
           </TabsContent>
 
           {/* Pixel Tab */}
