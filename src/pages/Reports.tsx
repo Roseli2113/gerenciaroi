@@ -51,7 +51,7 @@ const Reports = () => {
   const [customDateTo, setCustomDateTo] = useState<Date>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
-  const [localCampaigns, setLocalCampaigns] = useState<typeof campaigns | null>(null);
+  const [hiddenCampaignIds, setHiddenCampaignIds] = useState<Set<string>>(() => new Set());
 
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -98,8 +98,10 @@ const Reports = () => {
   });
   const { attribution, loading: attributionLoading, refreshAttribution } = useSalesAttribution(dateRange.startDate, dateRange.endDate);
 
-  // Use local campaigns if available (after deletions), otherwise use fetched campaigns
-  const baseCampaigns = localCampaigns ?? campaigns;
+  const baseCampaigns = useMemo(
+    () => campaigns.filter(campaign => !hiddenCampaignIds.has(campaign.id)),
+    [campaigns, hiddenCampaignIds],
+  );
 
   const uniqueCampaignNames = useMemo(() => {
     const counts = new Map<string, number>();
@@ -177,9 +179,9 @@ const Reports = () => {
 
   const handleDelete = () => {
     if (deleteIndex !== null) {
-      const newCampaigns = [...displayCampaigns];
-      newCampaigns.splice(deleteIndex, 1);
-      setLocalCampaigns(newCampaigns);
+      const campaign = displayCampaigns[deleteIndex];
+      if (!campaign) return;
+      setHiddenCampaignIds(previous => new Set(previous).add(campaign.id));
       toast.success('Registro removido do relatório');
       setDeleteIndex(null);
     }
