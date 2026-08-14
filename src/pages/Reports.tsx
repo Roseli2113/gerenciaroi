@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { endOfDay, format, startOfDay, startOfMonth, subDays, subMonths, endOfMonth } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,9 +25,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, Download, Calendar, TrendingUp, TrendingDown, Trash2, Loader2 } from 'lucide-react';
+import { FileText, Download, Calendar as CalendarIcon, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import { useSales } from '@/hooks/useSales';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
+import { normalizeAttributionName, useSalesAttribution } from '@/hooks/useSalesAttribution';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,58 +45,109 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const Reports = () => {
-  const { campaigns, isLoading: campaignsLoading } = useMetaCampaigns();
-  const { sales, metrics: salesMetrics } = useSales();
+  const [selectedPeriod, setSelectedPeriod] = useState('today');
+  const [selectedCampaign, setSelectedCampaign] = useState('all');
+  const [customDateFrom, setCustomDateFrom] = useState<Date>();
+  const [customDateTo, setCustomDateTo] = useState<Date>();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [localCampaigns, setLocalCampaigns] = useState<typeof campaigns | null>(null);
+
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    if (selectedPeriod === 'custom' && customDateFrom && customDateTo) {
+      return { startDate: startOfDay(customDateFrom), endDate: endOfDay(customDateTo) };
+    }
+    switch (selectedPeriod) {
+      case 'yesterday': {
+        const yesterday = subDays(now, 1);
+        return { startDate: startOfDay(yesterday), endDate: endOfDay(yesterday) };
+      }
+      case '7days': return { startDate: startOfDay(subDays(now, 6)), endDate: endOfDay(now) };
+      case '30days': return { startDate: startOfDay(subDays(now, 29)), endDate: endOfDay(now) };
+      case '90days': return { startDate: startOfDay(subDays(now, 89)), endDate: endOfDay(now) };
+      case 'thisMonth': return { startDate: startOfMonth(now), endDate: endOfDay(now) };
+      case 'lastMonth': {
+        const previousMonth = subMonths(now, 1);
+        return { startDate: startOfMonth(previousMonth), endDate: endOfMonth(previousMonth) };
+      }
+      default: return { startDate: startOfDay(now), endDate: endOfDay(now) };
+    }
+  }, [selectedPeriod, customDateFrom, customDateTo]);
+
+  const metaDatePreset = useMemo(() => {
+    const presets: Record<string, string> = {
+      today: 'today', yesterday: 'yesterday', '7days': 'last_7d',
+      '30days': 'last_30d', thisMonth: 'this_month', lastMonth: 'last_month',
+    };
+    return presets[selectedPeriod] ?? 'today';
+  }, [selectedPeriod]);
+
+  const customMetaRange = useMemo(() => {
+    if (selectedPeriod !== 'custom' && selectedPeriod !== '90days') return undefined;
+    return {
+      since: format(dateRange.startDate, 'yyyy-MM-dd'),
+      until: format(dateRange.endDate, 'yyyy-MM-dd'),
+    };
+  }, [selectedPeriod, dateRange]);
+
+  const { campaigns, isLoading: campaignsLoading, refreshAll } = useMetaCampaigns(metaDatePreset, customMetaRange);
+  const { metrics: salesMetrics, refreshSales, loading: salesLoading } = useSales({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  });
+  const { attribution, loading: attributionLoading, refreshAttribution } = useSalesAttribution(dateRange.startDate, dateRange.endDate);
 
   // Use local campaigns if available (after deletions), otherwise use fetched campaigns
   const baseCampaigns = localCampaigns ?? campaigns;
 
-  // Build revenue map from real sales grouped by campaign_id
-  const revenueByCampaign = useMemo(() => {
-    const map = new Map<string, { revenue: number; count: number }>();
-    const approvedSales = sales.filter(s => s.status === 'approved' || s.status === 'paid');
-    for (const sale of approvedSales) {
-      if (sale.campaign_id) {
-        const existing = map.get(sale.campaign_id) || { revenue: 0, count: 0 };
-        existing.revenue += Number(sale.amount);
-        existing.count += 1;
-        map.set(sale.campaign_id, existing);
-      }
+  const uniqueCampaignNames = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const campaign of baseCampaigns) {
+      const name = normalizeAttributionName(campaign.name);
+      if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
     }
-    return map;
-  }, [sales]);
+    return counts;
+  }, [baseCampaigns]);
 
-  // Merge real sales revenue into campaign data
+  // Merge only real webhook sales into campaign data. Pixel purchases are not revenue.
   const displayCampaigns = useMemo(() => {
     return baseCampaigns.map(c => {
-      const salesData = revenueByCampaign.get(c.id);
-      const realRevenue = salesData?.revenue ?? 0;
-      const realSalesCount = salesData?.count ?? 0;
-      // Use real sales revenue if available, otherwise fall back to Meta reported revenue
-      const revenue = realRevenue > 0 ? realRevenue : c.revenue;
-      const salesCount = realSalesCount > 0 ? realSalesCount : c.sales;
+      const normalizedName = normalizeAttributionName(c.name);
+      const byId = attribution.byCampaignId.get(c.id);
+      const byUniqueName = normalizedName && uniqueCampaignNames.get(normalizedName) === 1
+        ? attribution.byCampaignName.get(normalizedName)
+        : undefined;
+      const salesData = byId ?? byUniqueName;
+      const revenue = salesData?.revenue ?? 0;
+      const salesCount = salesData?.sales ?? 0;
       const profit = revenue - c.spent;
       const roi = c.spent > 0 ? revenue / c.spent : null;
       const cpa = salesCount > 0 ? c.spent / salesCount : null;
       return { ...c, revenue, sales: salesCount, profit, roi, cpa };
-    });
-  }, [baseCampaigns, revenueByCampaign]);
-
-  // Unattributed revenue (sales without campaign_id)
-  const unattributedRevenue = useMemo(() => {
-    return sales
-      .filter(s => (s.status === 'approved' || s.status === 'paid') && !s.campaign_id)
-      .reduce((sum, s) => sum + Number(s.amount), 0);
-  }, [sales]);
+    }).filter(c => selectedCampaign === 'all' || c.id === selectedCampaign);
+  }, [baseCampaigns, attribution, uniqueCampaignNames, selectedCampaign]);
 
   // Calculate totals from real data
   const totalSpent = displayCampaigns.reduce((sum, c) => sum + c.spent, 0);
-  const totalRevenue = displayCampaigns.reduce((sum, c) => sum + c.revenue, 0) + unattributedRevenue;
+  const totalRevenue = selectedCampaign === 'all'
+    ? salesMetrics.totalRevenue
+    : displayCampaigns.reduce((sum, c) => sum + c.revenue, 0);
   const avgROI = totalSpent > 0 ? (totalRevenue / totalSpent) * 100 : 0;
-  const totalSales = displayCampaigns.reduce((sum, c) => sum + c.sales, 0) + salesMetrics.approvedSales;
+  const totalSales = selectedCampaign === 'all'
+    ? salesMetrics.approvedSales
+    : displayCampaigns.reduce((sum, c) => sum + c.sales, 0);
   const avgCPA = totalSales > 0 ? totalSpent / totalSales : 0;
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refreshAll(), refreshSales(), refreshAttribution()]);
+      toast.success('Relatório atualizado com sucesso');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const exportCSV = () => {
     if (displayCampaigns.length === 0) {
@@ -137,37 +193,76 @@ const Reports = () => {
           <CardContent className="pt-6">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-              <Select defaultValue="today">
+                <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Período" />
                   </SelectTrigger>
                   <SelectContent>
-                  <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="yesterday">Ontem</SelectItem>
                     <SelectItem value="7days">Últimos 7 dias</SelectItem>
                     <SelectItem value="30days">Últimos 30 dias</SelectItem>
                     <SelectItem value="90days">Últimos 90 dias</SelectItem>
                     <SelectItem value="thisMonth">Este mês</SelectItem>
                     <SelectItem value="lastMonth">Mês passado</SelectItem>
+                    <SelectItem value="custom">Personalizado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <Select defaultValue="all">
+              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
                 <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Agrupar por" />
+                  <SelectValue placeholder="Campanha" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as campanhas</SelectItem>
-                  <SelectItem value="campaign">Por Campanha</SelectItem>
-                  <SelectItem value="product">Por Produto</SelectItem>
-                  <SelectItem value="utm">Por UTM</SelectItem>
+                  {campaigns.map(campaign => (
+                    <SelectItem key={campaign.id} value={campaign.id}>{campaign.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+
+              {selectedPeriod === 'custom' && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {customDateFrom ? format(customDateFrom, 'dd/MM/yyyy') : 'Data inicial'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={customDateFrom} onSelect={setCustomDateFrom} disabled={date => date > new Date()} locale={ptBR} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {customDateTo ? format(customDateTo, 'dd/MM/yyyy') : 'Data final'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={customDateTo} onSelect={setCustomDateTo} disabled={date => date > new Date() || (customDateFrom ? date < customDateFrom : false)} locale={ptBR} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
 
               <Button 
                 variant="outline" 
                 className="ml-auto gap-2"
+                onClick={handleRefresh}
+                disabled={isRefreshing || campaignsLoading || salesLoading || attributionLoading}
+              >
+                <RefreshCw className={cn('w-4 h-4', (isRefreshing || campaignsLoading || salesLoading || attributionLoading) && 'animate-spin')} />
+                Atualizar
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="gap-2"
                 onClick={exportCSV}
               >
                 <Download className="w-4 h-4" />
@@ -183,7 +278,7 @@ const Reports = () => {
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Total de Gastos</p>
               <p className="text-2xl font-bold text-foreground">
-                R$ {totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </CardContent>
           </Card>
@@ -191,7 +286,7 @@ const Reports = () => {
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Receita Total</p>
               <p className="text-2xl font-bold text-success">
-                R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </CardContent>
           </Card>
@@ -242,7 +337,7 @@ const Reports = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaignsLoading ? (
+                {(campaignsLoading || salesLoading || attributionLoading) ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
