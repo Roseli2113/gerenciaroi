@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { buildWebhookUrl, platformRequiresWebhookUrl } from '@/lib/webhooks';
 
@@ -21,15 +22,8 @@ export interface Webhook {
 export function useWebhooks() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    getUser();
-  }, []);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
   const fetchWebhooks = useCallback(async () => {
     if (!userId) return;

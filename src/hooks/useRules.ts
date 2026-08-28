@@ -1,5 +1,6 @@
  import { useState, useEffect, useCallback } from 'react';
  import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
  import { toast } from 'sonner';
  
 export interface Rule {
@@ -34,15 +35,8 @@ export interface Rule {
    const [rules, setRules] = useState<Rule[]>([]);
    const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
    const [loading, setLoading] = useState(true);
-   const [userId, setUserId] = useState<string | null>(null);
- 
-   useEffect(() => {
-     const getUser = async () => {
-       const { data: { user } } = await supabase.auth.getUser();
-       setUserId(user?.id || null);
-     };
-     getUser();
-   }, []);
+   const { user } = useAuth();
+  const userId = user?.id ?? null;
  
    const fetchRules = useCallback(async () => {
      if (!userId) return;
