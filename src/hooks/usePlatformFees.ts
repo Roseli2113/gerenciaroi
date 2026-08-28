@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface PlatformFee {
   id: string;
@@ -17,11 +18,8 @@ export function normalizePlatform(p: string | null | undefined): string {
 export function usePlatformFees() {
   const [fees, setFees] = useState<PlatformFee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id || null));
-  }, []);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
   const fetchFees = useCallback(async () => {
     if (!userId) return;

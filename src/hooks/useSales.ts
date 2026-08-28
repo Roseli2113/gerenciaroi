@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { usePlatformFees, normalizePlatform } from '@/hooks/usePlatformFees';
@@ -27,20 +28,13 @@ export interface SalesFilters {
 export function useSales(filters?: SalesFilters) {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { feeMap } = usePlatformFees();
 
   // Keep latest filters in a ref so refreshSales() always uses current filters
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    getUser();
-  }, []);
 
   const fetchSales = useCallback(async (activeFilters?: SalesFilters) => {
     if (!userId) return;
