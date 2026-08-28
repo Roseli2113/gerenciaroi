@@ -171,7 +171,11 @@ export function useSaleNotification() {
 
       return true;
     } catch (err) {
-      console.error('Push subscription error:', err);
+      // Chrome/Android can reject registration when its push service is
+      // temporarily unavailable. This is not an application failure.
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        console.error('Push subscription error:', err);
+      }
       return false;
     }
   }, [user]);
@@ -212,13 +216,6 @@ export function useSaleNotification() {
 
     registerPushSubscription().then(setPushEnabled).catch(() => setPushEnabled(false));
   }, [user, registerPushSubscription]);
-
-  // Auto-register subscription when push is already granted
-  useEffect(() => {
-    if (pushEnabled && user) {
-      registerPushSubscription();
-    }
-  }, [pushEnabled, user, registerPushSubscription]);
 
   // Disable push notifications
   const disablePush = useCallback(async () => {
