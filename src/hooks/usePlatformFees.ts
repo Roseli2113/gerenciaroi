@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -64,7 +64,12 @@ export function usePlatformFees() {
     }
   };
 
-  const feeMap = new Map<string, PlatformFee>(fees.map(f => [f.platform, f]));
+  // Keep the map reference stable between renders. Consumers use it in effect
+  // dependencies, so recreating it here caused continuous fetch/render cycles.
+  const feeMap = useMemo(
+    () => new Map<string, PlatformFee>(fees.map(f => [f.platform, f])),
+    [fees],
+  );
 
   return { fees, feeMap, loading, upsertFee, refreshFees: fetchFees };
 }
