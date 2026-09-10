@@ -746,7 +746,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       return true;
     } catch (err) {
       console.error('Error toggling adset:', err);
-      toast.error('Erro ao alterar status do conjunto');
+      toast.error(err instanceof Error ? err.message : 'Erro ao alterar status do conjunto');
       return false;
     }
   }, [accessToken]);
