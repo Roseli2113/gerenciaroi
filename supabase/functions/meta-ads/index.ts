@@ -591,102 +591,65 @@ serve(async (req) => {
       );
     }
 
-    if (action === "pause-campaign") {
-      const url = `${baseUrl}/${campaignId}?access_token=${accessToken}`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "PAUSED" })
-      });
-      const data = await response.json();
+    const statusActions: Record<string, { id: unknown; status: "ACTIVE" | "PAUSED"; label: string }> = {
+      "pause-campaign": { id: campaignId, status: "PAUSED", label: "campanha" },
+      "activate-campaign": { id: campaignId, status: "ACTIVE", label: "campanha" },
+      "pause-adset": { id: adsetId, status: "PAUSED", label: "conjunto" },
+      "activate-adset": { id: adsetId, status: "ACTIVE", label: "conjunto" },
+      "pause-ad": { id: adId, status: "PAUSED", label: "anúncio" },
+      "activate-ad": { id: adId, status: "ACTIVE", label: "anúncio" },
+    };
 
-      if (data.error) {
+    if (statusActions[action]) {
+      const { id: entityId, status: newStatus, label } = statusActions[action];
+
+      if (typeof entityId !== "string" || !entityId) {
         return new Response(
-          JSON.stringify({ error: data.error.message }),
+          JSON.stringify({ error: `ID do ${label} é obrigatório para alterar o status` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const params = new URLSearchParams();
+      params.set("access_token", accessToken);
+      params.set("status", newStatus);
+
+      try {
+        await postFormWithRetry(`${baseUrl}/${entityId}`, params);
+      } catch (statusError) {
+        const rawMessage = statusError instanceof Error ? statusError.message : "Erro desconhecido da Meta API";
+        console.error("Status change failed:", JSON.stringify({ action, entityId, newStatus, rawMessage }));
+        return new Response(
+          JSON.stringify({ error: `Não foi possível ${newStatus === "ACTIVE" ? "ativar" : "pausar"} o ${label}: ${rawMessage}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Confirm the change actually persisted on Meta's side.
+      let confirmedStatus: string | null = null;
+      try {
+        const verifyResp = await fetch(`${baseUrl}/${entityId}?fields=status&access_token=${accessToken}`);
+        const verifyData = await verifyResp.json() as MetaPayload;
+        if (!verifyData.error && typeof verifyData.status === "string") {
+          confirmedStatus = verifyData.status;
+        }
+      } catch (verifyError) {
+        console.error("Status verification failed (non-blocking):", verifyError);
+      }
+
+      if (confirmedStatus && confirmedStatus !== newStatus) {
+        return new Response(
+          JSON.stringify({
+            error: `A Meta manteve o ${label} como ${confirmedStatus}. Verifique se a campanha ou o conjunto acima está ativo e se a conta de anúncios não tem restrições.`,
+          }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ success: true, status: confirmedStatus || newStatus }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    }
-
-    if (action === "activate-campaign") {
-      const url = `${baseUrl}/${campaignId}?access_token=${accessToken}`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "ACTIVE" })
-      });
-      const data = await response.json();
-
-      if (data.error) {
-        return new Response(
-          JSON.stringify({ error: data.error.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (action === "update-adset") {
-      if (!adsetId || !updates) {
-        return new Response(JSON.stringify({ error: "Adset ID and updates are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      const url = `${baseUrl}/${adsetId}?access_token=${accessToken}`;
-      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
-      const data = await response.json();
-      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true, data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (action === "pause-adset") {
-      const url = `${baseUrl}/${adsetId}?access_token=${accessToken}`;
-      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PAUSED" }) });
-      const data = await response.json();
-      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (action === "activate-adset") {
-      const url = `${baseUrl}/${adsetId}?access_token=${accessToken}`;
-      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "ACTIVE" }) });
-      const data = await response.json();
-      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (action === "update-ad") {
-      if (!adId || !updates) {
-        return new Response(JSON.stringify({ error: "Ad ID and updates are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      const url = `${baseUrl}/${adId}?access_token=${accessToken}`;
-      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
-      const data = await response.json();
-      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true, data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (action === "pause-ad") {
-      const url = `${baseUrl}/${adId}?access_token=${accessToken}`;
-      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PAUSED" }) });
-      const data = await response.json();
-      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (action === "activate-ad") {
-      const url = `${baseUrl}/${adId}?access_token=${accessToken}`;
-      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "ACTIVE" }) });
-      const data = await response.json();
-      if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "duplicate-campaign") {
