@@ -759,7 +759,8 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
         body: { action: activate ? 'activate-ad' : 'pause-ad', accessToken, adId }
       });
 
-      if (error || data?.error) throw new Error(data?.error || error?.message);
+      const invokeError = await extractInvokeError(error, data);
+      if (invokeError) throw new Error(invokeError);
 
       setAds(prev => sortByStatusAndImpressions(prev.map(ad =>
         ad.id === adId ? { ...ad, status: activate, rawStatus: activate ? 'ACTIVE' : 'PAUSED' } : ad
