@@ -770,7 +770,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       return true;
     } catch (err) {
       console.error('Error toggling ad:', err);
-      toast.error('Erro ao alterar status do anúncio');
+      toast.error(err instanceof Error ? err.message : 'Erro ao alterar status do anúncio');
       return false;
     }
   }, [accessToken]);
