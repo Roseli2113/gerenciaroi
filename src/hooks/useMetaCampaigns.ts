@@ -292,6 +292,23 @@ function filterWithImpressions<T extends { impressions: number; spent: number }>
   return items.filter(item => item.impressions > 0 || item.spent > 0);
 }
 
+// Edge function errors return a non-2xx body; read it so the real Meta message reaches the UI.
+async function extractInvokeError(error: unknown, data: { error?: string } | null): Promise<string | null> {
+  if (data?.error) return data.error;
+  if (!error) return null;
+
+  const typedError = error as { message?: string; context?: Response };
+  if (typedError.context) {
+    try {
+      const body = await typedError.context.json() as { error?: string };
+      if (body?.error) return body.error;
+    } catch {
+      // fall back to the generic message below
+    }
+  }
+  return typedError.message || 'Erro desconhecido';
+}
+
 export function useMetaCampaigns(datePreset: string = 'today', customDateRange?: { since: string; until: string }) {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
