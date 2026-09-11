@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,9 @@ export function BulkBudgetDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Orçamento em Massa</DialogTitle>
+          <DialogDescription>
+            Defina o tipo e o valor que serão aplicados aos itens selecionados.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
