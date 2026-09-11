@@ -591,6 +591,55 @@ serve(async (req) => {
       );
     }
 
+    if (action === "update-adset") {
+      if (typeof adsetId !== "string" || !adsetId || !updates || typeof updates !== "object") {
+        return new Response(
+          JSON.stringify({ error: "ID do conjunto e alterações são obrigatórios" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const allowedFields = new Set(["daily_budget", "lifetime_budget", "name"]);
+      const updateEntries = Object.entries(updates as Record<string, unknown>);
+      const hasInvalidField = updateEntries.some(([field]) => !allowedFields.has(field));
+
+      if (updateEntries.length === 0 || hasInvalidField) {
+        return new Response(
+          JSON.stringify({ error: "Alteração inválida para o conjunto" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const params = new URLSearchParams();
+      params.set("access_token", accessToken);
+
+      for (const [field, value] of updateEntries) {
+        if ((field === "daily_budget" || field === "lifetime_budget") &&
+            (typeof value !== "number" || !Number.isFinite(value) || value <= 0)) {
+          return new Response(
+            JSON.stringify({ error: "O orçamento do conjunto deve ser maior que zero" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        params.set(field, String(value));
+      }
+
+      try {
+        const data = await postFormWithRetry(`${baseUrl}/${adsetId}`, params);
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (updateError) {
+        const rawMessage = updateError instanceof Error ? updateError.message : "Erro desconhecido da Meta API";
+        console.error("Ad set update failed:", JSON.stringify({ adsetId, fields: updateEntries.map(([field]) => field), rawMessage }));
+        return new Response(
+          JSON.stringify({ error: `Não foi possível atualizar o orçamento do conjunto: ${rawMessage}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const statusActions: Record<string, { id: unknown; status: "ACTIVE" | "PAUSED"; label: string }> = {
       "pause-campaign": { id: campaignId, status: "PAUSED", label: "campanha" },
       "activate-campaign": { id: campaignId, status: "ACTIVE", label: "campanha" },

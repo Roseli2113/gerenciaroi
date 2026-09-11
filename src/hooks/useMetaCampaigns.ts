@@ -712,7 +712,8 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
         body: { action: 'update-adset', accessToken, adsetId, updates }
       });
 
-      if (error || data?.error) throw new Error(data?.error || error?.message);
+      const invokeError = await extractInvokeError(error, data);
+      if (invokeError) throw new Error(invokeError);
 
       setAdSets(prev => prev.map(as =>
         as.id === adsetId ? { ...as, budget, budgetType } : as

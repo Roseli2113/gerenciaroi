@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,9 @@ export function EditAdSetBudgetDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Orçamento do Conjunto</DialogTitle>
+          <DialogDescription>
+            Defina o tipo e o novo valor de orçamento para este conjunto de anúncios.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
