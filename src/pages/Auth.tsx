@@ -313,6 +313,11 @@ export default function Auth() {
             </Tabs>
           </CardContent>
         </Card>
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <a href="/privacidade" className="hover:text-foreground hover:underline">Política de Privacidade</a>
+          <a href="/termos" className="hover:text-foreground hover:underline">Termos de Serviço</a>
+          <a href="/exclusao-de-dados" className="hover:text-foreground hover:underline">Exclusão de Dados</a>
+        </div>
       </div>
     </div>
   );
