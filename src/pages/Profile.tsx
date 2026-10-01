@@ -9,10 +9,57 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Save, User, Mail, Loader2, Calendar, Camera, Upload, Volume2, Play } from 'lucide-react';
+import { Save, User, Mail, Loader2, Calendar, Camera, Upload, Volume2, Play, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useSaleNotification, SOUND_OPTIONS, type SoundId } from '@/hooks/useSaleNotification';
+
+function ChangePasswordCard() {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (next.length < 6) return toast.error('A nova senha deve ter pelo menos 6 caracteres');
+    if (next !== confirm) return toast.error('As senhas não coincidem');
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({ password: next, current_password: current } as any);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success('Senha alterada com sucesso!');
+    setCurrent(''); setNext(''); setConfirm('');
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5" />Alterar Senha</CardTitle>
+        <CardDescription>Informe sua senha atual e a nova senha</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="cur-pass">Senha atual</Label>
+            <Input id="cur-pass" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-pass">Nova senha</Label>
+            <Input id="new-pass" type="password" minLength={6} value={next} onChange={(e) => setNext(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="conf-pass">Confirmar nova senha</Label>
+            <Input id="conf-pass" type="password" minLength={6} value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+          </div>
+          <Button type="submit" className="w-full" disabled={saving}>
+            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</> : 'Alterar Senha'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
 
 const Profile = () => {
   const { user } = useAuth();
@@ -280,6 +327,8 @@ const Profile = () => {
             </Button>
           </CardContent>
         </Card>
+
+        <ChangePasswordCard />
 
         {/* Notification Sound Settings */}
         <Card>
