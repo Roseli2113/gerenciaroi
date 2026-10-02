@@ -173,6 +173,20 @@ function getSaleTracking(
   if (result.utm_campaign) {
     result.utm_campaign = replaceUtmNameWithCurrentName(result.utm_campaign, currentNames.campaigns);
   }
+  if (result.campaign_name) {
+    result.campaign_name = replaceUtmNameWithCurrentName(result.campaign_name, currentNames.campaigns);
+  }
+
+  const campaignValue = result.utm_campaign || result.campaign_name;
+  if (campaignValue) {
+    const separatorIndex = campaignValue.lastIndexOf('|');
+    const campaignId = separatorIndex === -1 ? '' : campaignValue.slice(separatorIndex + 1).trim();
+    const currentCampaignName = currentNames.campaigns.get(campaignId);
+    if (currentCampaignName) {
+      result.campaign_name = `${currentCampaignName}|${campaignId}`;
+      result.utm_campaign = `${currentCampaignName}|${campaignId}`;
+    }
+  }
   if (result.utm_medium) {
     result.utm_medium = replaceUtmNameWithCurrentName(result.utm_medium, currentNames.adSets);
   }
