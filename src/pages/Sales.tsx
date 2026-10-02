@@ -2,6 +2,7 @@ import { useState } from 'react';
 import whatsappIcon from '@/assets/whatsapp-icon.png';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useSales, Sale } from '@/hooks/useSales';
+import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -108,7 +109,36 @@ function getStatusBadge(status: string) {
 }
 
 // Helper to extract campaign/UTM tracking data received via webhook
-function getSaleTracking(sale: Sale): Record<string, string> {
+function decodeTrackingValue(value: string): string {
+  const withSpaces = value.replace(/\+/g, ' ');
+  try {
+    return decodeURIComponent(withSpaces);
+  } catch {
+    return withSpaces;
+  }
+}
+
+function replaceUtmNameWithCurrentName(
+  value: string,
+  currentNamesById: Map<string, string>,
+): string {
+  const decoded = decodeTrackingValue(value);
+  const separatorIndex = decoded.lastIndexOf('|');
+  if (separatorIndex === -1) return decoded;
+
+  const id = decoded.slice(separatorIndex + 1).trim();
+  const currentName = currentNamesById.get(id);
+  return currentName ? `${currentName}|${id}` : decoded;
+}
+
+function getSaleTracking(
+  sale: Sale,
+  currentNames: {
+    campaigns: Map<string, string>;
+    adSets: Map<string, string>;
+    ads: Map<string, string>;
+  },
+): Record<string, string> {
   const result: Record<string, string> = {};
   if (!sale.raw_data || typeof sale.raw_data !== 'object') return result;
   const raw = sale.raw_data as Record<string, unknown>;
@@ -135,9 +165,19 @@ function getSaleTracking(sale: Sale): Record<string, string> {
     for (const k of keys) {
       const v = src[k];
       if (v !== undefined && v !== null && String(v).trim() !== '' && !result[k]) {
-        result[k] = String(v);
+        result[k] = decodeTrackingValue(String(v));
       }
     }
+  }
+
+  if (result.utm_campaign) {
+    result.utm_campaign = replaceUtmNameWithCurrentName(result.utm_campaign, currentNames.campaigns);
+  }
+  if (result.utm_medium) {
+    result.utm_medium = replaceUtmNameWithCurrentName(result.utm_medium, currentNames.adSets);
+  }
+  if (result.utm_content) {
+    result.utm_content = replaceUtmNameWithCurrentName(result.utm_content, currentNames.ads);
   }
 
   // Fallback: build campaign_name from the UTM chain
@@ -218,6 +258,12 @@ const Sales = () => {
     startDate,
     endDate,
   });
+  const { campaigns, adSets, ads } = useMetaCampaigns();
+  const currentMetaNames = {
+    campaigns: new Map(campaigns.map((campaign) => [campaign.id, campaign.name])),
+    adSets: new Map(adSets.map((adSet) => [adSet.id, adSet.name])),
+    ads: new Map(ads.map((ad) => [ad.id, ad.name])),
+  };
 
   const formatCurrency = (value: number, currency?: string | null) => {
     const cur = (currency || 'BRL').toUpperCase();
@@ -643,7 +689,7 @@ const Sales = () => {
               </div>
 
               {(() => {
-                const tracking = getSaleTracking(selectedSale);
+                const tracking = getSaleTracking(selectedSale, currentMetaNames);
                 const hasTracking = TRACKING_LABELS.some((t) => tracking[t.key]);
                 return (
                   <div className="border-t pt-4">
