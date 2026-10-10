@@ -341,21 +341,14 @@ const Campaigns = () => {
       return attribution.byCampaignName.get(nameKey) ?? idAttr;
     };
 
-    const getAdSetDirectAttr = (adSet: AdSet) => {
-      const idAttr = attribution.byAdSetId.get(adSet.id) ?? emptyAttr();
-      if (!isEmptyAttr(idAttr)) return idAttr;
-      const nameKey = normalizeAttributionName(adSet.name);
-      if (!nameKey || (adSetNameCounts.get(nameKey) ?? 0) !== 1) return idAttr;
-      return attribution.byAdSetName.get(nameKey) ?? idAttr;
-    };
+    // Ad sets and ads are matched ONLY by Meta ID. Generic names (e.g. "ADS-01", "CONJUNTO-01")
+    // repeat across campaigns, so a name fallback attributed sales from other campaigns.
+    void adSetNameCounts; void adNameCounts;
+    const getAdSetDirectAttr = (adSet: AdSet) =>
+      attribution.byAdSetId.get(adSet.id) ?? emptyAttr();
 
-    const getAdDirectAttr = (ad: Ad) => {
-      const idAttr = attribution.byAdId.get(ad.id) ?? emptyAttr();
-      if (!isEmptyAttr(idAttr)) return idAttr;
-      const nameKey = normalizeAttributionName(ad.name);
-      if (!nameKey || (adNameCounts.get(nameKey) ?? 0) !== 1) return idAttr;
-      return attribution.byAdName.get(nameKey) ?? idAttr;
-    };
+    const getAdDirectAttr = (ad: Ad) =>
+      attribution.byAdId.get(ad.id) ?? emptyAttr();
 
 
     // Build effective adset attribution: max(direct, sum of children ads) — rollup UP from ads
