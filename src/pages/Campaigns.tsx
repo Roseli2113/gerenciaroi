@@ -414,6 +414,11 @@ const Campaigns = () => {
       }
     }
 
+    // Manual traffic assignments belong only to the campaign, never invented child ads.
+    for (const [id, manual] of attribution.manualByCampaignId) {
+      effectiveCampaignAttr.set(id, sumAttr(effectiveCampaignAttr.get(id) ?? emptyAttr(), manual));
+    }
+
     const pickAttr = (id: string) => {
       if (tab === 'campanhas') return effectiveCampaignAttr.get(id) ?? emptyAttr();
       if (tab === 'conjuntos') return effectiveAdSetAttr.get(id) ?? emptyAttr();

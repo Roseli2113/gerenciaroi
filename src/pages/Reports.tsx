@@ -121,8 +121,9 @@ const Reports = () => {
         ? attribution.byCampaignName.get(normalizedName)
         : undefined;
       const salesData = byId ?? byUniqueName;
-      const revenue = salesData?.revenue ?? 0;
-      const salesCount = salesData?.sales ?? 0;
+      const manual = attribution.manualByCampaignId.get(c.id);
+      const revenue = (salesData?.revenue ?? 0) + (manual?.revenue ?? 0);
+      const salesCount = (salesData?.sales ?? 0) + (manual?.sales ?? 0);
       const profit = revenue - c.spent;
       const roi = c.spent > 0 ? revenue / c.spent : null;
       const cpa = salesCount > 0 ? c.spent / salesCount : null;
