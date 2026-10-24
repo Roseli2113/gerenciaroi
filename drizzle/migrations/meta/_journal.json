@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792815065815,
+      "tag": "0000_create_sales_attribution_settings",
+      "breakpoints": true
+    }
+  ]
+}
