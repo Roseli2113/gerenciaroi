@@ -1,0 +1,2 @@
+ALTER TABLE public.manual_sale_attributions ADD COLUMN adset_id text, ADD COLUMN adset_name text, ADD COLUMN ad_id text, ADD COLUMN ad_name text;
+ALTER TABLE public.manual_sale_attributions ADD CONSTRAINT manual_adset_id_format CHECK (adset_id IS NULL OR adset_id ~ '^[0-9]{9,25}$'), ADD CONSTRAINT manual_ad_id_format CHECK (ad_id IS NULL OR ad_id ~ '^[0-9]{9,25}$'), ADD CONSTRAINT manual_ad_requires_adset CHECK (ad_id IS NULL OR adset_id IS NOT NULL);
