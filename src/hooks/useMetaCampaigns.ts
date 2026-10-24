@@ -309,6 +309,29 @@ async function extractInvokeError(error: unknown, data: { error?: string } | nul
   return typedError.message || 'Erro desconhecido';
 }
 
+// Last successful Meta rows per user/accounts/period, shown while Facebook is slow or throttling.
+type MetaCacheKind = 'campaigns' | 'adsets' | 'ads';
+function metaCacheKey(kind: MetaCacheKind, userId: string, accountIds: string[], period: string) {
+  return `meta-cache:v1:${kind}:${userId}:${[...accountIds].sort().join(',')}:${period}`;
+}
+function readMetaCache<T>(key: string): T[] | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { rows?: T[] };
+    return Array.isArray(parsed.rows) ? parsed.rows : null;
+  } catch {
+    return null;
+  }
+}
+function writeMetaCache<T>(key: string, rows: T[]) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), rows }));
+  } catch {
+    // storage full or unavailable: caching is best-effort
+  }
+}
+
 export function useMetaCampaigns(datePreset: string = 'today', customDateRange?: { since: string; until: string }) {
   const { user } = useAuth();
   const userId = user?.id;
@@ -326,6 +349,20 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
   const [selectedAdSetIds, setSelectedAdSetIds] = useState<string[]>([]);
+  const periodKey = dateSince && dateUntil ? `${dateSince}_${dateUntil}` : datePreset;
+  const accountsKey = activeAccountIds.join(',');
+
+  // Show the last saved rows immediately so tables are never empty while Facebook responds.
+  useEffect(() => {
+    if (!userId || activeAccountIds.length === 0) return;
+    const c = readMetaCache<Campaign>(metaCacheKey('campaigns', userId, activeAccountIds, periodKey));
+    const as = readMetaCache<AdSet>(metaCacheKey('adsets', userId, activeAccountIds, periodKey));
+    const a = readMetaCache<Ad>(metaCacheKey('ads', userId, activeAccountIds, periodKey));
+    if (c) setCampaigns(prev => (prev.length ? prev : c));
+    if (as) setAdSets(prev => (prev.length ? prev : as));
+    if (a) setAds(prev => (prev.length ? prev : a));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, accountsKey, periodKey]);
 
   // Load active accounts and access token
   useEffect(() => {
@@ -397,6 +434,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
           const errMsg = data?.error || error?.message || '';
           console.warn(`Insights attempt ${attempt + 1}/3 for ${accountId} failed:`, errMsg);
+          if (data?.rateLimited) throw new Error(errMsg);
 
           // Don't retry permission errors
           const isPermissionError = errMsg.includes('permission') || errMsg.includes('#200');
@@ -452,6 +490,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       const filteredAndSorted = sortByStatusAndImpressions(filterWithImpressions(allCampaigns));
       setCampaigns(filteredAndSorted);
+      if (userId) writeMetaCache(metaCacheKey('campaigns', userId, activeAccountIds, periodKey), filteredAndSorted);
       setLastUpdated(new Date());
       return true;
     } catch (err) {
@@ -461,7 +500,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil]);
+  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil, userId, periodKey]);
 
   useEffect(() => {
     if (accessToken && activeAccountIds.length > 0) {
@@ -531,6 +570,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       const sorted = sortByStatusAndImpressions(result);
       setAdSets(sorted);
+      if (userId && !campaignIdFilter) writeMetaCache(metaCacheKey('adsets', userId, activeAccountIds, periodKey), sorted);
       return true;
     } catch (err) {
       console.error('Error fetching ad sets:', err);
@@ -539,7 +579,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
     } finally {
       setIsLoadingAdSets(false);
     }
-  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil]);
+  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil, userId, periodKey]);
 
   const fetchAds = useCallback(async (adsetIdFilter?: string) => {
     if (!accessToken || activeAccountIds.length === 0) return;
@@ -598,6 +638,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       const sorted = sortByStatusAndImpressions(result);
       setAds(sorted);
+      if (userId && !adsetIdFilter) writeMetaCache(metaCacheKey('ads', userId, activeAccountIds, periodKey), sorted);
       return true;
     } catch (err) {
       console.error('Error fetching ads:', err);
@@ -606,7 +647,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
     } finally {
       setIsLoadingAds(false);
     }
-  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil]);
+  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil, userId, periodKey]);
 
   // Refresh all data simultaneously
   const refreshAll = useCallback(async () => {
