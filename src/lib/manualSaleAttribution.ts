@@ -20,10 +20,10 @@ export function manualTargets(assignment: ManualHierarchy) {
     adId: assignment.adset_id ? assignment.ad_id ?? null : null };
 }
 
-export function assignmentChildren(
+export function assignmentChildren<S extends { id: string; campaignId: string | null }, A extends { id: string; adsetId: string | null }>(
   campaignId: string, adSetId: string,
-  adSets: { id: string; campaignId: string | null }[],
-  ads: { id: string; adsetId: string | null }[],
+  adSets: S[],
+  ads: A[],
 ) {
   const sets = adSets.filter(s => s.campaignId === campaignId);
   return { adSets: sets, ads: sets.some(s => s.id === adSetId) ? ads.filter(a => a.adsetId === adSetId) : [] };
