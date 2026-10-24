@@ -448,6 +448,10 @@ export type Database = {
       }
       manual_sale_attributions: {
         Row: {
+          ad_id: string | null
+          ad_name: string | null
+          adset_id: string | null
+          adset_name: string | null
           campaign_id: string
           campaign_name: string
           sale_id: string
@@ -455,6 +459,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
           campaign_id: string
           campaign_name: string
           sale_id: string
@@ -462,6 +470,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
           campaign_id?: string
           campaign_name?: string
           sale_id?: string

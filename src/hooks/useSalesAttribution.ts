@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformFees, normalizePlatform } from '@/hooks/usePlatformFees';
-import { resolveManualCampaign } from '@/lib/manualSaleAttribution';
+import { resolveManualCampaign, manualTargets, type ManualHierarchy } from '@/lib/manualSaleAttribution';
 
 interface TrackingData {
   utm_source?: string;
@@ -31,6 +31,8 @@ export interface AttributionMetrics {
 }
 
 export interface SalesAttribution {
+  manualByAdSetId: Map<string, AttributionMetrics>;
+  manualByAdId: Map<string, AttributionMetrics>;
   manualByCampaignId: Map<string, AttributionMetrics>;
   byCampaignId: Map<string, AttributionMetrics>;
   byAdSetId: Map<string, AttributionMetrics>;
@@ -86,6 +88,8 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
   const { user } = useAuth();
   const { feeMap } = usePlatformFees();
   const [attribution, setAttribution] = useState<SalesAttribution>({
+    manualByAdSetId: new Map(),
+    manualByAdId: new Map(),
     manualByCampaignId: new Map(),
     byCampaignId: new Map(),
     byAdSetId: new Map(),
@@ -114,12 +118,13 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
       if (settingsError) throw settingsError;
 
       const overrides = new Map<string, string>();
+      const hierarchy = new Map<string, ManualHierarchy>();
       for (let offset = 0; ; offset += 1000) {
         const { data, error } = await supabase.from('manual_sale_attributions')
-          .select('sale_id, campaign_id').eq('user_id', user.id)
+          .select('sale_id, campaign_id, adset_id, ad_id').eq('user_id', user.id)
           .order('sale_id').range(offset, offset + 999);
         if (error) throw error;
-        for (const row of data ?? []) overrides.set(row.sale_id, row.campaign_id);
+        for (const row of data ?? []) { overrides.set(row.sale_id, row.campaign_id); hierarchy.set(row.sale_id, row); }
         if (!data || data.length < 1000) break;
       }
 
@@ -140,6 +145,8 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
       }
 
       const manualByCampaignId = new Map<string, AttributionMetrics>();
+      const manualByAdSetId = new Map<string, AttributionMetrics>();
+      const manualByAdId = new Map<string, AttributionMetrics>();
       const byCampaignId = new Map<string, AttributionMetrics>();
       const byAdSetId = new Map<string, AttributionMetrics>();
       const byAdId = new Map<string, AttributionMetrics>();
@@ -205,6 +212,12 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
 
         if (manualCampaignId) {
           addToMap(manualByCampaignId, manualCampaignId);
+          const assignment = hierarchy.get(sale.id);
+          if (assignment) {
+            const targets = manualTargets(assignment);
+            addToMap(manualByAdSetId, targets.adSetId);
+            addToMap(manualByAdId, targets.adId);
+          }
           continue;
         }
         addToMap(byCampaignId, campaignId);
@@ -215,7 +228,7 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
         addToMap(byAdName, adName);
       }
 
-      setAttribution({ manualByCampaignId, byCampaignId, byAdSetId, byAdId, byCampaignName, byAdSetName, byAdName });
+      setAttribution({ manualByCampaignId, manualByAdSetId, manualByAdId, byCampaignId, byAdSetId, byAdId, byCampaignName, byAdSetName, byAdName });
     } catch (err) {
       console.error('Error fetching sales attribution:', err);
     } finally {

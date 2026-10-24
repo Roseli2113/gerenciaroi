@@ -10,9 +10,14 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Sale } from '@/hooks/useSales';
+import { assignmentChildren } from '@/lib/manualSaleAttribution';
 
 interface Props {
   campaigns: { id: string; name: string }[];
+  adSets: { id: string; name: string; campaignId: string | null }[];
+  ads: { id: string; name: string; adsetId: string | null }[];
+  childrenLoading: boolean;
+  childrenError?: string | null;
   initialCampaignId?: string;
   startDate: Date;
   endDate: Date;
@@ -20,9 +25,11 @@ interface Props {
   onSaved: () => Promise<void>;
 }
 
-export function AssignSaleDialog({ campaigns, initialCampaignId, startDate, endDate, onClose, onSaved }: Props) {
+export function AssignSaleDialog({ campaigns, adSets, ads, childrenLoading, childrenError, initialCampaignId, startDate, endDate, onClose, onSaved }: Props) {
   const { user } = useAuth();
   const [campaignId, setCampaignId] = useState(initialCampaignId ?? '');
+  const [adSetId, setAdSetId] = useState('');
+  const [adId, setAdId] = useState('');
   const [saleId, setSaleId] = useState('');
   const [search, setSearch] = useState('');
   const [sales, setSales] = useState<Sale[]>([]);
@@ -54,9 +61,9 @@ export function AssignSaleDialog({ campaigns, initialCampaignId, startDate, endD
         const assignments = new Map<string, string>();
         for (let offset = 0; ; offset += 1000) {
           const { data, error } = await supabase.from('manual_sale_attributions')
-            .select('sale_id, campaign_name').eq('user_id', user.id).order('sale_id').range(offset, offset + 999);
+            .select('sale_id, campaign_name, adset_name, ad_name').eq('user_id', user.id).order('sale_id').range(offset, offset + 999);
           if (error) throw error;
-          for (const row of data ?? []) assignments.set(row.sale_id, row.campaign_name);
+          for (const row of data ?? []) assignments.set(row.sale_id, [row.campaign_name, row.adset_name, row.ad_name].filter(Boolean).join(' / '));
           if (cancelled || !data || data.length < 1000) break;
         }
         if (!cancelled) { setSales(rows); setOverrides(assignments); }
@@ -74,15 +81,21 @@ export function AssignSaleDialog({ campaigns, initialCampaignId, startDate, endD
     .some(v => v?.toLowerCase().includes(search.toLowerCase())));
   const selectedSale = sales.find(s => s.id === saleId);
   const campaign = campaigns.find(c => c.id === campaignId);
+  const children = assignmentChildren(campaignId, adSetId, adSets, ads);
+  const adSet = children.adSets.find(s => s.id === adSetId);
+  const ad = children.ads.find(a => a.id === adId);
 
   async function save(remove = false) {
-    if (!user || !selectedSale || (!remove && !campaign)) return;
+    if (!user || !selectedSale || (!remove && (!campaign || (adSetId && !adSet) || (adId && !ad)))) return;
     setSaving(true);
     try {
       const result = remove
         ? await supabase.from('manual_sale_attributions').delete().eq('sale_id', saleId).eq('user_id', user.id).select('sale_id')
         : await supabase.from('manual_sale_attributions').upsert({ sale_id: saleId, user_id: user.id,
-            campaign_id: campaignId, campaign_name: campaign?.name ?? '', updated_at: new Date().toISOString() }).select('sale_id');
+            campaign_id: campaignId, campaign_name: campaign?.name ?? '',
+            adset_id: adSet?.id ?? null, adset_name: adSet?.name ?? null,
+            ad_id: ad?.id ?? null, ad_name: ad?.name ?? null,
+            updated_at: new Date().toISOString() }).select('sale_id');
       if (result.error || !result.data?.length) throw result.error ?? new Error('Not saved');
       await onSaved();
       toast.success(remove ? 'Atribuição manual removida' : 'Venda atribuída à campanha');
@@ -98,11 +111,29 @@ export function AssignSaleDialog({ campaigns, initialCampaignId, startDate, endD
         <DialogHeader><DialogTitle>Atribuir venda à campanha</DialogTitle></DialogHeader>
         <div className="space-y-2">
           <Label htmlFor="assignment-campaign">Campanha</Label>
-          <Select value={campaignId} onValueChange={setCampaignId} disabled={saving}>
+          <Select value={campaignId} onValueChange={id => { setCampaignId(id); setAdSetId(''); setAdId(''); }} disabled={saving}>
             <SelectTrigger id="assignment-campaign" className="w-full [&>span]:truncate"><SelectValue placeholder="Selecionar campanha" /></SelectTrigger>
             <SelectContent>{campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor="assignment-adset">Conjunto</Label>
+            <Select value={adSetId || 'none'} onValueChange={id => { setAdSetId(id === 'none' ? '' : id); setAdId(''); }} disabled={saving || !campaignId || childrenLoading}>
+              <SelectTrigger id="assignment-adset" className="w-full [&>span]:truncate"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="none">Somente campanha</SelectItem>{children.adSets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor="assignment-ad">Anúncio</Label>
+            <Select value={adId || 'none'} onValueChange={id => setAdId(id === 'none' ? '' : id)} disabled={saving || !adSet || childrenLoading}>
+              <SelectTrigger id="assignment-ad" className="w-full [&>span]:truncate"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="none">Somente conjunto</SelectItem>{children.ads.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </div>
+        {childrenLoading && <p className="text-xs text-muted-foreground">Carregando conjuntos e anúncios…</p>}
+        {childrenError && <p className="text-xs text-destructive">{childrenError}</p>}
         <div className="space-y-2">
           <Label htmlFor="assignment-search">Venda — {startDate.toLocaleDateString('pt-BR')} a {endDate.toLocaleDateString('pt-BR')}</Label>
           <div className="relative"><Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />

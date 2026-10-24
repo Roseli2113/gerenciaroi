@@ -417,6 +417,14 @@ const Campaigns = () => {
     for (const [id, manual] of attribution.manualByCampaignId) {
       effectiveCampaignAttr.set(id, sumAttr(effectiveCampaignAttr.get(id) ?? emptyAttr(), manual));
     }
+    // Explicit child assignments are added AFTER automatic rollups, so they cannot
+    // leak to siblings or be counted twice in the campaign total.
+    for (const [id, manual] of attribution.manualByAdSetId) {
+      effectiveAdSetAttr.set(id, sumAttr(effectiveAdSetAttr.get(id) ?? emptyAttr(), manual));
+    }
+    for (const [id, manual] of attribution.manualByAdId) {
+      effectiveAdAttr.set(id, sumAttr(effectiveAdAttr.get(id) ?? emptyAttr(), manual));
+    }
 
     const pickAttr = (id: string) => {
       if (tab === 'campanhas') return effectiveCampaignAttr.get(id) ?? emptyAttr();
@@ -1159,6 +1167,10 @@ const Campaigns = () => {
     <>
       {saleAssignment && <AssignSaleDialog
         campaigns={campaigns}
+        adSets={adSets}
+        ads={ads}
+        childrenLoading={isLoadingAdSets || isLoadingAds}
+        childrenError={loadErrors.adsets || loadErrors.ads}
         initialCampaignId={saleAssignment.campaignId}
         startDate={periodRange.startDate}
         endDate={periodRange.endDate}
