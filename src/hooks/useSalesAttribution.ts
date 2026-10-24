@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformFees, normalizePlatform } from '@/hooks/usePlatformFees';
-import { resolveTrafficFallback } from '@/lib/trafficAttribution';
+import { resolveManualCampaign } from '@/lib/manualSaleAttribution';
 
 interface TrackingData {
   utm_source?: string;
@@ -113,6 +113,16 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
         .maybeSingle();
       if (settingsError) throw settingsError;
 
+      const overrides = new Map<string, string>();
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase.from('manual_sale_attributions')
+          .select('sale_id, campaign_id').eq('user_id', user.id)
+          .order('sale_id').range(offset, offset + 999);
+        if (error) throw error;
+        for (const row of data ?? []) overrides.set(row.sale_id, row.campaign_id);
+        if (!data || data.length < 1000) break;
+      }
+
       // Historical ranges can exceed the API's default 1,000-row limit.
       const sales = [];
       for (let offset = 0; ; offset += 1000) {
@@ -139,7 +149,7 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
 
       for (const sale of sales || []) {
         const raw = (sale.raw_data as RawData | null) ?? {};
-        const manualCampaignId = resolveTrafficFallback(sale, settings?.fallback_campaign_id ?? null);
+        const manualCampaignId = resolveManualCampaign(sale, overrides, settings?.fallback_campaign_id ?? null);
 
         const tracking = getTracking(raw);
         let campaignId = extractIdFromUtm(tracking.utm_campaign);

@@ -8,6 +8,13 @@
       "when": 1792815065815,
       "tag": "0000_create_sales_attribution_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792870837720,
+      "tag": "0001_create_manual_sale_attributions",
+      "breakpoints": true
     }
   ]
 }

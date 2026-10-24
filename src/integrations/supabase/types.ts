@@ -446,6 +446,38 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_sale_attributions: {
+        Row: {
+          campaign_id: string
+          campaign_name: string
+          sale_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          campaign_name: string
+          sale_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          campaign_name?: string
+          sale_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_sale_attributions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: true
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_ad_accounts: {
         Row: {
           account_id: string
