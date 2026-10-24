@@ -225,8 +225,18 @@ Deno.serve(async (req) => {
 
     const saleData = await parseSaleData(platform.toLowerCase(), payload, userId, webhookConfig?.id)
 
-    // If no campaign_id was extracted, try to look it up from checkout_tracking
-    if (!saleData.campaign_id && saleData.customer_email && webhookConfig?.token) {
+    // If no campaign_id was extracted, try to look it up from checkout_tracking.
+    // IMPORTANT: only when the sale carries NO UTM data at all. If the sale already
+    // has partial UTMs (e.g. utm_source=facebook / utm_medium=paid-social without
+    // utm_campaign), it is an untracked sale and must NOT be attributed to a campaign —
+    // otherwise Meta learns from the wrong audience.
+    const saleTracking = (saleData.raw_data && typeof saleData.raw_data === 'object'
+      ? (saleData.raw_data as Record<string, unknown>).tracking
+      : null) as Record<string, unknown> | null
+    const hasAnyUtm = !!saleTracking && ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+      .some((k) => typeof saleTracking[k] === 'string' && (saleTracking[k] as string).trim() !== '')
+
+    if (!saleData.campaign_id && !hasAnyUtm && saleData.customer_email && webhookConfig?.token) {
       try {
         const thirtyMinAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString() // 1 hour window
         const { data: tracking } = await supabase
