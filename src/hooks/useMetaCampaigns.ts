@@ -495,7 +495,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       return true;
     } catch (err) {
       console.error('Error fetching campaigns:', err);
-      toast.error(err instanceof Error ? err.message : 'Erro ao carregar campanhas');
+      toast.error(err instanceof Error ? err.message : 'Erro ao carregar campanhas', { id: 'meta-load-error' });
       return false;
     } finally {
       setIsLoading(false);
@@ -574,7 +574,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       return true;
     } catch (err) {
       console.error('Error fetching ad sets:', err);
-      toast.error(err instanceof Error ? err.message : 'Erro ao carregar conjuntos de anúncios');
+      toast.error(err instanceof Error ? err.message : 'Erro ao carregar conjuntos de anúncios', { id: 'meta-load-error' });
       return false;
     } finally {
       setIsLoadingAdSets(false);
@@ -642,7 +642,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       return true;
     } catch (err) {
       console.error('Error fetching ads:', err);
-      toast.error(err instanceof Error ? err.message : 'Erro ao carregar anúncios');
+      toast.error(err instanceof Error ? err.message : 'Erro ao carregar anúncios', { id: 'meta-load-error' });
       return false;
     } finally {
       setIsLoadingAds(false);
