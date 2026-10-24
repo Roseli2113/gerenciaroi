@@ -445,6 +445,7 @@ serve(async (req) => {
       const [adsets, insights] = await Promise.all([
         fetchAllPages(entityUrl),
         fetchAllPages(insightsUrl).catch((err) => {
+          if (err instanceof MetaRateLimitError) throw err;
           console.error("Adset insights fetch failed (non-blocking):", err.message);
           return [];
         }),
@@ -553,6 +554,7 @@ serve(async (req) => {
       const [ads, insights] = await Promise.all([
         fetchAllPages(entityUrl),
         fetchAllPages(insightsUrl).catch((err) => {
+          if (err instanceof MetaRateLimitError) throw err;
           console.error("Ad insights fetch failed (non-blocking):", err.message);
           return [];
         }),
