@@ -4,3 +4,5 @@
 - [x] Identify the requesting user's traffic campaign by Meta ID.
 - [x] Apply user-scoped fallback attribution to old and future sales without campaign UTMs.
 - [x] Verify rules with tests and the signed-in campaign page (7 tests passed; traffic campaign shows 9 sales in the current period).
+- [ ] Add per-sale manual assignment on the campaign page with persisted overrides.
+- [ ] Verify assignment precedence, isolation, and signed-in save/readback.
