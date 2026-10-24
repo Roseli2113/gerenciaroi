@@ -38,6 +38,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useSales } from '@/hooks/useSales';
 import { normalizeAttributionName, useSalesAttribution } from '@/hooks/useSalesAttribution';
+import { campaignFinancials } from '@/lib/campaignFinancials';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
@@ -427,31 +428,9 @@ const Campaigns = () => {
 
     return items.map(item => {
       const attr = pickAttr(item.id);
-
-      if (attr.sales === 0 && attr.revenue === 0 && attr.refundedSales === 0 && attr.declinedSales === 0) {
-        return item;
-      }
-
-      const sales = attr.sales;
-      const revenue = attr.revenue;
-      const spent = item.spent;
-      const profit = revenue - spent;
-      const cpa = sales > 0 ? spent / sales : null;
-      const roi = spent > 0 ? revenue / spent : null;
-      const roas = spent > 0 ? revenue / spent : null;
-      const margin = revenue > 0 ? ((revenue - spent) / revenue) * 100 : null;
-
       return {
         ...item,
-        sales,
-        revenue,
-        profit,
-        cpa,
-        roi,
-        roas,
-        margin,
-        refundedSales: attr.refundedSales,
-        declinedSales: attr.declinedSales,
+        ...campaignFinancials(item.spent, attr),
       };
     });
   };
