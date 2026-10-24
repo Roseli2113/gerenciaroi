@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformFees, normalizePlatform } from '@/hooks/usePlatformFees';
+import { resolveTrafficFallback } from '@/lib/trafficAttribution';
 
 interface TrackingData {
   utm_source?: string;
@@ -30,6 +31,7 @@ export interface AttributionMetrics {
 }
 
 export interface SalesAttribution {
+  manualByCampaignId: Map<string, AttributionMetrics>;
   byCampaignId: Map<string, AttributionMetrics>;
   byAdSetId: Map<string, AttributionMetrics>;
   byAdId: Map<string, AttributionMetrics>;
@@ -84,6 +86,7 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
   const { user } = useAuth();
   const { feeMap } = usePlatformFees();
   const [attribution, setAttribution] = useState<SalesAttribution>({
+    manualByCampaignId: new Map(),
     byCampaignId: new Map(),
     byAdSetId: new Map(),
     byAdId: new Map(),
@@ -103,20 +106,30 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
         fromDate.setHours(0, 0, 0, 0);
       }
 
-      let query = supabase
-        .from('sales')
-        .select('amount, status, raw_data, campaign_id, platform')
+      const { data: settings, error: settingsError } = await supabase
+        .from('sales_attribution_settings')
+        .select('fallback_campaign_id')
         .eq('user_id', user.id)
-        .gte('created_at', fromDate.toISOString());
+        .maybeSingle();
+      if (settingsError) throw settingsError;
 
-      if (endDate) {
-        query = query.lte('created_at', endDate.toISOString());
+      // Historical ranges can exceed the API's default 1,000-row limit.
+      const sales = [];
+      for (let offset = 0; ; offset += 1000) {
+        let query = supabase.from('sales')
+          .select('id, amount, status, raw_data, campaign_id, platform')
+          .eq('user_id', user.id)
+          .gte('created_at', fromDate.toISOString())
+          .order('created_at').order('id')
+          .range(offset, offset + 999);
+        if (endDate) query = query.lte('created_at', endDate.toISOString());
+        const { data, error } = await query;
+        if (error) throw error;
+        sales.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
       }
 
-      const { data: sales, error } = await query;
-
-      if (error) throw error;
-
+      const manualByCampaignId = new Map<string, AttributionMetrics>();
       const byCampaignId = new Map<string, AttributionMetrics>();
       const byAdSetId = new Map<string, AttributionMetrics>();
       const byAdId = new Map<string, AttributionMetrics>();
@@ -125,8 +138,8 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
       const byAdName = new Map<string, AttributionMetrics>();
 
       for (const sale of sales || []) {
-        const raw = sale.raw_data as RawData | null;
-        if (!raw) continue;
+        const raw = (sale.raw_data as RawData | null) ?? {};
+        const manualCampaignId = resolveTrafficFallback(sale, settings?.fallback_campaign_id ?? null);
 
         const tracking = getTracking(raw);
         let campaignId = extractIdFromUtm(tracking.utm_campaign);
@@ -180,6 +193,10 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
           map.set(id, existing);
         };
 
+        if (manualCampaignId) {
+          addToMap(manualByCampaignId, manualCampaignId);
+          continue;
+        }
         addToMap(byCampaignId, campaignId);
         addToMap(byAdSetId, adSetId);
         addToMap(byAdId, adId);
@@ -188,7 +205,7 @@ export function useSalesAttribution(startDate?: Date, endDate?: Date) {
         addToMap(byAdName, adName);
       }
 
-      setAttribution({ byCampaignId, byAdSetId, byAdId, byCampaignName, byAdSetName, byAdName });
+      setAttribution({ manualByCampaignId, byCampaignId, byAdSetId, byAdId, byCampaignName, byAdSetName, byAdName });
     } catch (err) {
       console.error('Error fetching sales attribution:', err);
     } finally {
