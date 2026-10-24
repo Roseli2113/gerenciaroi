@@ -52,12 +52,28 @@ function getMetaErrorMessage(payload: MetaPayload | null): string | null {
   return formatMetaErrorMessage(payload.error);
 }
 
+class MetaRateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MetaRateLimitError";
+  }
+}
+
+// Ad-account level throttles (code 17 / 80000-80014 / 613) last minutes; retrying only burns more quota.
+function isAccountThrottle(error: MetaApiError | undefined): boolean {
+  if (!error) return false;
+  const code = error.code ?? 0;
+  return code === 17 || code === 613 || (code >= 80000 && code <= 80014) || error.error_subcode === 2446079;
+}
+
+const RATE_LIMIT_USER_MESSAGE = "O Facebook limitou temporariamente as consultas desta conta de anúncios. Aguarde alguns minutos e clique em Atualizar.";
+
 function isRateLimitMessage(message: string): boolean {
   const msg = message.toLowerCase();
   return msg.includes("too many calls") || msg.includes("request limit") || msg.includes("rate limit");
 }
 
-async function fetchAllPages(url: string, maxRetries = 4): Promise<unknown[]> {
+async function fetchAllPages(url: string, maxRetries = 1): Promise<unknown[]> {
   const allData: unknown[] = [];
   let nextUrl: string | null = url;
 
@@ -72,11 +88,15 @@ async function fetchAllPages(url: string, maxRetries = 4): Promise<unknown[]> {
       if (!errorMessage) break;
 
       logMetaError("Meta API fetch error", data);
-      if (!isRateLimitMessage(errorMessage) || attempt === maxRetries) {
+      const rateLimited = isRateLimitMessage(errorMessage) || isAccountThrottle(data?.error);
+      if (rateLimited && (isAccountThrottle(data?.error) || attempt === maxRetries)) {
+        throw new MetaRateLimitError(RATE_LIMIT_USER_MESSAGE);
+      }
+      if (!rateLimited || attempt === maxRetries) {
         throw new Error(errorMessage);
       }
 
-      const delay = 5000 * Math.pow(2, attempt);
+      const delay = 3000;
       console.log(`Rate limited, retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
       await new Promise((r) => setTimeout(r, delay));
       data = null;
@@ -425,6 +445,7 @@ serve(async (req) => {
       const [adsets, insights] = await Promise.all([
         fetchAllPages(entityUrl),
         fetchAllPages(insightsUrl).catch((err) => {
+          if (err instanceof MetaRateLimitError) throw err;
           console.error("Adset insights fetch failed (non-blocking):", err.message);
           return [];
         }),
@@ -533,6 +554,7 @@ serve(async (req) => {
       const [ads, insights] = await Promise.all([
         fetchAllPages(entityUrl),
         fetchAllPages(insightsUrl).catch((err) => {
+          if (err instanceof MetaRateLimitError) throw err;
           console.error("Ad insights fetch failed (non-blocking):", err.message);
           return [];
         }),
@@ -944,6 +966,13 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     console.error("Meta Ads API error:", error);
+    if (error instanceof MetaRateLimitError) {
+      // 200 so the client reads the friendly message instead of a generic transport error.
+      return new Response(
+        JSON.stringify({ error: error.message, rateLimited: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({ error: message }),
