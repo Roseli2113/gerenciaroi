@@ -311,6 +311,9 @@ async function extractInvokeError(error: unknown, data: { error?: string } | nul
 
 export function useMetaCampaigns(datePreset: string = 'today', customDateRange?: { since: string; until: string }) {
   const { user } = useAuth();
+  const userId = user?.id;
+  const dateSince = customDateRange?.since;
+  const dateUntil = customDateRange?.until;
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [adSets, setAdSets] = useState<AdSet[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
@@ -327,13 +330,13 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
   // Load active accounts and access token
   useEffect(() => {
     const loadActiveAccounts = async () => {
-      if (!user) return;
+      if (!userId) return;
 
       try {
         const { data: connection } = await supabase
           .from('meta_connections')
           .select('access_token')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .maybeSingle();
 
         if (connection) {
@@ -343,7 +346,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
         const { data: activeAccounts } = await supabase
           .from('meta_ad_accounts')
           .select('account_id')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('is_active', true);
 
         if (activeAccounts && activeAccounts.length > 0) {
@@ -357,7 +360,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
     };
 
     loadActiveAccounts();
-  }, [user]);
+  }, [userId]);
 
   const fetchCampaigns = useCallback(async () => {
     if (!accessToken || activeAccountIds.length === 0) return;
@@ -369,21 +372,23 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       await Promise.all(activeAccountIds.map(async (accountId) => {
         const { data: campaignsData, error: campaignsError } = await supabase.functions.invoke('meta-ads', {
+          timeout: 30000,
           body: { action: 'get-campaigns', accessToken, adAccountId: accountId }
         });
 
         if (campaignsError || campaignsData?.error) {
           console.error(`Error fetching campaigns for ${accountId}:`, campaignsData?.error || campaignsError?.message);
-          return;
+          throw new Error(campaignsData?.error || 'O Facebook não respondeu. Aguarde alguns minutos e tente atualizar novamente.');
         }
 
         // Fetch insights with retry (up to 3 attempts)
         let insightsData: any = null;
         let insightsFailed = false;
-        const insightsBody = { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {}) };
+        const insightsBody = { action: 'get-campaign-insights', accessToken, adAccountId: accountId, dateRange: datePreset, ...(dateSince && dateUntil ? { dateSince, dateUntil } : {}) };
 
         for (let attempt = 0; attempt < 3; attempt++) {
-          const { data, error } = await supabase.functions.invoke('meta-ads', { body: insightsBody });
+          const { data, error } = await supabase.functions.invoke('meta-ads', { body: insightsBody, timeout: 30000 });
+          if (error) throw new Error('Não foi possível atualizar os gastos no Facebook. Aguarde alguns minutos e tente novamente.');
 
           if (!error && !data?.error && data?.insights) {
             insightsData = data;
@@ -415,6 +420,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
           }
         }
 
+        if (insightsFailed) throw new Error('O Facebook não disponibilizou os gastos. Os dados anteriores foram mantidos.');
         const insightsMap = new Map<string, CampaignInsight>();
         if (insightsData?.insights) {
           insightsData.insights.forEach((insight: CampaignInsight) => {
@@ -447,13 +453,15 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       const filteredAndSorted = sortByStatusAndImpressions(filterWithImpressions(allCampaigns));
       setCampaigns(filteredAndSorted);
       setLastUpdated(new Date());
+      return true;
     } catch (err) {
       console.error('Error fetching campaigns:', err);
       toast.error(err instanceof Error ? err.message : 'Erro ao carregar campanhas');
+      return false;
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, activeAccountIds, datePreset, customDateRange]);
+  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil]);
 
   useEffect(() => {
     if (accessToken && activeAccountIds.length > 0) {
@@ -471,18 +479,19 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       await Promise.all(activeAccountIds.map(async (accountId) => {
         // Single combined call: fetches entities + insights in parallel on the server
         const { data, error } = await supabase.functions.invoke('meta-ads', {
+          timeout: 30000,
           body: {
             action: 'get-adsets-with-insights',
             accessToken,
             adAccountId: accountId,
             dateRange: datePreset,
-            ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {})
+            ...(dateSince && dateUntil ? { dateSince, dateUntil } : {})
           }
         });
 
         if (error || data?.error) {
           console.error(`Error fetching adsets for ${accountId}:`, data?.error || error?.message);
-          return;
+          throw new Error(data?.error || 'O Facebook não respondeu ao atualizar os conjuntos. Tente novamente em alguns minutos.');
         }
 
         const insightsMap = new Map();
@@ -522,13 +531,15 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       const sorted = sortByStatusAndImpressions(result);
       setAdSets(sorted);
+      return true;
     } catch (err) {
       console.error('Error fetching ad sets:', err);
-      toast.error('Erro ao carregar conjuntos de anúncios');
+      toast.error(err instanceof Error ? err.message : 'Erro ao carregar conjuntos de anúncios');
+      return false;
     } finally {
       setIsLoadingAdSets(false);
     }
-  }, [accessToken, activeAccountIds, datePreset, customDateRange]);
+  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil]);
 
   const fetchAds = useCallback(async (adsetIdFilter?: string) => {
     if (!accessToken || activeAccountIds.length === 0) return;
@@ -540,18 +551,19 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
       await Promise.all(activeAccountIds.map(async (accountId) => {
         // Single combined call: fetches entities + insights in parallel on the server
         const { data, error } = await supabase.functions.invoke('meta-ads', {
+          timeout: 30000,
           body: {
             action: 'get-ads-with-insights',
             accessToken,
             adAccountId: accountId,
             dateRange: datePreset,
-            ...(customDateRange ? { dateSince: customDateRange.since, dateUntil: customDateRange.until } : {})
+            ...(dateSince && dateUntil ? { dateSince, dateUntil } : {})
           }
         });
 
         if (error || data?.error) {
           console.error(`Error fetching ads for ${accountId}:`, data?.error || error?.message);
-          return;
+          throw new Error(data?.error || 'O Facebook não respondeu ao atualizar os anúncios. Tente novamente em alguns minutos.');
         }
 
         const insightsMap = new Map();
@@ -586,30 +598,32 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       const sorted = sortByStatusAndImpressions(result);
       setAds(sorted);
+      return true;
     } catch (err) {
       console.error('Error fetching ads:', err);
-      toast.error('Erro ao carregar anúncios');
+      toast.error(err instanceof Error ? err.message : 'Erro ao carregar anúncios');
+      return false;
     } finally {
       setIsLoadingAds(false);
     }
-  }, [accessToken, activeAccountIds, datePreset, customDateRange]);
+  }, [accessToken, activeAccountIds, datePreset, dateSince, dateUntil]);
 
   // Refresh all data simultaneously
   const refreshAll = useCallback(async () => {
     if (!accessToken || activeAccountIds.length === 0) return;
     
-    setIsLoading(true);
-    setIsLoadingAdSets(true);
-    setIsLoadingAds(true);
-    
-    await Promise.all([
+    const results = await Promise.all([
       fetchCampaigns(),
       fetchAdSets(),
       fetchAds()
     ]);
     
-    setLastUpdated(new Date());
-    toast.success('Dados atualizados!', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
+    const succeeded = results.every(result => result === true);
+    if (succeeded) {
+      setLastUpdated(new Date());
+      toast.success('Dados atualizados!', { style: { background: '#16a34a', color: '#ffffff', border: 'none' } });
+    }
+    return succeeded;
   }, [accessToken, activeAccountIds, fetchCampaigns, fetchAdSets, fetchAds]);
 
   const toggleCampaignStatus = useCallback(async (campaignId: string, activate: boolean) => {
