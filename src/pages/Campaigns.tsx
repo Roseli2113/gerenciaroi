@@ -39,6 +39,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSales } from '@/hooks/useSales';
 import { normalizeAttributionName, useSalesAttribution } from '@/hooks/useSalesAttribution';
 import { campaignFinancials } from '@/lib/campaignFinancials';
+import { AssignSaleDialog } from '@/components/campaigns/AssignSaleDialog';
 
 type TabType = 'contas' | 'campanhas' | 'conjuntos' | 'anuncios';
 
@@ -98,6 +99,7 @@ const Campaigns = () => {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [editingAdSet, setEditingAdSet] = useState<AdSet | null>(null);
   const [editingCampaignName, setEditingCampaignName] = useState<Campaign | null>(null);
+  const [saleAssignment, setSaleAssignment] = useState<{ campaignId?: string } | null>(null);
   const [editingAdName, setEditingAdName] = useState<Ad | null>(null);
   const [editingAdSetName, setEditingAdSetName] = useState<AdSet | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1002,6 +1004,11 @@ const Campaigns = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-52">
+                        {activeTab === 'campanhas' && (
+                          <DropdownMenuItem className="gap-2" onClick={() => setSaleAssignment({ campaignId: item.id })}>
+                            <Pencil className="w-4 h-4" /> Atribuir venda
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem className="gap-2">
                           <BarChart3 className="w-4 h-4" /> Gráfico comparativo
                         </DropdownMenuItem>
@@ -1150,6 +1157,14 @@ const Campaigns = () => {
 
   const renderDialogs = () => (
     <>
+      {saleAssignment && <AssignSaleDialog
+        campaigns={campaigns}
+        initialCampaignId={saleAssignment.campaignId}
+        startDate={periodRange.startDate}
+        endDate={periodRange.endDate}
+        onClose={() => setSaleAssignment(null)}
+        onSaved={refreshAttribution}
+      />}
       {editingCampaign && (
         <EditBudgetDialog
           open={!!editingCampaign}
@@ -1389,6 +1404,9 @@ const Campaigns = () => {
             )}
           </div>
           <div className="flex items-center gap-2 md:gap-4">
+            {activeTab === 'campanhas' && <Button variant="outline" size="sm" className="h-8 md:h-9" disabled={!campaigns.length} onClick={() => setSaleAssignment({})}>
+              <Pencil className="w-4 h-4 mr-2" />Atribuir venda
+            </Button>}
             <span className="text-xs md:text-sm text-muted-foreground hidden md:inline">Atualizado há {getLastUpdatedText()}</span>
             <Button variant="default" size="sm" onClick={handleRefresh} disabled={isLoading || isLoadingAdSets || isLoadingAds} className="h-8 md:h-9">
               {(isLoading || isLoadingAdSets || isLoadingAds) ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
