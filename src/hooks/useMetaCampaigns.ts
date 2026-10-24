@@ -349,6 +349,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
   const [selectedAdSetIds, setSelectedAdSetIds] = useState<string[]>([]);
+  const [loadErrors, setLoadErrors] = useState<Record<MetaCacheKind, string | null>>({ campaigns: null, adsets: null, ads: null });
   const periodKey = dateSince && dateUntil ? `${dateSince}_${dateUntil}` : datePreset;
   const accountsKey = activeAccountIds.join(',');
 
@@ -490,12 +491,14 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       const filteredAndSorted = sortByStatusAndImpressions(filterWithImpressions(allCampaigns));
       setCampaigns(filteredAndSorted);
+      setLoadErrors(prev => ({ ...prev, campaigns: null }));
       if (userId) writeMetaCache(metaCacheKey('campaigns', userId, activeAccountIds, periodKey), filteredAndSorted);
       setLastUpdated(new Date());
       return true;
     } catch (err) {
       console.error('Error fetching campaigns:', err);
       toast.error(err instanceof Error ? err.message : 'Erro ao carregar campanhas', { id: 'meta-load-error' });
+      setLoadErrors(prev => ({ ...prev, campaigns: err instanceof Error ? err.message : 'Erro ao carregar campanhas' }));
       return false;
     } finally {
       setIsLoading(false);
@@ -570,11 +573,13 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       const sorted = sortByStatusAndImpressions(result);
       setAdSets(sorted);
+      setLoadErrors(prev => ({ ...prev, adsets: null }));
       if (userId && !campaignIdFilter) writeMetaCache(metaCacheKey('adsets', userId, activeAccountIds, periodKey), sorted);
       return true;
     } catch (err) {
       console.error('Error fetching ad sets:', err);
       toast.error(err instanceof Error ? err.message : 'Erro ao carregar conjuntos de anúncios', { id: 'meta-load-error' });
+      setLoadErrors(prev => ({ ...prev, adsets: err instanceof Error ? err.message : 'Erro ao carregar conjuntos de anúncios' }));
       return false;
     } finally {
       setIsLoadingAdSets(false);
@@ -638,11 +643,13 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
 
       const sorted = sortByStatusAndImpressions(result);
       setAds(sorted);
+      setLoadErrors(prev => ({ ...prev, ads: null }));
       if (userId && !adsetIdFilter) writeMetaCache(metaCacheKey('ads', userId, activeAccountIds, periodKey), sorted);
       return true;
     } catch (err) {
       console.error('Error fetching ads:', err);
       toast.error(err instanceof Error ? err.message : 'Erro ao carregar anúncios', { id: 'meta-load-error' });
+      setLoadErrors(prev => ({ ...prev, ads: err instanceof Error ? err.message : 'Erro ao carregar anúncios' }));
       return false;
     } finally {
       setIsLoadingAds(false);
@@ -986,6 +993,7 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
   }, [lastUpdated]);
 
   return {
+    loadErrors,
     campaigns,
     adSets,
     ads,

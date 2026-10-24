@@ -127,7 +127,7 @@ const Campaigns = () => {
   });
   
   const {
-    campaigns, adSets, ads, isLoading, isLoadingAdSets, isLoadingAds,
+    campaigns, adSets, ads, isLoading, isLoadingAdSets, isLoadingAds, loadErrors,
     fetchCampaigns, fetchAdSets, fetchAds, refreshAll,
     toggleCampaignStatus, toggleAdSetStatus, toggleAdStatus,
     updateCampaignBudget, updateAdSetBudget, updateCampaignName, updateAdName, updateAdSetName,
@@ -860,6 +860,16 @@ const Campaigns = () => {
       return <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /><span className="ml-3 text-muted-foreground">Carregando...</span></div>;
     }
     if (displayData.length === 0) {
+      const tabError = activeTab === 'campanhas' ? loadErrors.campaigns : activeTab === 'conjuntos' ? loadErrors.adsets : activeTab === 'anuncios' ? loadErrors.ads : null;
+      if (tabError) {
+        return (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-4">
+            <LayoutGrid className="w-12 h-12 text-muted-foreground" />
+            <p className="text-muted-foreground max-w-md">{tabError}</p>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>Tentar novamente</Button>
+          </div>
+        );
+      }
       return (
         <div className="flex flex-col items-center justify-center py-16">
           <LayoutGrid className="w-12 h-12 text-muted-foreground mb-3" />
