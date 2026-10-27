@@ -1,5 +1,6 @@
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ExternalLink, Play, List, MessageCircle, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import whatsappIcon from '@/assets/whatsapp-icon.png';
 
 const tutorials = [
@@ -9,7 +10,7 @@ const tutorials = [
     description: 'Tutoriais da plataforma',
     buttonLabel: 'Ver tutoriais',
     buttonIcon: <List className="w-4 h-4" />,
-    url: '#',
+    url: '/support/facebook',
   },
   {
     icon: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg',
@@ -120,6 +121,14 @@ export default function Support() {
                     {item.buttonIcon}
                     {item.buttonLabel}
                   </span>
+                ) : item.url.startsWith('/') ? (
+                  <Link
+                    to={item.url}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
+                  >
+                    {item.buttonIcon}
+                    {item.buttonLabel}
+                  </Link>
                 ) : (
                   <a
                     href={item.url}
