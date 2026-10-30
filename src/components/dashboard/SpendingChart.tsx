@@ -24,12 +24,12 @@ export function SpendingChart() {
       .map((campaign, index) => ({
         name: campaign.name.length > 18 ? campaign.name.slice(0, 18) + '…' : campaign.name || `Camp ${index + 1}`,
         gastos: campaign.spent,
-        roi: campaign.roi ? campaign.roi * 100 : 0,
+        roi: campaign.roi ?? 0,
       }));
   }, [campaigns]);
 
   const formatCurrency = (value: number) => `R$ ${value.toFixed(0)}`;
-  const formatROI = (value: number) => `${value.toFixed(0)}%`;
+  const formatROI = (value: number) => value.toFixed(2);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -41,7 +41,7 @@ export function SpendingChart() {
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: entry.color }} />
             <span className="text-muted-foreground">{entry.name === 'gastos' ? 'Gastos' : 'ROI'}:</span>
             <span className="font-semibold text-foreground">
-              {entry.name === 'gastos' ? `R$ ${entry.value.toFixed(2)}` : `${entry.value.toFixed(1)}%`}
+              {entry.name === 'gastos' ? `R$ ${entry.value.toFixed(2)}` : entry.value.toFixed(2)}
             </span>
           </div>
         ))}
@@ -63,7 +63,7 @@ export function SpendingChart() {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ background: 'hsl(142, 76%, 36%)' }} />
-            <span className="text-sm text-muted-foreground">ROI %</span>
+            <span className="text-sm text-muted-foreground">ROI</span>
           </div>
         </div>
       </div>

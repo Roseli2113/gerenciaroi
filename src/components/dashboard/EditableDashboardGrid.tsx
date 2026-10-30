@@ -18,6 +18,7 @@ import {
 import { DraggableMetricCard } from './DraggableMetricCard';
 import { MetricsSidebar } from './MetricsSidebar';
 import { AVAILABLE_METRICS } from '@/hooks/useDashboardLayout';
+import { roiRatio } from '@/lib/campaignFinancials';
 import type { useDashboardLayout as UseDashboardLayoutType } from '@/hooks/useDashboardLayout';
 import type { SalesMetrics } from '@/hooks/useSales';
 import {
@@ -88,7 +89,7 @@ export function EditableDashboardGrid({ isEditMode, layoutHook, campaigns, sales
   const totalSpent = campaigns.reduce((sum, c) => sum + c.spent, 0);
   const totalSales = salesMetrics.approvedSales;
   const totalProfit = totalRevenue - totalSpent;
-  const avgROI = totalSpent > 0 ? (totalProfit / totalSpent) * 100 : 0;
+  const overallRoi = roiRatio(totalRevenue, totalSpent);
   const avgCPA = totalSales > 0 ? totalSpent / totalSales : 0;
   const avgTicket = totalSales > 0 ? totalRevenue / totalSales : salesMetrics.avgTicket;
   const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
@@ -112,9 +113,10 @@ export function EditableDashboardGrid({ isEditMode, layoutHook, campaigns, sales
       case 'spent':
         return { title: 'Gastos com Anúncios', value: formatCurrency(totalSpent), icon: Icon, variant: 'danger', change: 0 };
       case 'roi': {
-        const roiValue = totalProfit >= 0 ? avgROI : -avgROI;
-        const roiVariant = totalProfit >= 0 && avgROI > 100 ? 'success' : totalProfit < 0 ? 'danger' : 'primary';
-        return { title: 'ROI', value: formatPercent(roiValue), icon: Icon, variant: roiVariant, change: 0 };
+        const roiVariant = overallRoi === null || overallRoi === 1
+          ? 'primary'
+          : overallRoi > 1 ? 'success' : 'danger';
+        return { title: 'ROI', value: overallRoi === null ? 'N/A' : overallRoi.toFixed(2), icon: Icon, variant: roiVariant, change: 0 };
       }
       case 'profit':
         return { title: 'Lucro', value: formatCurrency(totalProfit), icon: Icon, variant: totalProfit >= 0 ? 'success' : 'danger', change: 0 };

@@ -56,7 +56,7 @@ export function CampaignsList() {
         ) : (
           sortedCampaigns.map((campaign) => {
             const isActive = campaign.status;
-            const roi = campaign.roi ? campaign.roi * 100 : 0;
+            const roi = campaign.roi ?? 0;
             const cpa = campaign.cpa || 0;
 
             return (
@@ -123,10 +123,10 @@ export function CampaignsList() {
                     <p className="text-sm text-muted-foreground">ROI</p>
                     <div className={cn(
                       'flex items-center gap-1 font-semibold',
-                      roi > 150 ? 'text-success' : roi < 100 ? 'text-destructive' : 'text-warning'
+                      roi > 1 ? 'text-success' : roi < 1 ? 'text-destructive' : 'text-warning'
                     )}>
-                      {roi > 150 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                      {roi.toFixed(0)}%
+                      {roi > 1 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {roi.toFixed(2)}
                     </div>
                   </div>
                   <div className="text-right">
