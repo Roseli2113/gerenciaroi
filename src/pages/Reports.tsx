@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { endOfDay, format, startOfDay, startOfMonth, subDays, subMonths, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { roiRatio } from '@/lib/campaignFinancials';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -136,7 +137,7 @@ const Reports = () => {
   const totalRevenue = selectedCampaign === 'all'
     ? salesMetrics.totalRevenue
     : displayCampaigns.reduce((sum, c) => sum + c.revenue, 0);
-  const avgROI = totalSpent > 0 ? (totalRevenue / totalSpent) * 100 : 0;
+  const avgROI = roiRatio(totalRevenue, totalSpent);
   const totalSales = selectedCampaign === 'all'
     ? salesMetrics.approvedSales
     : displayCampaigns.reduce((sum, c) => sum + c.sales, 0);
@@ -165,7 +166,7 @@ const Reports = () => {
       (c.ctr ?? 0).toFixed(2) + '%',
       'R$ ' + c.spent.toFixed(2),
       'R$ ' + c.revenue.toFixed(2),
-      ((c.roi ?? 0) * 100).toFixed(0) + '%',
+      (c.roi ?? 0).toFixed(2),
       'R$ ' + (c.cpa ?? 0).toFixed(2)
     ]);
     
@@ -296,7 +297,7 @@ const Reports = () => {
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">ROI Médio</p>
-              <p className="text-2xl font-bold text-primary">{avgROI.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</p>
+              <p className="text-2xl font-bold text-primary">{avgROI === null ? 'N/A' : avgROI.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </CardContent>
           </Card>
           <Card>
@@ -368,13 +369,13 @@ const Reports = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       {(() => {
-                        const roiPercent = (row.roi ?? 0) * 100;
+                        const roiValue = row.roi ?? 0;
                         return (
                           <span className={cn(
                             'font-medium',
-                            roiPercent > 200 ? 'text-success' : roiPercent < 100 ? 'text-destructive' : 'text-warning'
+                            roiValue > 1 ? 'text-success' : roiValue < 1 ? 'text-destructive' : 'text-warning'
                           )}>
-                            {roiPercent.toFixed(0)}%
+                            {row.roi === null ? 'N/A' : roiValue.toFixed(2)}
                           </span>
                         );
                       })()}
