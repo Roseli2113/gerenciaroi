@@ -8,3 +8,4 @@
 - [x] Verify rules with tests and the signed-in campaign page (7 tests passed; traffic campaign shows 9 sales in the current period).
 - [x] Add per-sale manual assignment on the campaign page with persisted overrides.
 - [x] Verify assignment precedence and unchanged source records (14 tests); signed-in save, reload/readback, and removal passed.
+- [x] Show ROI as a ratio with 2 decimals (1.85 style) on the dashboard card, active-campaigns widget, Gastos vs ROI chart and Reports page; 19 tests passed and signed-in dashboard shows 2.40 instead of a percentage.
