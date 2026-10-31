@@ -1,4 +1,5 @@
 # Tasks
+- [ ] Deduplicate sale alerts across realtime, push, settings hooks and visible/background delivery; verify regression tests.
 - [x] Add optional cascading Conjunto and Anúncio choices and persist selected hierarchy without duplicate totals.
 - [x] Verify hierarchical choices and signed-in save/readback/removal; 16 attribution tests passed and build OK.
 - [x] Verify the refresh button stops after a Facebook timeout and remains usable; signed-in initial load and manual refresh both completed, preserving campaign rows.

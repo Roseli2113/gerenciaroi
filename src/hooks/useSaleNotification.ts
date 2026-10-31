@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import logoImg from '@/assets/Logo_gerencia_roi.png';
+import { claimSaleNotification } from '@/lib/saleNotificationDedup';
 
 const SOUND_OPTIONS = [
   { id: 'cash-money', label: 'Cash Money', file: '/sounds/cash-money.mp3' },
@@ -26,7 +26,7 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
-export function useSaleNotification() {
+export function useSaleNotification({ listen = false }: { listen?: boolean } = {}) {
   const { user } = useAuth();
   const [selectedSound, setSelectedSound] = useState<SoundId>('cash-money');
   const [enabled, setEnabled] = useState(true);
@@ -273,13 +273,6 @@ export function useSaleNotification() {
     return result;
   }, [user]);
 
-  const showBrowserNotification = useCallback((title: string, body: string) => {
-    if (Notification.permission !== 'granted') return;
-    try {
-      new Notification(title, { body, icon: logoImg, badge: logoImg, requireInteraction: true, tag: `sale-${Date.now()}` });
-    } catch { /* mobile Safari may not support */ }
-  }, []);
-
   const playSound = () => {
     if (!enabled || !audioRef.current) return;
     audioRef.current.currentTime = 0;
@@ -293,31 +286,43 @@ export function useSaleNotification() {
     audio.play().catch(() => {});
   };
 
-  // Listen for SW messages via BroadcastChannel to play sound when push arrives
-  useEffect(() => {
-    const bc = new BroadcastChannel('sale-sound-channel');
-    bc.onmessage = (event) => {
-      if (event.data?.type === 'PLAY_SALE_SOUND') {
-        // Play sound immediately
+  const notifySale = useCallback(async (saleId: string, title: string, body: string) => {
+    if (!user || !listen || document.visibilityState !== 'visible') return;
+    const show = () => {
+      try {
+        if (!claimSaleNotification(localStorage, user.id, saleId)) return;
+      } catch {
+        if (knownSalesRef.current.has(`notified:${saleId}`)) return;
+        knownSalesRef.current.add(`notified:${saleId}`);
+      }
+      if (enabled) {
         const sound = SOUND_OPTIONS.find(s => s.id === selectedSound);
-        if (sound) {
-          const audio = new Audio(sound.file);
-          audio.play().catch((e) => console.warn('Audio play failed:', e));
-        }
+        if (sound) new Audio(sound.file).play().catch(() => {});
+      }
+      toast.success(title, { id: `sale-${saleId}`, description: body, duration: Infinity });
+    };
+    if (navigator.locks) await navigator.locks.request(`sale-notification:${user.id}:${saleId}`, show);
+    else show();
+  }, [user, listen, enabled, selectedSound]);
+
+  // The worker selects a single visible tab; realtime shares the same sale claim.
+  useEffect(() => {
+    if (!listen || !('serviceWorker' in navigator)) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PLAY_SALE_SOUND') {
         const sale = event.data.sale;
         if (sale?.body) {
-          toast.success(sale.title || '💰 Nova venda!', { description: sale.body, duration: Infinity });
+          void notifySale(sale.tag || 'test-notification', sale.title || '💰 Nova venda!', sale.body);
         }
       }
     };
-    return () => {
-      bc.close();
-    };
-  }, [selectedSound]);
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, [listen, notifySale]);
 
   // Listen for new sales via realtime
   useEffect(() => {
-    if (!user) return;
+    if (!user || !listen) return;
 
     const loadExisting = async () => {
       const { data } = await supabase
@@ -349,12 +354,10 @@ export function useSaleNotification() {
           if (knownSalesRef.current.has(newSale.id)) return;
           knownSalesRef.current.add(newSale.id);
 
-          playSound();
           const amount = Number(newSale.amount || 0);
           const title = `💰 Nova venda: R$ ${amount.toFixed(2)}`;
           const body = newSale.customer_name || newSale.platform || 'Venda recebida!';
-          toast.success(title, { description: body, duration: Infinity });
-          showBrowserNotification(title, body);
+          void notifySale(`sale-${newSale.id}`, title, body);
         }
       )
       .subscribe();
@@ -362,7 +365,7 @@ export function useSaleNotification() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, enabled, selectedSound, showBrowserNotification]);
+  }, [user, listen, notifySale]);
 
   return {
     selectedSound,
