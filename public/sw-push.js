@@ -21,20 +21,22 @@ self.addEventListener('push', (event) => {
         includeUncontrolled: true,
       });
       
-      const hasVisibleClient = allClients.some(
-        (client) => client.visibilityState === 'visible'
-      );
-
-      // Always broadcast to play the custom MP3 sound in open tabs
-      const bc = new BroadcastChannel('sale-sound-channel');
-      bc.postMessage({ type: 'PLAY_SALE_SOUND', sale: data });
-      bc.close();
-
-      if (hasVisibleClient) {
-        console.log('[SW-Push] App is visible, showing persistent system notification too');
+      // Serialize repeated deliveries and remember sale tags across worker restarts.
+      if (data.tag?.startsWith('sale-') && data.tag !== 'sale-notification') {
+        const cache = await caches.open('sale-notifications-v1');
+        const key = new URL(`/__sale-notified/${encodeURIComponent(data.tag)}`, self.location.origin).href;
+        if (await cache.match(key)) return;
+        await cache.put(key, new Response('1'));
       }
 
-      // Always show a silent system notification so it remains until manual dismissal
+      const visibleClient = allClients.find(client => client.visibilityState === 'visible' && client.focused)
+        || allClients.find(client => client.visibilityState === 'visible');
+      if (visibleClient) {
+        visibleClient.postMessage({ type: 'PLAY_SALE_SOUND', sale: data });
+        return;
+      }
+
+      // In the background the system notification is the only alert.
       const title = data.title || '💰 Nova Venda!';
       const options = {
         body: data.body || 'Você recebeu uma nova venda!',
@@ -42,8 +44,8 @@ self.addEventListener('push', (event) => {
         badge: '/pwa-192.png',
         vibrate: [200, 100, 200],
         tag: data.tag || `sale-${Date.now()}`,
-        renotify: true,
-        silent: false,
+        renotify: false,
+        silent: true,
         requireInteraction: true,
         persistent: true,
         sticky: true,

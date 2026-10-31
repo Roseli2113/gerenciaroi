@@ -11,7 +11,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, title, headerAction }: MainLayoutProps) {
   // Initialize sale notification listener globally
-  useSaleNotification();
+  useSaleNotification({ listen: true });
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
