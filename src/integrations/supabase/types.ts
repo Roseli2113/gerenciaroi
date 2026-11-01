@@ -717,6 +717,7 @@ export type Database = {
           phone: string | null
           plan: string | null
           plan_status: string | null
+          sale_notif_customer_name: string
           sale_notif_dashboard_name: string | null
           sale_notif_product_name: string | null
           sale_notif_sale_value: string | null
@@ -741,6 +742,7 @@ export type Database = {
           phone?: string | null
           plan?: string | null
           plan_status?: string | null
+          sale_notif_customer_name?: string
           sale_notif_dashboard_name?: string | null
           sale_notif_product_name?: string | null
           sale_notif_sale_value?: string | null
@@ -765,6 +767,7 @@ export type Database = {
           phone?: string | null
           plan?: string | null
           plan_status?: string | null
+          sale_notif_customer_name?: string
           sale_notif_dashboard_name?: string | null
           sale_notif_product_name?: string | null
           sale_notif_sale_value?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS sale_notif_customer_name text NOT NULL DEFAULT 'show';
