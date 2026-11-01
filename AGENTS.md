@@ -1,5 +1,5 @@
 # Architecture rules
-- Sale alerts use one owner-scoped persistent sale claim across realtime and push, and only MainLayout enables listeners; this prevents duplicate alerts from settings hooks, remounts and multiple delivery paths.
+- Sale alerts come from the server push; the realtime toast runs only in browsers without a push subscription, both build text via `supabase/functions/_shared/saleNotificationMessage.ts`, share one owner-scoped sale claim, and only MainLayout enables listeners; this keeps one alert per sale with identical, preference-respecting content.
 - Keep user-specific fallback attribution in `sales_attribution_settings` and aggregate it separately in `useSalesAttribution`; this applies to historical and future sales without mutating source UTMs or Meta conversion events.
 - Add manual fallback metrics only at campaign/account reporting level after hierarchy rollup; this avoids inventing attribution to ad sets or ads.
 - Test attribution eligibility with `bun test src/lib/trafficAttribution.test.ts src/lib/manualSaleAttribution.test.ts`; business rules must remain independently verifiable.
