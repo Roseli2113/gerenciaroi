@@ -49,6 +49,7 @@ const Notifications = () => {
     productName: 'hide',
     utmCampaign: 'hide',
     dashboardName: 'hide',
+    customerName: 'show',
   });
 
   useEffect(() => {
@@ -56,7 +57,7 @@ const Notifications = () => {
     const load = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('notify_email, notify_push, notify_sms, notify_slack, sale_notif_send_pending, sale_notif_send_approved, sale_notif_sale_value, sale_notif_product_name, sale_notif_utm_campaign, sale_notif_dashboard_name')
+        .select('notify_email, notify_push, notify_sms, notify_slack, sale_notif_send_pending, sale_notif_send_approved, sale_notif_sale_value, sale_notif_product_name, sale_notif_utm_campaign, sale_notif_dashboard_name, sale_notif_customer_name')
         .eq('user_id', user.id)
         .single();
       if (data) {
@@ -73,6 +74,7 @@ const Notifications = () => {
           productName: (data as any).sale_notif_product_name ?? 'hide',
           utmCampaign: (data as any).sale_notif_utm_campaign ?? 'hide',
           dashboardName: (data as any).sale_notif_dashboard_name ?? 'hide',
+          customerName: (data as any).sale_notif_customer_name ?? 'show',
         });
       }
       setLoaded(true);
@@ -101,6 +103,7 @@ const Notifications = () => {
     productName: 'sale_notif_product_name',
     utmCampaign: 'sale_notif_utm_campaign',
     dashboardName: 'sale_notif_dashboard_name',
+    customerName: 'sale_notif_customer_name',
   };
 
   const updateSaleOption = async (key: string, value: string) => {
@@ -345,6 +348,7 @@ const Notifications = () => {
                     { key: 'sendPending', label: 'Enviar vendas pendentes', tooltip: 'Receba notificações quando uma venda ficar pendente', options: [{ value: 'disabled', label: 'Desabilitado' }, { value: 'enabled', label: 'Habilitado' }] },
                     { key: 'sendApproved', label: 'Enviar vendas aprovadas', tooltip: 'Receba notificações quando uma venda for aprovada', options: [{ value: 'disabled', label: 'Desabilitado' }, { value: 'enabled', label: 'Habilitado' }] },
                     { key: 'saleValue', label: 'Valor da venda', tooltip: 'Como exibir o valor da venda na notificação', options: [{ value: 'total', label: 'Total' }, { value: 'net', label: 'Líquido' }, { value: 'hide', label: 'Esconder' }] },
+                    { key: 'customerName', label: 'Nome do cliente', tooltip: 'Exibir ou esconder o nome de quem comprou', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
                     { key: 'productName', label: 'Nome do produto', tooltip: 'Exibir ou esconder o nome do produto', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
                     { key: 'utmCampaign', label: 'Valor de utm_campaign', tooltip: 'Exibir o valor da utm_campaign na notificação', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
                     { key: 'dashboardName', label: 'Nome do dashboard', tooltip: 'Exibir o nome do dashboard na notificação', options: [{ value: 'show', label: 'Mostrar' }, { value: 'hide', label: 'Esconder' }] },
@@ -390,6 +394,7 @@ const Notifications = () => {
                       <p className="text-xs text-muted-foreground">
                         {[
                           saleOptions.saleValue !== 'hide' && `Valor: R$ ${saleOptions.saleValue === 'net' ? '89,90' : '99,90'}`,
+                          saleOptions.customerName === 'show' && 'Cliente: Maria Souza',
                           saleOptions.productName === 'show' && 'Produto: Curso XYZ',
                           saleOptions.utmCampaign === 'show' && 'Campanha: 120934812',
                           saleOptions.dashboardName === 'show' && 'Dashboard: lowify',

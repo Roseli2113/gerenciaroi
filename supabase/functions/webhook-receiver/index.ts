@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { buildSaleNotification, salePrefsFromProfile, shouldNotifyStatus } from '../_shared/saleNotificationMessage.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -360,53 +361,18 @@ Deno.serve(async (req) => {
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('sale_notif_send_pending, sale_notif_send_approved, sale_notif_sale_value, sale_notif_product_name, sale_notif_utm_campaign, sale_notif_dashboard_name')
+        .select('sale_notif_send_pending, sale_notif_send_approved, sale_notif_sale_value, sale_notif_product_name, sale_notif_utm_campaign, sale_notif_dashboard_name, sale_notif_customer_name')
         .eq('user_id', userId)
         .single()
 
-      const prefs = {
-        sendPending: profile?.sale_notif_send_pending ?? 'disabled',
-        sendApproved: profile?.sale_notif_send_approved ?? 'enabled',
-        saleValue: profile?.sale_notif_sale_value ?? 'total',
-        productName: profile?.sale_notif_product_name ?? 'hide',
-        utmCampaign: profile?.sale_notif_utm_campaign ?? 'hide',
-        dashboardName: profile?.sale_notif_dashboard_name ?? 'hide',
-      }
+      const prefs = salePrefsFromProfile(profile)
 
       const shouldNotify =
-        (!existingId && saleData.status === 'approved' && prefs.sendApproved === 'enabled') ||
-        (!existingId && saleData.status === 'pending' && prefs.sendPending === 'enabled') ||
+        (!existingId && shouldNotifyStatus(saleData.status, prefs)) ||
         (!!existingId && existingStatus !== 'approved' && saleData.status === 'approved' && prefs.sendApproved === 'enabled')
 
       if (shouldNotify) {
-        const amount = Number(saleData.amount || 0)
-        const commission = Number(saleData.commission || 0)
-        const isApproved = saleData.status === 'approved'
-
-        // Build title
-        let title = isApproved ? '💰 Venda aprovada!' : '⏳ Venda pendente!'
-
-        // Build body parts
-        const bodyParts: string[] = []
-
-        if (prefs.saleValue !== 'hide') {
-          const displayAmount = prefs.saleValue === 'net' ? (amount - commission) : amount
-          bodyParts.push(`Valor: R$ ${displayAmount.toFixed(2)}`)
-        }
-
-        if (prefs.productName === 'show' && saleData.product_name) {
-          bodyParts.push(`Produto: ${saleData.product_name}`)
-        }
-
-        if (prefs.utmCampaign === 'show' && saleData.campaign_id) {
-          bodyParts.push(`Campanha: ${saleData.campaign_id}`)
-        }
-
-        if (prefs.dashboardName === 'show' && saleData.platform) {
-          bodyParts.push(`Dashboard: ${saleData.platform}`)
-        }
-
-        const body = bodyParts.length > 0 ? bodyParts.join(' • ') : (saleData.customer_name || 'Venda recebida!')
+        const { title, body } = buildSaleNotification(saleData, prefs)
 
         const pushPayload = {
           user_id: userId,

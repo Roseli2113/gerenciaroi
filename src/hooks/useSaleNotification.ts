@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { claimSaleNotification } from '@/lib/saleNotificationDedup';
+import { buildSaleNotification, salePrefsFromProfile, shouldNotifyStatus } from '../../supabase/functions/_shared/saleNotificationMessage';
 
 const SOUND_OPTIONS = [
   { id: 'cash-money', label: 'Cash Money', file: '/sounds/cash-money.mp3' },
@@ -314,20 +315,19 @@ export function useSaleNotification({ listen = false }: { listen?: boolean } = {
     return () => navigator.serviceWorker.removeEventListener('message', onMessage);
   }, [listen, notifySale]);
 
-  // Listen for new sales via realtime
+  // In-app fallback only for browsers without push: when push is active, the
+  // server push is the single alert, so realtime never adds a second one.
   useEffect(() => {
-    if (!user || !listen) return;
+    if (!user || !listen || pushEnabled) return;
+    let prefs = salePrefsFromProfile(null);
 
     const loadExisting = async () => {
-      const { data } = await supabase
-        .from('sales')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (data) {
-        data.forEach(s => knownSalesRef.current.add(s.id));
-      }
+      const [{ data }, { data: profile }] = await Promise.all([
+        supabase.from('sales').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(100),
+        supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle(),
+      ]);
+      if (data) data.forEach(s => knownSalesRef.current.add(s.id));
+      prefs = salePrefsFromProfile(profile as Record<string, unknown> | null);
       initialLoadDone.current = true;
     };
     loadExisting();
@@ -336,21 +336,14 @@ export function useSaleNotification({ listen = false }: { listen?: boolean } = {
       .channel('sale-notifications')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'sales',
-          filter: `user_id=eq.${user.id}`,
-        },
+        { event: 'INSERT', schema: 'public', table: 'sales', filter: `user_id=eq.${user.id}` },
         (payload) => {
           if (!initialLoadDone.current) return;
           const newSale = payload.new as any;
           if (knownSalesRef.current.has(newSale.id)) return;
           knownSalesRef.current.add(newSale.id);
-
-          const amount = Number(newSale.amount || 0);
-          const title = `💰 Nova venda: R$ ${amount.toFixed(2)}`;
-          const body = newSale.customer_name || newSale.platform || 'Venda recebida!';
+          if (!shouldNotifyStatus(newSale.status, prefs)) return;
+          const { title, body } = buildSaleNotification(newSale, prefs);
           void notifySale(`sale-${newSale.id}`, title, body);
         }
       )
@@ -359,7 +352,7 @@ export function useSaleNotification({ listen = false }: { listen?: boolean } = {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, listen, notifySale]);
+  }, [user, listen, pushEnabled, notifySale]);
 
   return {
     selectedSound,
