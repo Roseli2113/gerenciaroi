@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, it as test } from 'node:test';
+import assert from 'node:assert/strict';
 import { claimSaleNotification } from './saleNotificationDedup';
 
 describe('one notification per sale', () => {
@@ -8,16 +9,16 @@ describe('one notification per sale', () => {
   };
   test('realtime, push and remounted listeners claim the same sale only once', () => {
     const store = storage();
-    expect([1, 2, 3].filter(() => claimSaleNotification(store, 'owner', 'sale-1'))).toHaveLength(1);
+    assert.equal([1, 2, 3].filter(() => claimSaleNotification(store, 'owner', 'sale-1')).length, 1);
   });
   test('different sales each get one notification', () => {
     const store = storage();
-    expect(claimSaleNotification(store, 'owner', 'sale-1')).toBe(true);
-    expect(claimSaleNotification(store, 'owner', 'sale-2')).toBe(true);
+    assert.equal(claimSaleNotification(store, 'owner', 'sale-1'), true);
+    assert.equal(claimSaleNotification(store, 'owner', 'sale-2'), true);
   });
   test('notification claims are scoped to the owner', () => {
     const store = storage();
-    expect(claimSaleNotification(store, 'owner-1', 'sale-1')).toBe(true);
-    expect(claimSaleNotification(store, 'owner-2', 'sale-1')).toBe(true);
+    assert.equal(claimSaleNotification(store, 'owner-1', 'sale-1'), true);
+    assert.equal(claimSaleNotification(store, 'owner-2', 'sale-1'), true);
   });
 });
