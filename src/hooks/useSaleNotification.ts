@@ -273,12 +273,6 @@ export function useSaleNotification({ listen = false }: { listen?: boolean } = {
     return result;
   }, [user]);
 
-  const playSound = () => {
-    if (!enabled || !audioRef.current) return;
-    audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {});
-  };
-
   const previewSound = (soundId: SoundId) => {
     const sound = SOUND_OPTIONS.find(s => s.id === soundId);
     if (!sound) return;

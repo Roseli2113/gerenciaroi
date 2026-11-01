@@ -1,5 +1,6 @@
 // Service Worker: Push Notifications
 // Handles Web Push events in the background
+let deliveryQueue = Promise.resolve();
 
 // Push notification received
 self.addEventListener('push', (event) => {
@@ -14,7 +15,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    (async () => {
+    (deliveryQueue = deliveryQueue.catch(() => {}).then(async () => {
       // Check if any app window is currently focused/visible
       const allClients = await self.clients.matchAll({
         type: 'window',
@@ -42,7 +43,6 @@ self.addEventListener('push', (event) => {
         body: data.body || 'Você recebeu uma nova venda!',
         icon: '/pwa-192.png',
         badge: '/pwa-192.png',
-        vibrate: [200, 100, 200],
         tag: data.tag || `sale-${Date.now()}`,
         renotify: false,
         silent: true,
@@ -55,7 +55,7 @@ self.addEventListener('push', (event) => {
       };
 
       await self.registration.showNotification(title, options);
-    })()
+    }))
   );
 });
 
