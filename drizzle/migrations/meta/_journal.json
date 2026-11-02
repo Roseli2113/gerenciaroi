@@ -29,6 +29,13 @@
       "when": 1793538648935,
       "tag": "0003_add_sale_notif_customer_name",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793588681145,
+      "tag": "0004_push_subscription_single_owner",
+      "breakpoints": true
     }
   ]
 }

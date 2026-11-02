@@ -145,24 +145,12 @@ export function useSaleNotification({ listen = false }: { listen?: boolean } = {
         return false;
       }
 
-      // Save to database (upsert by endpoint)
-      const { data: existing } = await supabase
-        .from('push_subscriptions')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('endpoint', subJson.endpoint)
-        .maybeSingle();
-
-      if (existing) {
-        // Already saved
-        return true;
-      }
-
-      const { error } = await supabase.from('push_subscriptions').insert({
-        user_id: user.id,
-        endpoint: subJson.endpoint,
-        p256dh: subJson.keys.p256dh,
-        auth: subJson.keys.auth,
+      // One browser belongs to one account: claiming moves it to the signed-in user,
+      // so a browser used by two accounts never gets the same sale twice.
+      const { error } = await supabase.rpc('claim_push_subscription', {
+        _endpoint: subJson.endpoint,
+        _p256dh: subJson.keys.p256dh,
+        _auth: subJson.keys.auth,
       });
 
       if (error) {
