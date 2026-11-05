@@ -18,3 +18,7 @@ test('due date is one month after last payment', () => {
 test('overdue gives negative days', () => {
   assert.equal(daysUntil(new Date('2026-11-03T12:00:00'), new Date('2026-11-05T12:00:00')), -2);
 });
+import { paymentStatus } from './billing';
+test('paid and not yet due is Pago', () => { assert.equal(paymentStatus('2026-11-01T00:00:00Z', 26), 'pago'); });
+test('overdue is Pendente', () => { assert.equal(paymentStatus('2026-10-01T00:00:00Z', -2), 'pendente'); });
+test('no payment received is Pendente', () => { assert.equal(paymentStatus(null, 10), 'pendente'); });

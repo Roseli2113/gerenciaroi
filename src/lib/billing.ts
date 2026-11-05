@@ -33,3 +33,8 @@ export function effectivePrice(plan: string | null | undefined, customPrice: num
   if (customPrice !== null && customPrice !== undefined) return Number(customPrice);
   return plan && PLAN_PRICES[plan] !== undefined ? PLAN_PRICES[plan] : null;
 }
+
+/** "Pago" when a payment was received and the next due date hasn't passed; otherwise "Pendente". */
+export function paymentStatus(lastPaidAt: string | null | undefined, daysLeft: number): 'pago' | 'pendente' {
+  return lastPaidAt && daysLeft >= 0 ? 'pago' : 'pendente';
+}

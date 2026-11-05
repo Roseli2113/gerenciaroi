@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/sonner';
 import { ArrowLeft, Loader2, Pencil, Search } from 'lucide-react';
-import { PLAN_PRICES, daysUntil, effectivePrice, nextDueDate } from '@/lib/billing';
+import { PLAN_PRICES, daysUntil, effectivePrice, nextDueDate, paymentStatus } from '@/lib/billing';
 
 interface Profile { user_id: string; display_name: string | null; email: string | null; plan: string | null; plan_status: string | null; created_at: string; }
 interface Billing { user_id: string; last_paid_at: string | null; next_due_at: string | null; custom_price: number | null; custom_checkout_url: string | null; notes: string | null; }
@@ -98,10 +98,10 @@ export default function AdminBilling() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Usuário</TableHead><TableHead>Plano</TableHead><TableHead>Próxima mensalidade</TableHead>
-                <TableHead>Faltam</TableHead><TableHead>Valor</TableHead><TableHead className="text-right">Ações</TableHead>
+                <TableHead>Faltam</TableHead><TableHead>Status</TableHead><TableHead>Valor</TableHead><TableHead className="text-right">Ações</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {rows.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum assinante encontrado</TableCell></TableRow>}
+                {rows.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum assinante encontrado</TableCell></TableRow>}
                 {rows.map(({ p, b, due, days, price }) => (
                   <TableRow key={p.user_id}>
                     <TableCell><div className="font-medium">{p.display_name || '—'}</div><div className="text-xs text-muted-foreground">{p.email}</div></TableCell>
@@ -111,6 +111,11 @@ export default function AdminBilling() {
                       <Badge variant={days < 0 ? 'destructive' : days <= 5 ? 'secondary' : 'outline'}>
                         {days < 0 ? `Atrasado ${-days} dia(s)` : days === 0 ? 'Vence hoje' : `${days} dia(s)`}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {paymentStatus(b?.last_paid_at, days) === 'pago'
+                        ? <Badge className="border-0 bg-success/20 text-success hover:bg-success/20">Pago</Badge>
+                        : <Badge className="border-0 bg-destructive/20 text-destructive hover:bg-destructive/20">Pendente</Badge>}
                     </TableCell>
                     <TableCell>
                       {price !== null ? brl(price) : '—'}
