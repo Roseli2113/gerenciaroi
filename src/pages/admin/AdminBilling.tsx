@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/sonner';
-import { ArrowLeft, Loader2, Pencil, Search } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Loader2, Pencil, Search } from 'lucide-react';
 import { PLAN_PRICES, daysUntil, effectivePrice, nextDueDate, paymentStatus } from '@/lib/billing';
 
 interface Profile { user_id: string; display_name: string | null; email: string | null; plan: string | null; plan_status: string | null; created_at: string; }
@@ -61,6 +61,19 @@ export default function AdminBilling() {
     setEditing(p);
   };
 
+  const setPaid = async (p: Profile, due: Date, days: number, paid: boolean) => {
+    const nextDue = new Date(due);
+    if (paid && days < 0) nextDue.setMonth(nextDue.getMonth() + 1);
+    const { error } = await supabase.from('subscription_billing').upsert({
+      user_id: p.user_id,
+      last_paid_at: paid ? new Date().toISOString() : null,
+      next_due_at: nextDue.toISOString(),
+    });
+    if (error) { toast.error('Erro ao salvar: ' + error.message); return; }
+    toast.success(paid ? 'Marcado como pago' : 'Marcado como pendente');
+    load();
+  };
+
   const base = editing?.plan ? PLAN_PRICES[editing.plan] ?? 0 : 0;
   const parse = (s: string) => Number(s.replace(',', '.'));
   const computed = form.mode === 'price' ? parse(form.price) : form.mode === 'discount' ? Math.max(0, +(base * (1 - parse(form.discount) / 100)).toFixed(2)) : null;
@@ -108,7 +121,7 @@ export default function AdminBilling() {
                     <TableCell>{planName[p.plan || ''] || p.plan}</TableCell>
                     <TableCell>{format(due, 'dd/MM/yyyy')}</TableCell>
                     <TableCell>
-                      <Badge variant={days < 0 ? 'destructive' : days <= 5 ? 'secondary' : 'outline'}>
+                      <Badge className="whitespace-nowrap" variant={days < 0 ? 'destructive' : days <= 5 ? 'secondary' : 'outline'}>
                         {days < 0 ? `Atrasado ${-days} dia(s)` : days === 0 ? 'Vence hoje' : `${days} dia(s)`}
                       </Badge>
                     </TableCell>
@@ -121,7 +134,11 @@ export default function AdminBilling() {
                       {price !== null ? brl(price) : '—'}
                       {b?.custom_price != null && <Badge className="ml-2" variant="secondary">Personalizado</Badge>}
                     </TableCell>
-                    <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => openEdit(p)}><Pencil className="w-4 h-4 mr-1" />Editar</Button></TableCell>
+                    <TableCell className="text-right space-x-2 whitespace-nowrap">
+                      {paymentStatus(b?.last_paid_at, days) === 'pago'
+                        ? <Button size="sm" variant="outline" onClick={() => setPaid(p, due, days, false)}>Marcar pendente</Button>
+                        : <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => setPaid(p, due, days, true)}><CheckCircle2 className="w-4 h-4 mr-1" />Marcar como pago</Button>}
+                      <Button size="sm" variant="outline" onClick={() => openEdit(p)}><Pencil className="w-4 h-4 mr-1" />Editar</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
