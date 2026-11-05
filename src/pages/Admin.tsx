@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight, Copy, Link2, CheckCircle2, LayoutDashboard,
+  Eye, Ban, Trash2, Bell, UserPlus, ShieldOff, Loader2, CreditCard, Users, UserCheck, Clock, UserX, Crown, DollarSign, Search, X, ChevronLeft, ChevronRight, Copy, Link2, CheckCircle2, LayoutDashboard, MonitorSmartphone,
 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { toast } from '@/components/ui/sonner';
@@ -22,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useApiCredentials } from '@/hooks/useApiCredentials';
+import { startViewAs } from '@/lib/viewAs';
 import { AdminUserPanelDialog } from '@/components/admin/AdminUserPanelDialog';
 const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
 
@@ -398,6 +399,11 @@ export default function Admin() {
                     <TableCell>{getPlanBadge(getDisplayPlanStatus(u))}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        {u.user_id !== user?.id && (
+                          <Button variant="ghost" size="icon" onClick={() => startViewAs({ userId: u.user_id, email: u.email, name: u.display_name })} title="Ver painel como o usuário">
+                            <MonitorSmartphone className="w-4 h-4 text-warning" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => setPanelUser(u)} title="Acessar painel">
                           <LayoutDashboard className="w-4 h-4 text-primary" />
                         </Button>

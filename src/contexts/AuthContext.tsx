@@ -1,9 +1,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getViewAs, installViewAsGuard } from '@/lib/viewAs';
 
 interface AuthContextType {
+  /** Account whose data is shown (the viewed user in admin view mode). */
   user: User | null;
+  /** The account actually signed in. */
+  realUser: User | null;
   session: Session | null;
   isLoading: boolean;
   signUp: (email: string, password: string, metadata?: { displayName?: string; phone?: string }) => Promise<{ error: Error | null }>;
@@ -65,8 +69,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  // Admin "view as user": only admins get the swap (data access is enforced by admin-only read policies).
+  const [viewAsAllowed, setViewAsAllowed] = useState<boolean | null>(getViewAs() ? null : false);
+  useEffect(() => {
+    const v = getViewAs();
+    if (!v || !user) return;
+    supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').maybeSingle()
+      .then(({ data }) => {
+        if (data) { installViewAsGuard(); setViewAsAllowed(true); }
+        else { sessionStorage.removeItem('admin-view-as:v1'); setViewAsAllowed(false); }
+      });
+  }, [user]);
+  const viewAs = viewAsAllowed ? getViewAs() : null;
+  const effectiveUser = user && viewAs ? ({ ...user, id: viewAs.userId, email: viewAs.email ?? undefined } as User) : user;
+  const waiting = !!getViewAs() && !!user && viewAsAllowed === null;
+
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user: effectiveUser, realUser: user, isLoading: isLoading || waiting, session, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

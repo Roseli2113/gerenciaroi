@@ -43,6 +43,13 @@
       "when": 1793904580369,
       "tag": "0005_create_subscription_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793905949589,
+      "tag": "0006_admin_read_user_data_for_view_as",
+      "breakpoints": true
     }
   ]
 }
