@@ -1,4 +1,5 @@
 # Tasks
+- [x] Change the Premium plan price to R$ 27,90/month on the plans screen and landing page, keeping other tiers unchanged.
 - [x] Deduplicate sale alerts across realtime, push and settings hooks; three regression tests passed, signed-in repeated delivery shows one toast and reload/redelivery shows no duplicate; build OK.
 - [x] Add optional cascading Conjunto and Anúncio choices and persist selected hierarchy without duplicate totals.
 - [x] Verify hierarchical choices and signed-in save/readback/removal; 16 attribution tests passed and build OK.

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, Zap, Crown, Rocket, TrendingUp, BarChart3, Target, ShieldCheck, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatPlanPrice } from '@/lib/planPrice';
 import { useState } from 'react';
 import logoImg from '@/assets/Logo_gerencia_roi.png';
 import heroImg from '@/assets/landing-hero.jpg';
@@ -33,7 +34,7 @@ const plansList = [
   {
     id: 'premium',
     name: 'Premium',
-    price: 27,
+    price: 27.9,
     description: 'Para quem está começando',
     icon: Zap,
     checkoutUrl: 'https://adsroi.com.br/checkout/cEKD6a?offer=offer-1771698608846&aff=[ID_AFILIADO]',
@@ -244,7 +245,7 @@ const Landing = () => {
                   <CardTitle className="mt-4">{plan.name}</CardTitle>
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                   <div className="mt-4">
-                    <span className="text-4xl font-bold">R$ {plan.price}</span>
+                    <span className="text-4xl font-bold">R$ {formatPlanPrice(plan.price)}</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                 </CardHeader>

@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addMonths } from 'date-fns';
+import { formatPlanPrice } from '@/lib/planPrice';
 const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
 
 const plansList = [
@@ -39,7 +40,7 @@ const plansList = [
   {
     id: 'premium',
     name: 'Premium',
-    price: 27,
+    price: 27.9,
     description: 'Para quem está começando',
     icon: Star,
     checkoutUrl: 'https://adsroi.com.br/checkout/cEKD6a?offer=offer-1771698608846&aff=[ID_AFILIADO]',
@@ -240,7 +241,7 @@ const Subscription = () => {
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="mt-4">
                     <span className="text-4xl font-bold text-foreground">
-                      R$ {plan.price}
+                      R$ {formatPlanPrice(plan.price)}
                     </span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
