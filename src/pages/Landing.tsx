@@ -37,7 +37,7 @@ const plansList = [
     price: 27.9,
     description: 'Para quem está começando',
     icon: Zap,
-    checkoutUrl: 'https://adsroi.com.br/checkout/Z0p5kg?aff=[ID_AFILIADO]',
+    checkoutUrl: 'https://adsroi.com.br/checkout/Z0p5kg?offer=offer-1793904016936&aff=[ID_AFILIADO]',
     features: [
       '1 Dashboard',
       '1 conta de anúncio',

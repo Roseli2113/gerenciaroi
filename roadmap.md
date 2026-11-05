@@ -1,4 +1,5 @@
 # Tasks
+- [x] Point the Premium plan link at offer-1793904016936 on the plans screen and landing page and map that offer to the premium plan in the payment webhook; 30 tests passed, signed-in click opened the new checkout address, build OK.
 - [x] Change the Premium plan price to R$ 27,90/month on the plans screen and landing page, keeping other tiers unchanged.
 - [x] Deduplicate sale alerts across realtime, push and settings hooks; three regression tests passed, signed-in repeated delivery shows one toast and reload/redelivery shows no duplicate; build OK.
 - [x] Add optional cascading Conjunto and Anúncio choices and persist selected hierarchy without duplicate totals.
