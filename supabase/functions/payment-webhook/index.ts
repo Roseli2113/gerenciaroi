@@ -10,6 +10,8 @@ const offerToPlan: Record<string, string> = {
   'offer-1771698608846': 'premium',    // R$ 27,90
   'offer-1771698186014': 'advanced',   // R$ 67 (maps to 'profissional' in DB)
   'offer-1771698238795': 'monster',    // R$ 147 (maps to 'enterprise' in DB)
+  'offer-1793903493254': 'advanced',   // novo link Avançado
+  'offer-1793903618819': 'monster',    // novo link Monster
 }
 
 // Map internal plan names to DB plan names
