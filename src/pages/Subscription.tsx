@@ -43,7 +43,7 @@ const plansList = [
     price: 27.9,
     description: 'Para quem está começando',
     icon: Star,
-    checkoutUrl: 'https://adsroi.com.br/checkout/cEKD6a?offer=offer-1771698608846&aff=[ID_AFILIADO]',
+    checkoutUrl: 'https://adsroi.com.br/checkout/Z0p5kg?aff=[ID_AFILIADO]',
     features: [
       '1 Dashboard',
       '1 conta de anúncio',
@@ -63,7 +63,7 @@ const plansList = [
     description: 'Recomendado para quem já possui uma operação.',
     icon: Crown,
     popular: true,
-    checkoutUrl: 'https://adsroi.com.br/checkout/cEKD6a?offer=offer-1771698186014&aff=[ID_AFILIADO]',
+    checkoutUrl: 'https://adsroi.com.br/checkout/Z0p5kg?offer=offer-1793903493254&aff=[ID_AFILIADO]',
     features: [
       '3 Dashboard',
       '3 conta de anúncio',
@@ -82,7 +82,7 @@ const plansList = [
     price: 147,
     description: 'Recomendado para quem já é um monstro da escala.',
     icon: Rocket,
-    checkoutUrl: 'https://adsroi.com.br/checkout/cEKD6a?offer=offer-1771698238795&aff=[ID_AFILIADO]',
+    checkoutUrl: 'https://adsroi.com.br/checkout/Z0p5kg?offer=offer-1793903618819&aff=[ID_AFILIADO]',
     features: [
       'Dashboards ILIMITADOS',
       'Contas de Anúncio ILIMITADAS',
