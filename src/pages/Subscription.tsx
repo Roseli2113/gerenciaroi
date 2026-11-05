@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addMonths } from 'date-fns';
 import { formatPlanPrice } from '@/lib/planPrice';
+import { nextDueDate } from '@/lib/billing';
 const SUPER_ADMIN_EMAILS = ['r48529908@gmail.com', 'joseadalbertoferrari@gmail.com'];
 
 const plansList = [
@@ -124,6 +125,8 @@ const Subscription = () => {
   const [userPlan, setUserPlan] = useState<string>('free');
   const [planStatus, setPlanStatus] = useState<string>('active');
   const [nextBillingDate, setNextBillingDate] = useState<string | null>(null);
+  const [customPrice, setCustomPrice] = useState<number | null>(null);
+  const [customUrl, setCustomUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -145,15 +148,15 @@ const Subscription = () => {
         setUserPlan(profile.plan || 'free');
         setPlanStatus(profile.plan_status || 'active');
         
-        // Calculate next billing date based on account creation
+        const { data: billing } = await supabase
+          .from('subscription_billing')
+          .select('next_due_at, last_paid_at, custom_price, custom_checkout_url')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        setCustomPrice(billing?.custom_price ?? null);
+        setCustomUrl(billing?.custom_checkout_url ?? null);
         if (profile.plan && profile.plan !== 'free') {
-          const createdAt = new Date(profile.created_at);
-          const now = new Date();
-          let next = new Date(createdAt);
-          // Advance month by month until next is in the future
-          while (next <= now) {
-            next = addMonths(next, 1);
-          }
+          const next = nextDueDate({ nextDueAt: billing?.next_due_at, lastPaidAt: billing?.last_paid_at, createdAt: profile.created_at });
           setNextBillingDate(format(next, 'dd/MM/yyyy'));
         }
       }
@@ -188,6 +191,12 @@ const Subscription = () => {
                   <>
                     <p className="text-sm text-muted-foreground">Próxima cobrança</p>
                     <p className="font-semibold text-foreground">{nextBillingDate}</p>
+                    {customPrice !== null && (
+                      <p className="text-sm text-success font-semibold">Seu valor: R$ {customPrice.toFixed(2).replace('.', ',')}/mês</p>
+                    )}
+                    {customUrl && (
+                      <Button size="sm" className="mt-2" onClick={() => window.open(customUrl, '_blank')}>Pagar mensalidade</Button>
+                    )}
                   </>
                 )}
                 <Badge className={cn(

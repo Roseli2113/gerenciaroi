@@ -21,6 +21,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import AdminBilling from "./pages/admin/AdminBilling";
 import Landing from "./pages/Landing";
 import Onboarding from "./pages/Onboarding";
 import OnboardingStrategy from "./pages/OnboardingStrategy";
@@ -63,6 +64,7 @@ const App = () => (
               <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+              <Route path="/admin/billing" element={<ProtectedRoute><AdminBilling /></ProtectedRoute>} />
               <Route path="/support/facebook" element={<ProtectedRoute><FacebookTutorials /></ProtectedRoute>} />
               <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminRole } from '@/hooks/useAdminRole';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -220,6 +220,9 @@ export default function Admin() {
   return (
     <MainLayout title="Área Admin">
       <div className="space-y-6">
+        <div className="flex justify-end">
+          <Button asChild><Link to="/admin/billing"><CreditCard className="w-4 h-4 mr-2" />Mensalidades e descontos</Link></Button>
+        </div>
         {/* Metric Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[

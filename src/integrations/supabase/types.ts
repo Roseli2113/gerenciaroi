@@ -942,6 +942,39 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_billing: {
+        Row: {
+          created_at: string
+          custom_checkout_url: string | null
+          custom_price: number | null
+          last_paid_at: string | null
+          next_due_at: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_checkout_url?: string | null
+          custom_price?: number | null
+          last_paid_at?: string | null
+          next_due_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_checkout_url?: string | null
+          custom_price?: number | null
+          last_paid_at?: string | null
+          next_due_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

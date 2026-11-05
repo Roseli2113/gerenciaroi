@@ -106,6 +106,23 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Custom-price users (set by admin) keep their current plan when paying via a custom link
+    const { data: billing } = await supabase
+      .from('subscription_billing')
+      .select('custom_price')
+      .eq('user_id', profile.user_id)
+      .maybeSingle()
+    if (planStatus === 'active' && !(offerId && offerToPlan[offerId]) && billing?.custom_price != null) {
+      const { data: current } = await supabase.from('profiles').select('plan').eq('user_id', profile.user_id).single()
+      if (current?.plan && current.plan !== 'free') dbPlan = current.plan
+    }
+    if (planStatus === 'active') {
+      await supabase.from('subscription_billing').upsert(
+        { user_id: profile.user_id, last_paid_at: new Date().toISOString(), next_due_at: null },
+        { onConflict: 'user_id' }
+      )
+    }
+
     // Update user plan
     const { error: updateError } = await supabase
       .from('profiles')
