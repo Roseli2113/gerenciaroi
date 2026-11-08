@@ -3,6 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { formatBRL } from '@/lib/formatBRL';
 import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -254,7 +255,7 @@ export default function Admin() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Receita Total Mensal</p>
-              <p className="text-2xl font-bold text-success">R$ {totalRevenue.toFixed(2).replace('.', ',')}</p>
+              <p className="text-2xl font-bold text-success">{formatBRL(totalRevenue)}</p>
             </div>
           </div>
         </div>

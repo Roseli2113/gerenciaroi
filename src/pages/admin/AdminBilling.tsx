@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { formatBRL } from '@/lib/formatBRL';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +19,7 @@ interface Profile { user_id: string; display_name: string | null; email: string 
 interface Billing { user_id: string; last_paid_at: string | null; next_due_at: string | null; custom_price: number | null; custom_checkout_url: string | null; notes: string | null; }
 
 const planName: Record<string, string> = { starter: 'Premium', profissional: 'Avançado', enterprise: 'Monster' };
-const brl = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
+const brl = formatBRL;
 
 export default function AdminBilling() {
   const { isAdmin, isLoading } = useAdminRole();

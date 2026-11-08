@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { formatBRL } from '@/lib/formatBRL';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
@@ -220,7 +221,7 @@ const Campaigns = () => {
     );
   };
 
-  const formatCurrency = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
+  const formatCurrency = formatBRL;
   const formatPercent = (v: number | null) => v === null ? 'N/A' : `${v.toFixed(2).replace('.', ',')}%`;
   const formatNumber = (v: number) => v.toLocaleString('pt-BR');
 

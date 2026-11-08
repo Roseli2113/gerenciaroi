@@ -1,3 +1,4 @@
+import { formatBRL, formatBRLShort } from '@/lib/formatBRL';
 import {
   ComposedChart,
   Bar,
@@ -28,7 +29,7 @@ export function SpendingChart() {
       }));
   }, [campaigns]);
 
-  const formatCurrency = (value: number) => `R$ ${value.toFixed(0)}`;
+  const formatCurrency = (value: number) => formatBRLShort(value);
   const formatROI = (value: number) => value.toFixed(2);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -41,7 +42,7 @@ export function SpendingChart() {
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: entry.color }} />
             <span className="text-muted-foreground">{entry.name === 'gastos' ? 'Gastos' : 'ROI'}:</span>
             <span className="font-semibold text-foreground">
-              {entry.name === 'gastos' ? `R$ ${entry.value.toFixed(2)}` : entry.value.toFixed(2)}
+              {entry.name === 'gastos' ? formatBRL(entry.value) : entry.value.toFixed(2)}
             </span>
           </div>
         ))}

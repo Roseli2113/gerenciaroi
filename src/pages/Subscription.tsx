@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { formatBRL } from '@/lib/formatBRL';
 import {
   Card,
   CardContent,
@@ -192,7 +193,7 @@ const Subscription = () => {
                     <p className="text-sm text-muted-foreground">Próxima cobrança</p>
                     <p className="font-semibold text-foreground">{nextBillingDate}</p>
                     {customPrice !== null && (
-                      <p className="text-sm text-success font-semibold">Seu valor: R$ {customPrice.toFixed(2).replace('.', ',')}/mês</p>
+                      <p className="text-sm text-success font-semibold">Seu valor: {formatBRL(customPrice)}/mês</p>
                     )}
                     {customUrl && (
                       <Button size="sm" className="mt-2" onClick={() => window.open(customUrl, '_blank')}>Pagar mensalidade</Button>

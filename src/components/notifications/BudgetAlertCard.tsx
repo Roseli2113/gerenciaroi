@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Wallet, Plus, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { formatBRL } from '@/lib/formatBRL';
 import { useBudgetAlerts } from '@/hooks/useBudgetAlerts';
 import { useMetaAdAccounts } from '@/hooks/useMetaAdAccounts';
 import { cn } from '@/lib/utils';
@@ -151,7 +152,7 @@ export function BudgetAlertCard() {
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>R$ {spent.toFixed(2)} de R$ {alert.budget_amount.toFixed(2)}</span>
+                      <span>{formatBRL(spent)} de {formatBRL(alert.budget_amount)}</span>
                       <span>Avisar em {alert.alert_threshold}%</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { formatBRL, formatBRLShort } from '@/lib/formatBRL';
 import {
   Area,
   Bar,
@@ -36,7 +37,7 @@ export function ProfitByHourChart({ sales }: ProfitByHourChartProps) {
     return hourlyData;
   }, [sales]);
 
-  const formatCurrency = (value: number) => `R$ ${value.toFixed(0)}`;
+  const formatCurrency = (value: number) => formatBRLShort(value);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -50,7 +51,7 @@ export function ProfitByHourChart({ sales }: ProfitByHourChartProps) {
               {entry.dataKey === 'receita' ? 'Receita' : 'Reembolsos'}:
             </span>
             <span className="font-semibold text-foreground">
-              R$ {Math.abs(entry.value).toFixed(2)}
+              {formatBRL(Math.abs(entry.value))}
             </span>
           </div>
         ))}

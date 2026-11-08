@@ -1,3 +1,4 @@
+import { formatBRL, formatBRLShort } from '@/lib/formatBRL';
 import {
   BarChart,
   Bar,
@@ -36,7 +37,7 @@ export function CPAChart() {
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => `R$${value}`}
+            tickFormatter={(value) => formatBRLShort(value)}
           />
           <YAxis 
             type="category" 
@@ -55,7 +56,7 @@ export function CPAChart() {
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             }}
             labelStyle={{ color: 'hsl(var(--foreground))' }}
-            formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'CPA']}
+            formatter={(value: number) => [formatBRL(value), 'CPA']}
           />
           <Bar 
             dataKey="cpa" 

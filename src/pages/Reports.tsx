@@ -3,6 +3,7 @@ import { endOfDay, format, startOfDay, startOfMonth, subDays, subMonths, endOfMo
 import { ptBR } from 'date-fns/locale';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { roiRatio } from '@/lib/campaignFinancials';
+import { formatBRL } from '@/lib/formatBRL';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -388,7 +389,7 @@ const Reports = () => {
                             'font-medium',
                             cpaValue < 8 ? 'text-success' : cpaValue > 10 ? 'text-warning' : 'text-foreground'
                           )}>
-                            R$ {cpaValue.toFixed(2)}
+                            {formatBRL(cpaValue)}
                           </span>
                         );
                       })()}

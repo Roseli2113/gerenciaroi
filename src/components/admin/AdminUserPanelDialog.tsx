@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { formatBRL } from '@/lib/formatBRL';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
@@ -276,7 +277,7 @@ export function AdminUserPanelDialog({ open, onOpenChange, userId, userEmail, us
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className="font-medium text-foreground">R$ {Number(sale.amount).toFixed(2).replace('.', ',')}</span>
+                        <span className="font-medium text-foreground">{formatBRL(Number(sale.amount))}</span>
                         <p className="text-xs">
                           <Badge variant={sale.status === 'approved' ? 'default' : 'secondary'} className={sale.status === 'approved' ? 'bg-success/20 text-success border-0' : ''}>
                             {sale.status}

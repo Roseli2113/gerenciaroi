@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Pause, TrendingUp, TrendingDown, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { formatBRL } from '@/lib/formatBRL';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -98,7 +99,7 @@ export function CampaignsList() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Orçamento: R$ {(campaign.budget || 0).toFixed(2)}
+                    Orçamento: {formatBRL(campaign.budget || 0)}
                   </p>
                 </div>
 
@@ -107,7 +108,7 @@ export function CampaignsList() {
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">Gastos</p>
                     <p className="font-semibold text-foreground">
-                      R$ {campaign.spent.toFixed(2)}
+                      {formatBRL(campaign.spent)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -116,7 +117,7 @@ export function CampaignsList() {
                       'font-semibold',
                       cpa < 10 ? 'text-success' : cpa > 15 ? 'text-destructive' : 'text-warning'
                     )}>
-                      R$ {cpa.toFixed(2)}
+                      {formatBRL(cpa)}
                     </p>
                   </div>
                   <div className="text-right">

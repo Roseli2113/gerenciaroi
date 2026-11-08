@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { formatBRL } from '@/lib/formatBRL';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -244,7 +245,7 @@ const Rules = () => {
   const formatActionValue = (rule: Rule) => {
     if (rule.actionValue == null) return '';
     return rule.actionValueType === 'amount'
-      ? `R$ ${Number(rule.actionValue).toFixed(2)}`
+      ? formatBRL(Number(rule.actionValue))
       : `${rule.actionValue}%`;
   };
 

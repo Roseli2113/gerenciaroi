@@ -1,4 +1,5 @@
 import { MainLayout } from '@/components/layout/MainLayout';
+import { formatBRL } from '@/lib/formatBRL';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -252,14 +253,14 @@ const UTMs = () => {
                         {utm.conversions}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        R$ {utm.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {formatBRL(utm.revenue)}
                       </TableCell>
                       <TableCell className="text-right">
                         <span className={cn(
                           'font-medium',
                           utm.cpa < 8 ? 'text-success' : utm.cpa > 10 ? 'text-warning' : 'text-foreground'
                         )}>
-                          R$ {utm.cpa.toFixed(2)}
+                          {formatBRL(utm.cpa)}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
