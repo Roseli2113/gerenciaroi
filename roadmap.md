@@ -1,4 +1,6 @@
 # Tasks
+- [x] Add Imposto to the sidebar with a period-based investment/tax/total breakdown; checked with real user data on desktop and mobile.
+- [x] Include 12% investment tax once in campaign, ad-set, ad, account, dashboard and report expenses; 29 tests passed and real campaign totals match the tax page.
 - [x] Show the thousands dot in money everywhere (campaigns ORÇAMENTO column and totals, dashboard widgets and chart axes, reports, UTMs, rules, admin screens, subscription custom price) via `src/lib/formatBRL.ts`; 46 tests passed and the signed-in campaigns page shows R$ 10.000,00 / R$ 1.000.000,00 / total R$ 1.030.000,00.
 - [x] Point the Premium plan link at offer-1793904016936 on the plans screen and landing page and map that offer to the premium plan in the payment webhook; 30 tests passed, signed-in click opened the new checkout address, build OK.
 - [x] Change the Premium plan price to R$ 27,90/month on the plans screen and landing page, keeping other tiers unchanged.

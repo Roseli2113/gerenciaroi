@@ -31,6 +31,7 @@ import ResetPassword from "./pages/ResetPassword";
 import DataDeletion from "./pages/DataDeletion";
 import FacebookTutorials from "./pages/FacebookTutorials";
 import Support from "./pages/Support";
+import Tax from "./pages/Tax";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
               <Route path="/utms" element={<ProtectedRoute><UTMs /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+              <Route path="/tax" element={<ProtectedRoute><Tax /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

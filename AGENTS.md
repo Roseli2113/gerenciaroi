@@ -1,4 +1,5 @@
 # Architecture rules
+- Apply investment tax via `withInvestmentTax` only to the returned reporting rows of `useMetaCampaigns`; keep state/cache raw and budgets/write APIs unchanged, so all reporting consumers include tax once without compounding it.
 - Sale alerts come from the server push; the realtime toast runs only in browsers without a push subscription, both build text via `supabase/functions/_shared/saleNotificationMessage.ts`, share one owner-scoped sale claim, and only MainLayout enables listeners; this keeps one alert per sale with identical, preference-respecting content.
 - Keep user-specific fallback attribution in `sales_attribution_settings` and aggregate it separately in `useSalesAttribution`; this applies to historical and future sales without mutating source UTMs or Meta conversion events.
 - Add manual fallback metrics only at campaign/account reporting level after hierarchy rollup; this avoids inventing attribution to ad sets or ads.

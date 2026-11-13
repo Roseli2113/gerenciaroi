@@ -41,9 +41,11 @@ interface DashboardFiltersProps {
   };
   onRefresh?: () => Promise<void>;
   isRefreshing?: boolean;
+  campaignOptions?: { id: string; name: string; accountId?: string }[];
+  showProductFilter?: boolean;
 }
 
-export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: DashboardFiltersProps) {
+export function DashboardFilters({ filters, onRefresh, isRefreshing = false, campaignOptions, showProductFilter = true }: DashboardFiltersProps) {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
@@ -155,7 +157,7 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas as campanhas</SelectItem>
-          {campaigns.map((campaign) => (
+          {(campaignOptions ?? campaigns).filter(campaign => !('accountId' in campaign) || selectedAccount === 'all' || campaign.accountId === selectedAccount).map((campaign) => (
             <SelectItem key={campaign.id} value={campaign.id}>
               {campaign.name}
             </SelectItem>
@@ -163,7 +165,7 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
         </SelectContent>
       </Select>
 
-      <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+      {showProductFilter && <Select value={selectedProduct} onValueChange={setSelectedProduct}>
         <SelectTrigger className="w-32 sm:w-40 border-0 bg-muted/50">
           <SelectValue placeholder="Produto" />
         </SelectTrigger>
@@ -175,7 +177,7 @@ export function DashboardFilters({ filters, onRefresh, isRefreshing = false }: D
             </SelectItem>
           ))}
         </SelectContent>
-      </Select>
+      </Select>}
 
       <div className="ml-auto shrink-0">
         <Button 

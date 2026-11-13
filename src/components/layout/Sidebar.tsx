@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   HelpCircle,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -30,6 +31,7 @@ const menuItems = [
   { icon: Settings2, label: 'Regras', path: '/rules' },
   { icon: Link2, label: 'UTMs', path: '/utms' },
   { icon: FileText, label: 'Relatórios', path: '/reports' },
+  { icon: Receipt, label: 'Imposto', path: '/tax' },
   { icon: Bell, label: 'Notificações', path: '/notifications' },
   { icon: CreditCard, label: 'Assinatura', path: '/subscription' },
   { icon: HelpCircle, label: 'Suporte', path: '/support' },
