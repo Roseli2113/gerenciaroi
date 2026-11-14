@@ -30,4 +30,12 @@ describe('Facebook investment tax', () => {
     assert.equal(total, 336);
     assert.equal(total, investmentCosts(300).total);
   });
+  it('applies a custom rate: 10% on 10,000 becomes 11,000', () => {
+    assert.deepEqual(investmentCosts(10000, 0.10), { investment: 10000, tax: 1000, total: 11000 });
+  });
+  it('keeps spend unchanged when the custom rate is zero', () => {
+    const row = withInvestmentTax({ spent: 100, revenue: 224, sales: 2, clicks: 10, impressions: 1000, pageViews: 4, initiatedCheckout: 2 }, 0);
+    assert.equal(row.spent, 100);
+    assert.equal(row.profit, 124);
+  });
 });

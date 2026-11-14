@@ -1,7 +1,7 @@
 export const INVESTMENT_TAX_RATE = 0.12;
 
-export function investmentCosts(investment: number) {
-  const tax = investment * INVESTMENT_TAX_RATE;
+export function investmentCosts(investment: number, rate: number = INVESTMENT_TAX_RATE) {
+  const tax = investment * rate;
   return { investment, tax, total: investment + tax };
 }
 
@@ -16,8 +16,8 @@ interface SpendMetrics {
 }
 
 /** Apply only to raw Meta rows; never persist this projection in the Meta cache. */
-export function withInvestmentTax<T extends SpendMetrics>(row: T) {
-  const { total: spent } = investmentCosts(row.spent);
+export function withInvestmentTax<T extends SpendMetrics>(row: T, rate: number = INVESTMENT_TAX_RATE) {
+  const { total: spent } = investmentCosts(row.spent, rate);
   const roi = spent > 0 ? row.revenue / spent : null;
   return {
     ...row,

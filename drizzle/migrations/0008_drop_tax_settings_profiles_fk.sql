@@ -1,0 +1,1 @@
+ALTER TABLE public.investment_tax_settings DROP CONSTRAINT investment_tax_settings_user_id_fkey;

@@ -50,6 +50,20 @@
       "when": 1793905949589,
       "tag": "0006_admin_read_user_data_for_view_as",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794614503471,
+      "tag": "0007_create_investment_tax_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794614668719,
+      "tag": "0008_drop_tax_settings_profiles_fk",
+      "breakpoints": true
     }
   ]
 }

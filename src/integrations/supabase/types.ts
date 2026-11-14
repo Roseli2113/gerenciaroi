@@ -410,6 +410,24 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_tax_settings: {
+        Row: {
+          rate: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          rate?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          rate?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       live_visitors: {
         Row: {
           city: string | null

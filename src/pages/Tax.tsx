@@ -1,18 +1,29 @@
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
-import { Receipt, RefreshCw } from 'lucide-react';
+import { Pencil, Receipt, RefreshCw } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { useMetaCampaigns } from '@/hooks/useMetaCampaigns';
-import { investmentCosts, INVESTMENT_TAX_RATE } from '@/lib/investmentTax';
+import { useInvestmentTaxRate } from '@/hooks/useInvestmentTaxRate';
+import { investmentCosts } from '@/lib/investmentTax';
 import { formatBRL } from '@/lib/formatBRL';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
+const formatPercent = (rate: number) =>
+  (rate * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 
 export default function Tax() {
   const filters = useDashboardFilters();
   const [refreshing, setRefreshing] = useState(false);
+  const { rate, saveRate } = useInvestmentTaxRate();
+  const [editing, setEditing] = useState(false);
+  const [percentInput, setPercentInput] = useState('');
+  const [saving, setSaving] = useState(false);
   const preset = {
     today: 'today', yesterday: 'yesterday', '7days': 'last_7d', '30days': 'last_30d',
     thisMonth: 'this_month', lastMonth: 'last_month', custom: 'today',
@@ -25,10 +36,25 @@ export default function Tax() {
   const rows = rawCampaigns.filter(c =>
     (filters.selectedAccount === 'all' || c.accountId === filters.selectedAccount) &&
     (filters.selectedCampaign === 'all' || c.id === filters.selectedCampaign));
-  const totals = investmentCosts(rows.reduce((sum, c) => sum + c.spent, 0));
+  const totals = investmentCosts(rows.reduce((sum, c) => sum + c.spent, 0), rate);
+  const percentLabel = formatPercent(rate);
   const refresh = async () => {
     setRefreshing(true);
     try { await fetchCampaigns(); } finally { setRefreshing(false); }
+  };
+  const openEdit = () => {
+    setPercentInput(percentLabel);
+    setEditing(true);
+  };
+  const save = async () => {
+    const percent = Number(percentInput.replace(',', '.'));
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) return;
+    setSaving(true);
+    try {
+      if (await saveRate(percent)) setEditing(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -37,13 +63,18 @@ export default function Tax() {
         <div className="flex items-center gap-3">
           <Receipt className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-semibold">Imposto Facebook</h1>
-          <span className="ml-auto text-sm font-semibold text-primary">{INVESTMENT_TAX_RATE * 100}% sobre o investimento</span>
+          <span className="ml-auto flex items-center gap-2 text-sm font-semibold text-primary">
+            {percentLabel}% sobre o investimento
+            <Button variant="outline" size="sm" onClick={openEdit}>
+              <Pencil className="mr-2 h-4 w-4" />Editar
+            </Button>
+          </span>
         </div>
         <DashboardFilters filters={filters} campaignOptions={rawCampaigns} showProductFilter={false} onRefresh={refresh} isRefreshing={refreshing || isLoading} />
         <dl className="grid grid-cols-1 gap-6 border-y border-border py-6 sm:grid-cols-3">
           {[
             { label: 'Investimento sem imposto', value: totals.investment },
-            { label: 'Imposto (12%)', value: totals.tax },
+            { label: `Imposto (${percentLabel}%)`, value: totals.tax },
             { label: 'Gastos com imposto', value: totals.total },
           ].map(item => (
             <div key={item.label}>
@@ -58,12 +89,12 @@ export default function Tax() {
             <TableHeader><TableRow>
               <TableHead>Campanha</TableHead>
               <TableHead className="text-right whitespace-nowrap">Investimento</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Imposto (12%)</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Imposto ({percentLabel}%)</TableHead>
               <TableHead className="text-right whitespace-nowrap">Gastos com imposto</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {rows.map(c => {
-                const costs = investmentCosts(c.spent);
+                const costs = investmentCosts(c.spent, rate);
                 return <TableRow key={c.id}>
                   <TableCell className="min-w-48 font-medium">{c.name}</TableCell>
                   <TableCell className="text-right whitespace-nowrap tabular-nums">{formatBRL(costs.investment)}</TableCell>
@@ -85,6 +116,31 @@ export default function Tax() {
           </Table>
         </div>
       </div>
+
+      <Dialog open={editing} onOpenChange={setEditing}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar imposto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="tax-rate">Percentual sobre o investimento (%)</Label>
+            <Input
+              id="tax-rate"
+              inputMode="decimal"
+              value={percentInput}
+              onChange={e => setPercentInput(e.target.value)}
+              placeholder="12"
+            />
+            <p className="text-xs text-muted-foreground">
+              Esse percentual entra nas somas de gastos de todo o painel (Campanhas, Dashboard e Relatórios).
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>
+            <Button onClick={save} disabled={saving}>{saving ? 'Salvando…' : 'Salvar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

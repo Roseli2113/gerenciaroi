@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { withInvestmentTax } from '@/lib/investmentTax';
+import { useInvestmentTaxRate } from '@/hooks/useInvestmentTaxRate';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -994,9 +995,10 @@ export function useMetaCampaigns(datePreset: string = 'today', customDateRange?:
   }, [lastUpdated]);
 
   // Cache/state remain raw so refreshes, remounts and hierarchy sums cannot apply tax twice.
-  const taxedCampaigns = useMemo(() => campaigns.map(withInvestmentTax), [campaigns]);
-  const taxedAdSets = useMemo(() => adSets.map(withInvestmentTax), [adSets]);
-  const taxedAds = useMemo(() => ads.map(withInvestmentTax), [ads]);
+  const { rate: taxRate } = useInvestmentTaxRate();
+  const taxedCampaigns = useMemo(() => campaigns.map(c => withInvestmentTax(c, taxRate)), [campaigns, taxRate]);
+  const taxedAdSets = useMemo(() => adSets.map(as => withInvestmentTax(as, taxRate)), [adSets, taxRate]);
+  const taxedAds = useMemo(() => ads.map(ad => withInvestmentTax(ad, taxRate)), [ads, taxRate]);
 
   return {
     loadErrors,
