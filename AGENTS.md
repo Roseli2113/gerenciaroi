@@ -10,3 +10,4 @@
 - Keep per-user billing overrides (custom price, due date, custom checkout link) in `subscription_billing`, admin-writable only, and compute due days/price via `src/lib/billing.ts`; the plan stays independent of what the user pays.
 - Admin "view as user" swaps `useAuth().user` to the target (real account in `realUser`), relies on admin-only SELECT policies, and `src/lib/viewAs.ts` blocks every write/RPC and non-`get-*` function call; signing in as another user is not allowed by the platform.
 - Render money through `formatBRL` / `formatBRLShort` in `src/lib/formatBRL.ts` instead of per-component `toFixed`; the hand-built grouping keeps the thousands dot and decimal comma identical in every runtime and keeps the rule testable in `src/lib/formatBRL.test.ts`.
+- Show stored platform fee values with two decimals via `feeInputValue` / `normalizeFeeInput` in `src/lib/feeInput.ts`; this keeps a saved 0.5 on screen as 0.50 so users don't think the value was lost.
