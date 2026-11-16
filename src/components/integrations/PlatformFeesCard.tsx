@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { DollarSign, Loader2, Save } from 'lucide-react';
 import { useWebhooks } from '@/hooks/useWebhooks';
 import { usePlatformFees, normalizePlatform } from '@/hooks/usePlatformFees';
+import { feeInputValue, normalizeFeeInput } from '@/lib/feeInput';
 
 export function PlatformFeesCard() {
   const { webhooks, loading: whLoading } = useWebhooks();
@@ -33,9 +34,9 @@ export function PlatformFeesCard() {
         if (!next[p]) {
           const f = feeMap.get(p);
           next[p] = {
-            sale: f ? String(f.fee_per_sale) : '0',
-            withdrawal: f ? String(f.fee_per_withdrawal) : '0',
-            orderbump: f ? String(f.fee_per_orderbump) : '0',
+            sale: f ? feeInputValue(f.fee_per_sale) : '0.00',
+            withdrawal: f ? feeInputValue(f.fee_per_withdrawal) : '0.00',
+            orderbump: f ? feeInputValue(f.fee_per_orderbump) : '0.00',
           };
         }
       });
@@ -45,7 +46,7 @@ export function PlatformFeesCard() {
 
   const handleSave = async (p: string) => {
     setSavingId(p);
-    const d = draft[p] || { sale: '0', withdrawal: '0', orderbump: '0' };
+    const d = draft[p] || { sale: '0.00', withdrawal: '0.00', orderbump: '0.00' };
     await upsertFee(p, parseFloat(d.sale) || 0, parseFloat(d.withdrawal) || 0, parseFloat(d.orderbump) || 0);
     setSavingId(null);
   };
@@ -74,7 +75,7 @@ export function PlatformFeesCard() {
         ) : (
           <div className="space-y-3">
             {platforms.map(p => {
-              const d = draft[p] || { sale: '0', withdrawal: '0', orderbump: '0' };
+              const d = draft[p] || { sale: '0.00', withdrawal: '0.00', orderbump: '0.00' };
               return (
                 <div key={p} className="p-3 bg-muted/30 rounded-lg space-y-3">
                   <Badge variant="outline" className="capitalize">{p}</Badge>
@@ -87,6 +88,7 @@ export function PlatformFeesCard() {
                         min="0"
                         value={d.sale}
                         onChange={e => setDraft({ ...draft, [p]: { ...d, sale: e.target.value } })}
+                        onBlur={() => setDraft(prev => ({ ...prev, [p]: { ...d, sale: normalizeFeeInput(d.sale) } }))}
                       />
                     </div>
                     <div className="space-y-1">
@@ -97,6 +99,7 @@ export function PlatformFeesCard() {
                         min="0"
                         value={d.orderbump}
                         onChange={e => setDraft({ ...draft, [p]: { ...d, orderbump: e.target.value } })}
+                        onBlur={() => setDraft(prev => ({ ...prev, [p]: { ...d, orderbump: normalizeFeeInput(d.orderbump) } }))}
                       />
                     </div>
                     <div className="space-y-1">
@@ -107,6 +110,7 @@ export function PlatformFeesCard() {
                         min="0"
                         value={d.withdrawal}
                         onChange={e => setDraft({ ...draft, [p]: { ...d, withdrawal: e.target.value } })}
+                        onBlur={() => setDraft(prev => ({ ...prev, [p]: { ...d, withdrawal: normalizeFeeInput(d.withdrawal) } }))}
                       />
                     </div>
                   </div>
