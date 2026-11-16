@@ -23,7 +23,10 @@ export function PlatformFeesCard() {
   const [draft, setDraft] = useState<Record<string, { sale: string; withdrawal: string; orderbump: string }>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  // Wait for saved fees to load; otherwise the form locks in zeros before the
+  // saved values arrive and it looks like the values disappeared.
   useEffect(() => {
+    if (feesLoading) return;
     setDraft(prev => {
       const next = { ...prev };
       platforms.forEach(p => {
@@ -38,7 +41,7 @@ export function PlatformFeesCard() {
       });
       return next;
     });
-  }, [platforms, feeMap]);
+  }, [platforms, feeMap, feesLoading]);
 
   const handleSave = async (p: string) => {
     setSavingId(p);

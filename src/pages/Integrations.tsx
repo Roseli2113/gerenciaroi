@@ -57,7 +57,6 @@ import { LiveTrackingScriptCard } from '@/components/integrations/LiveTrackingSc
 import { InitiateCheckoutSnippetCard } from '@/components/integrations/InitiateCheckoutSnippetCard';
 import { UtmBridgeScriptCard } from '@/components/integrations/UtmBridgeScriptCard';
 
-import { WebhookLogsPanel } from '@/components/integrations/WebhookLogsPanel';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -643,7 +642,6 @@ export default function Integrations() {
               <PlatformFeesCard />
             </div>
 
-            <WebhookLogsPanel />
           </TabsContent>
 
 
